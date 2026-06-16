@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
+from database import init_db
 
 #  تنظیم لاگ: سطح اینفو ، فرمت شامل زمان + سطح + پیام
 logging.basicConfig(
@@ -36,6 +37,8 @@ async def cmd_start(message: types.Message):
 
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")  # LOG START
+    await init_db() # ساخت جدول های دیتابیس
+    logger.info("دیتابیس اماده شد")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
