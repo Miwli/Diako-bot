@@ -2,9 +2,11 @@ import asyncio
 import logging  # ماژول لاگ 
 import os
 from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types , F
 from aiogram.filters import CommandStart
 from database import init_db
+from keyboards import admin_main_menu
+from keyboards import admin_panel_menu
 
 #  تنظیم لاگ: سطح اینفو ، فرمت شامل زمان + سطح + پیام
 logging.basicConfig(
@@ -30,10 +32,20 @@ async def cmd_start(message: types.Message):
     logger.info(f"کاربر {message.from_user.id} دستور /start فرستاد")
 
     if is_admin(message.from_user.id):
-        await message.answer("سلام ادمین! 👋")
-
+        await message.answer(
+            "سلام ادمین! 👋",
+            reply_markup=admin_main_menu()
+        )
     else:
         await message.answer("سلام! به بات فروش bping خوش آمدید 🚀")
+
+@dp.callback_query(F.data == "admin_panel")
+async def admin_panel(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "⚙️ پنل ادمین",
+        reply_markup=admin_panel_menu()        
+    )
+    await callback.answer
 
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")  # LOG START
