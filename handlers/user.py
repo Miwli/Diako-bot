@@ -6,11 +6,11 @@ from states import BuyVPN
 from keyboards import (
     user_main_menu, user_servers_keyboard, user_services_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
-    user_service_detail_keyboard
+    user_service_detail_keyboard, confirm_delete_service_keyboard
 )
 from database import (
     get_servers, get_plans, get_plan, get_setting, create_order,
-    get_user_services, get_user_service
+    get_user_services, get_user_service, update_order_status
 )
 from rebecca_api import RebeccaAPI
 
@@ -157,6 +157,78 @@ def register_user_handlers(dp):
             user_service_detail_keyboard(order_id, order["subscription_url"])
         )
         await callback.answer()
+
+    @dp.callback_query(F.data.startswith("renew_service_"))
+    async def renew_service(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("renew_service_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            return
+        plan = await get_plan(order["plan_id"])
+        if not plan:
+            await callback.answer("سرور این سرویس در دسترس نیست.", show_alert=True)
+            return
+        plans = await get_plans(plan["server_id"], only_active=True)
+        if not plans:
+            await callback.answer("این سرور در حال حاضر پلن فعالی ندارد.", show_alert=True)
+            return
+        show_price = (await get_setting("show_plan_price")) == "1"
+        await _edit_or_replace(
+            callback,
+            "🔄 <b>تمدید سرویس</b>\n\nیک پلن انتخاب کنید:",
+            user_plans_keyboard(plans, plan["server_id"], multiple_servers=False, show_price=show_price)
+        )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("delete_service_"))
+    async def ask_delete_service(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("delete_service_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            return
+        await _edit_or_replace(
+            callback,
+            f"⚠️ مطمئنی می‌خوای سرویس <code>{order['vpn_username']}</code> رو حذف کنی؟\n\n"
+            "این عمل قابل بازگشت نیست.",
+            confirm_delete_service_keyboard(order_id)
+        )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("confirmed_delete_service_"))
+    async def do_delete_service(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("confirmed_delete_service_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            return
+        try:
+            api = RebeccaAPI(order["panel_url"], order["panel_token"])
+            await api.delete_user(order["vpn_username"])
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در حذف سرویس {order['vpn_username']}: {e}")
+            await callback.answer(f"خطا در حذف سرویس: {e}", show_alert=True)
+            return
+        await update_order_status(order_id, "deleted")
+        orders = await get_user_services(callback.from_user.id)
+        if orders:
+            await _edit_or_replace(
+                callback,
+                "🗑 سرویس حذف شد.\n\n📋 <b>سرویس‌های من</b>",
+                user_services_keyboard(orders)
+            )
+        else:
+            await _edit_or_replace(
+                callback,
+                "🗑 سرویس حذف شد.\n\n"
+                "📋 <b>سرویس‌های من</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "هنوز هیچ سرویسی نداری.",
+                user_services_keyboard([])
+            )
+        await callback.answer("سرویس حذف شد.")
 
     @dp.callback_query(F.data.startswith("sub_link_"))
     async def send_sub_link(callback: types.CallbackQuery):

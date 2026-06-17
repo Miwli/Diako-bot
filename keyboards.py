@@ -217,8 +217,20 @@ def user_service_detail_keyboard(order_id: int, subscription_url: str = None):
         buttons.append([InlineKeyboardButton(text="📋 کپی لینک اشتراک", copy_text=CopyTextButton(text=subscription_url))])
     else:
         buttons.append([InlineKeyboardButton(text="🔗 لینک اشتراک", callback_data=f"sub_link_{order_id}")])
+    buttons.append([
+        InlineKeyboardButton(text="🔄 تمدید",       callback_data=f"renew_service_{order_id}"),
+        InlineKeyboardButton(text="🗑 حذف سرویس",   callback_data=f"delete_service_{order_id}"),
+    ])
     buttons.append([InlineKeyboardButton(text="🔙 بازگشت به سرویس‌ها", callback_data="my_services")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def confirm_delete_service_keyboard(order_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🗑 بله، حذف کن", callback_data=f"confirmed_delete_service_{order_id}"),
+            InlineKeyboardButton(text="❌ انصراف",       callback_data=f"my_service_{order_id}"),
+        ],
+    ])
 
 # ─── سفارش‌ها ─────────────────────────────────
 

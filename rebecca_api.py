@@ -59,6 +59,15 @@ class RebeccaAPI:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def delete_user(self, username: str) -> None:
+        """حذف یوزر از پنل"""
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.delete(
+                f"{self.base_url}/api/user/{username}",
+                ssl=False
+            ) as resp:
+                resp.raise_for_status()
+
     async def get_user(self, username: str) -> dict:
         """دریافت اطلاعات زنده یوزر از پنل"""
         async with aiohttp.ClientSession(headers=self.headers) as session:
