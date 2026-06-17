@@ -7,6 +7,8 @@ from database import init_db
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
+from handlers.user import register_user_handlers
+from handlers.finance import register_finance_handlers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +31,8 @@ def is_admin(user_id: int) -> bool:
 register_admin_handlers(dp)
 register_server_handlers(dp)
 register_plan_handlers(dp)
+register_user_handlers(dp)
+register_finance_handlers(dp)
 
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")
@@ -37,4 +41,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main()) 
