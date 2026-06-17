@@ -1,11 +1,83 @@
+from datetime import datetime, timezone, timedelta
+import jdatetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import BuyVPN
 from keyboards import (
-    user_main_menu, user_servers_keyboard,
-    user_plans_keyboard, proforma_keyboard, payment_info_keyboard
+    user_main_menu, user_servers_keyboard, user_services_keyboard,
+    user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
+    user_service_detail_keyboard
 )
-from database import get_servers, get_plans, get_plan, get_setting, set_setting, create_order
+from database import (
+    get_servers, get_plans, get_plan, get_setting, create_order,
+    get_user_services, get_user_service
+)
+from rebecca_api import RebeccaAPI
+
+from aiogram.exceptions import TelegramBadRequest
+
+TEHRAN = timezone(timedelta(hours=3, minutes=30))
+
+async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
+    try:
+        await callback.message.edit_text(text, reply_markup=markup, parse_mode=parse_mode)
+    except TelegramBadRequest:
+        await callback.message.delete()
+        await callback.message.answer(text, reply_markup=markup, parse_mode=parse_mode)
+
+def _to_jalali(dt_source) -> str:
+    try:
+        if isinstance(dt_source, str):
+            dt = datetime.strptime(dt_source, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        elif isinstance(dt_source, (int, float)) and dt_source > 0:
+            dt = datetime.fromtimestamp(dt_source, tz=timezone.utc)
+        else:
+            return "نامحدود"
+        jdt = jdatetime.datetime.fromgregorian(datetime=dt.astimezone(TEHRAN))
+        return jdt.strftime("%Y/%m/%d")
+    except Exception:
+        return "نامشخص"
+
+def _fmt_gb(b: int) -> str:
+    return f"{b / (1024 ** 3):.1f} گیگابایت"
+
+def _service_text(order, live=None) -> str:
+    STATUS_MAP = {
+        "active":   "✅ فعال",
+        "expired":  "❌ منقضی شده",
+        "limited":  "❌ ترافیک تمام شده",
+        "disabled": "⚠️ غیرفعال",
+    }
+    status = STATUS_MAP.get(live.get("status", ""), "❓ نامشخص") if live else "⚠️ اطلاعات زنده در دسترس نیست"
+
+    parts = [
+        f"📡 وضعیت : {status}",
+        "",
+        f"🔐 نام سرویس : <code>{order['vpn_username']}</code>",
+        f"🖥 سرور : {order['server_name']}",
+        f"📦 پلن : {order['plan_name']}",
+    ]
+
+    if live:
+        data_limit = live.get("data_limit") or 0
+        used = live.get("used_traffic") or 0
+        parts += ["", "━━━━━━━━━━━━━━━━━━━━━━━━"]
+        if data_limit:
+            remaining = max(0, data_limit - used)
+            pct = int(used / data_limit * 100)
+            parts += [
+                f"📊 ترافیک : {_fmt_gb(data_limit)}",
+                f"📉 مصرف شده : {_fmt_gb(used)} ({pct}٪)",
+                f"📈 باقی‌مانده : {_fmt_gb(remaining)}",
+            ]
+        else:
+            parts.append("📊 ترافیک : نامحدود")
+        parts.append("━━━━━━━━━━━━━━━━━━━━━━━━")
+        expire = live.get("expire")
+        parts.append(f"📅 انقضا : {_to_jalali(expire) if expire else 'نامحدود'}")
+
+    parts.append(f"🗓 خرید : {_to_jalali(order['created_at'])}")
+    return "\n".join(parts)
 
 def register_user_handlers(dp):
 
@@ -37,10 +109,65 @@ def register_user_handlers(dp):
 
     @dp.callback_query(F.data == "user_main")
     async def user_main(callback: types.CallbackQuery, state: FSMContext):
+        from bot import is_admin
+        from keyboards import admin_main_menu
         await state.clear()
-        await callback.message.edit_text(
-            "🏠 منوی اصلی",
-            reply_markup=user_main_menu()
+        menu = admin_main_menu() if is_admin(callback.from_user.id) else user_main_menu()
+        await _edit_or_replace(callback, "🏠 منوی اصلی", menu)
+        await callback.answer()
+
+    @dp.callback_query(F.data == "my_services")
+    async def my_services(callback: types.CallbackQuery):
+        orders = await get_user_services(callback.from_user.id)
+        if not orders:
+            await _edit_or_replace(
+                callback,
+                "📋 <b>سرویس‌های من</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "هنوز هیچ سرویسی نداری.",
+                user_services_keyboard([])
+            )
+        else:
+            await _edit_or_replace(
+                callback,
+                "📋 <b>سرویس‌های من</b>",
+                user_services_keyboard(orders)
+            )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("my_service_"))
+    async def my_service_detail(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("my_service_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            return
+
+        live = None
+        try:
+            api = RebeccaAPI(order["panel_url"], order["panel_token"])
+            live = await api.get_user(order["vpn_username"])
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در دریافت اطلاعات سرویس {order['vpn_username']}: {e}")
+
+        await _edit_or_replace(
+            callback,
+            _service_text(order, live),
+            user_service_detail_keyboard(order_id, order["subscription_url"])
+        )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("sub_link_"))
+    async def send_sub_link(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("sub_link_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order or not order["subscription_url"]:
+            await callback.answer("لینک در دسترس نیست.", show_alert=True)
+            return
+        await callback.message.answer(
+            f"🔗 لینک اشتراک:\n\n<code>{order['subscription_url']}</code>",
+            parse_mode="HTML"
         )
         await callback.answer()
 

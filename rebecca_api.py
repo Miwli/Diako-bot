@@ -59,6 +59,16 @@ class RebeccaAPI:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def get_user(self, username: str) -> dict:
+        """دریافت اطلاعات زنده یوزر از پنل"""
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(
+                f"{self.base_url}/api/user/{username}",
+                ssl=False
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+
     def _random_username(self) -> str:
         chars = string.ascii_lowercase + string.digits
         return "bp_" + "".join(random.choices(chars, k=8))

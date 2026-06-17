@@ -49,10 +49,18 @@ async def init_db():
                 receipt_file_id  TEXT NOT NULL,
                 status           TEXT NOT NULL DEFAULT 'pending',
                 rejection_reason TEXT,
+                vpn_username     TEXT,
+                subscription_url TEXT,
                 created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (plan_id) REFERENCES plans(id)
             )
         """)
+        for col in ("vpn_username", "subscription_url"):
+            try:
+                await db.execute(f"ALTER TABLE orders ADD COLUMN {col} TEXT")
+                await db.commit()
+            except Exception:
+                pass
         await db.commit()
 
 # ─── توابع سرورها ─────────────────────────────
@@ -241,6 +249,44 @@ async def get_order(order_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+        return await cursor.fetchone()
+
+async def update_order_vpn_info(order_id: int, vpn_username: str, subscription_url: str):
+    """ذخیره اطلاعات VPN بعد از تایید سفارش"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE orders SET vpn_username = ?, subscription_url = ? WHERE id = ?",
+            (vpn_username, subscription_url, order_id)
+        )
+        await db.commit()
+
+async def get_user_services(user_id: int):
+    """لیست سرویس‌های فعال یک کاربر"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("""
+            SELECT orders.*, plans.name as plan_name,
+                   servers.name as server_name, servers.panel_url, servers.panel_token
+            FROM orders
+            JOIN plans ON orders.plan_id = plans.id
+            JOIN servers ON plans.server_id = servers.id
+            WHERE orders.user_id = ? AND orders.status = 'approved'
+            ORDER BY orders.created_at DESC
+        """, (user_id,))
+        return await cursor.fetchall()
+
+async def get_user_service(order_id: int, user_id: int):
+    """گرفتن یک سرویس با تایید مالکیت"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("""
+            SELECT orders.*, plans.name as plan_name,
+                   servers.name as server_name, servers.panel_url, servers.panel_token
+            FROM orders
+            JOIN plans ON orders.plan_id = plans.id
+            JOIN servers ON plans.server_id = servers.id
+            WHERE orders.id = ? AND orders.user_id = ? AND orders.status = 'approved'
+        """, (order_id, user_id))
         return await cursor.fetchone()
 
 async def update_order_status(order_id: int, status: str, rejection_reason: str = None):

@@ -1,12 +1,25 @@
 import json
+import qrcode
+from io import BytesIO
 from aiogram import types, F
+from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard
+from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard
 from states import AdminAction
-from database import get_order, get_plan_with_server, update_order_status
+from database import get_order, get_plan_with_server, update_order_status, update_order_vpn_info
 from rebecca_api import RebeccaAPI
+
+def _make_qr(data: str) -> BufferedInputFile:
+    qr = qrcode.QRCode(box_size=10, border=4)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return BufferedInputFile(buf.read(), filename="qr.png")
 
 def register_admin_handlers(dp):
 
@@ -77,18 +90,22 @@ def register_admin_handlers(dp):
             return
 
         await update_order_status(order_id, "approved")
+        await update_order_vpn_info(order_id, username, subscription_url)
         await callback.message.edit_caption(
             callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{username}</code>",
             parse_mode="HTML",
             reply_markup=after_order_keyboard()
         )
-        await callback.bot.send_message(
+        qr_file = _make_qr(subscription_url)
+        await callback.bot.send_photo(
             chat_id=order["user_id"],
-            text=(
+            photo=qr_file,
+            caption=(
                 f"✅ <b>سفارش شما تایید شد!</b>\n\n"
-                f"🔗 لینک اشتراک شما:\n<code>{subscription_url}</code>\n\n"
-                f"این لینک را در اپلیکیشن VPN خود وارد کنید."
+                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
+                f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
             ),
+            reply_markup=subscription_approved_keyboard(subscription_url),
             parse_mode="HTML"
         )
         await callback.answer("سفارش تایید شد.")

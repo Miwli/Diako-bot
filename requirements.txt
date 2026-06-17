@@ -1,4 +1,6 @@
 aiofiles==25.1.0
+jdatetime
+qrcode[pil]
 aiogram==3.29.0
 aiohappyeyeballs==2.6.2
 aiohttp==3.14.1
