@@ -14,3 +14,13 @@ def admin_panel_menu():
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])
     return keyboard
+
+def admin_plans_menu():
+    """منوی مدیریت پلن‌ها"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ پلن جدید", callback_data="add_plan")],
+        [InlineKeyboardButton(text="📋 لیست پلن‌ها", callback_data="list_plans")],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")],
+        [InlineKeyboardButton(text="🏠 منوی اصلی", callback_data="back_to_start")]
+    ])
+    return keyboard

@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types , F
 from aiogram.filters import CommandStart
 from database import init_db
-from keyboards import admin_main_menu
-from keyboards import admin_panel_menu
+from keyboards import admin_main_menu, admin_panel_menu, admin_plans_menu
+
 
 #  تنظیم لاگ: سطح اینفو ، فرمت شامل زمان + سطح + پیام
 logging.basicConfig(
@@ -37,7 +37,7 @@ async def cmd_start(message: types.Message):
             reply_markup=admin_main_menu()
         )
     else:
-        await message.answer("سلام! به بات فروش bping خوش آمدید 🚀")
+        await message.answer("سلام! 👋 به bping خوش اومدی 🚀")
 
 @dp.callback_query(F.data == "admin_panel")
 async def admin_panel(callback: types.CallbackQuery):
@@ -52,6 +52,14 @@ async def back_to_start(callback: types.CallbackQuery):
     await callback.message.edit_text(
         "🏠 دوباره اومدی صفحه اصلی!",
         reply_markup=admin_main_menu()
+    )
+    await callback.answer()
+
+@dp.callback_query(F.data == "admin_plans")
+async def admin_plans(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "📦 مدیریت پلن‌ها",
+        reply_markup=admin_plans_menu()
     )
     await callback.answer()
 
