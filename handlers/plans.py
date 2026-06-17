@@ -2,7 +2,7 @@ from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import AddPlan
 from keyboards import admin_plans_menu, servers_list_keyboard
-from database import add_plan, get_servers
+from database import add_plan, get_servers, get_plans
 
 def register_plan_handlers(dp):
 
@@ -80,3 +80,45 @@ def register_plan_handlers(dp):
             "✅ پلن با موفقیت اضافه شد!",
             reply_markup=admin_plans_menu()
         )
+
+    @dp.callback_query(F.data == "list_plans")
+    async def list_plans(callback: types.CallbackQuery):
+        servers = await get_servers()
+        if not servers:
+            await callback.message.edit_text(
+                "❌ هیچ سروری ثبت نشده!",
+                reply_markup=admin_plans_menu()
+            )
+            await callback.answer()
+            return
+        await callback.message.edit_text(
+            "🖥 برای دیدن پلن‌ها، سرور رو انتخاب کن:",
+            reply_markup=servers_list_keyboard(servers, mode="view_plans")
+        )
+        await callback.answer()       
+    
+    @dp.callback_query(F.data.startswith("view_plans_"))
+    async def view_plans(callback: types.CallbackQuery):
+        server_id = int(callback.data.replace("view_plans_", ""))
+        plans = await get_plans(server_id)
+        if not plans:
+            await callback.message.edit_text(
+                "❌ هیچ پلنی برای این سرور ثبت نشده!",
+                reply_markup=admin_plans_menu()
+            )
+            await callback.answer()
+            return
+        text = "📋 <b>لیست پلن‌ها:</b>\n\n"
+        for plan in plans:
+            text += (
+                f"🔹 <b>{plan['name']}</b>\n"
+                f"💰 قیمت: {plan['price']:,} تومان\n"
+                f"📅 مدت: {plan['duration']} روز\n"
+                f"📊 حجم: {plan['traffic']} گیگ\n\n"
+            )
+        await callback.message.edit_text(
+            text,
+            reply_markup=admin_plans_menu(),
+            parse_mode="HTML"
+        )
+        await callback.answer()

@@ -35,14 +35,14 @@ def admin_plans_menu():
     ])
     return keyboard
 
-def servers_list_keyboard(servers):
-    """لیست سرورها برای انتخاب هنگام ساخت پلن"""
+def servers_list_keyboard(servers, mode="select_server"):
+    """لیست سرورها"""
     buttons = []
     for server in servers:
         buttons.append([
             InlineKeyboardButton(
                 text=f"🖥 {server['name']}",
-                callback_data=f"select_server_{server['id']}"
+                callback_data=f"{mode}_{server['id']}"
             )
         ])
     buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_plans")])
