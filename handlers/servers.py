@@ -1,8 +1,8 @@
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import AddServer
-from keyboards import admin_servers_menu
-from database import add_server
+from keyboards import admin_servers_menu, back_to_servers_menu
+from database import add_server, get_servers
 import re
 
 def register_server_handlers(dp):
@@ -57,3 +57,27 @@ def register_server_handlers(dp):
             "✅ سرور با موفقیت اضافه شد!",
             reply_markup=admin_servers_menu()
         )
+    
+    @dp.callback_query(F.data == "list_servers")
+    async def list_servers(callback: types.CallbackQuery):
+        servers = await get_servers(only_active=False)
+        if not servers:
+            await callback.message.edit_text(
+                "❌ هیچ سروری ثبت نشده!",
+                reply_markup=back_to_servers_menu(),
+            )
+            await callback.answer()
+            return
+        text = "🖥 <b>لیست سرورها:</b>\n\n"
+        for server in servers:
+            status = "✅" if server["is_active"] else "❌"
+            text += (
+                f"{status} <b>{server['name']}</b>\n"
+                f"🔗 {server['panel_url']}\n\n"
+            )
+        await callback.message.edit_text(
+            text,
+            reply_markup=admin_servers_menu(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
