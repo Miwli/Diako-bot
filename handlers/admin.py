@@ -1,5 +1,6 @@
 from aiogram import types, F
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from keyboards import admin_main_menu, admin_panel_menu
 
 def register_admin_handlers(dp):
@@ -29,5 +30,15 @@ def register_admin_handlers(dp):
         await callback.message.edit_text(
             "🏠 دوباره اومدی صفحه اصلی!",
             reply_markup=admin_main_menu()
+        )
+        await callback.answer()
+
+    @dp.callback_query(F.data == "cancel")
+    async def cancel_operation(callback: types.CallbackQuery, state: FSMContext):
+        """لغو هر عملیات در حال انجام و بازگشت به پنل ادمین"""
+        await state.clear()
+        await callback.message.edit_text(
+            "❌ عملیات لغو شد.",
+            reply_markup=admin_panel_menu()
         )
         await callback.answer()

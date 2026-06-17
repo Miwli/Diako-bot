@@ -1,7 +1,7 @@
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import AddServer
-from keyboards import admin_servers_menu, back_to_servers_menu
+from keyboards import admin_servers_menu, back_to_servers_menu, servers_list_view_keyboard, cancel_keyboard
 from database import add_server, get_servers
 import re
 
@@ -17,14 +17,20 @@ def register_server_handlers(dp):
 
     @dp.callback_query(F.data == "add_server")
     async def add_server_start(callback: types.CallbackQuery, state: FSMContext):
-        await callback.message.edit_text("🖥 اسم سرور رو بفرست:\n\nمثلاً: سرور آلمان 🇩🇪")
+        await callback.message.edit_text(
+            "🖥 اسم سرور رو بفرست:\n\nمثلاً: سرور آلمان 🇩🇪",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddServer.waiting_for_name)
         await callback.answer()
 
     @dp.message(AddServer.waiting_for_name)
     async def add_server_name(message: types.Message, state: FSMContext):
         await state.update_data(name=message.text)
-        await message.answer("🔗 آدرس پنل رو بفرست:\n\nمثلاً: https://rebeccapanel.com:8880")
+        await message.answer(
+            "🔗 آدرس پنل رو بفرست:\n\nمثلاً: https://rebeccapanel.com:8880",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddServer.waiting_for_url)
 
     @dp.message(AddServer.waiting_for_url)
@@ -41,7 +47,10 @@ def register_server_handlers(dp):
             )
             return
         await state.update_data(panel_url=url)
-        await message.answer("🔑 توکن API پنل رو بفرست:")
+        await message.answer(
+            "🔑 توکن API پنل رو بفرست:",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddServer.waiting_for_token)
 
     @dp.message(AddServer.waiting_for_token)
@@ -77,7 +86,7 @@ def register_server_handlers(dp):
             )
         await callback.message.edit_text(
             text,
-            reply_markup=admin_servers_menu(),
+            reply_markup=servers_list_view_keyboard(),
             parse_mode="HTML"
         )
         await callback.answer()

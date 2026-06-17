@@ -1,7 +1,7 @@
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import AddPlan
-from keyboards import admin_plans_menu, servers_list_keyboard
+from keyboards import admin_plans_menu, servers_list_keyboard, plans_list_view_keyboard, cancel_keyboard
 from database import add_plan, get_servers, get_plans
 
 def register_plan_handlers(dp):
@@ -34,14 +34,20 @@ def register_plan_handlers(dp):
     async def select_server(callback: types.CallbackQuery, state: FSMContext):
         server_id = int(callback.data.replace("select_server_", ""))
         await state.update_data(server_id=server_id)
-        await callback.message.edit_text("📝 اسم پلن رو بفرست:")
+        await callback.message.edit_text(
+            "📝 اسم پلن رو بفرست:",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddPlan.waiting_for_name)
         await callback.answer()
 
     @dp.message(AddPlan.waiting_for_name)
     async def add_plan_name(message: types.Message, state: FSMContext):
         await state.update_data(name=message.text)
-        await message.answer("💰 قیمت رو بفرست (تومان):")
+        await message.answer(
+            "💰 قیمت رو بفرست (تومان):",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddPlan.waiting_for_price)
 
     @dp.message(AddPlan.waiting_for_price)
@@ -50,7 +56,10 @@ def register_plan_handlers(dp):
             await message.answer("❌ قیمت باید عدد باشه! دوباره بفرست:")
             return
         await state.update_data(price=int(message.text))
-        await message.answer("📅 مدت رو بفرست (روز):")
+        await message.answer(
+            "📅 مدت رو بفرست (روز):",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddPlan.waiting_for_duration)
 
     @dp.message(AddPlan.waiting_for_duration)
@@ -59,7 +68,10 @@ def register_plan_handlers(dp):
             await message.answer("❌ مدت باید عدد باشه! دوباره بفرست:")
             return
         await state.update_data(duration=int(message.text))
-        await message.answer("📊 حجم رو بفرست (گیگابایت):")
+        await message.answer(
+            "📊 حجم رو بفرست (گیگابایت):",
+            reply_markup=cancel_keyboard()
+        )
         await state.set_state(AddPlan.waiting_for_traffic)
 
     @dp.message(AddPlan.waiting_for_traffic)
@@ -118,7 +130,7 @@ def register_plan_handlers(dp):
             )
         await callback.message.edit_text(
             text,
-            reply_markup=admin_plans_menu(),
+            reply_markup=plans_list_view_keyboard(),
             parse_mode="HTML"
         )
         await callback.answer()

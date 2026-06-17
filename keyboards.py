@@ -54,3 +54,25 @@ def back_to_servers_menu():
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_servers")],
     ])
     return keyboard
+
+def cancel_keyboard():
+    """دکمه لغو عملیات در حین فرایندهای چندمرحله‌ای"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ لغو", callback_data="cancel")],
+    ])
+    return keyboard
+
+def servers_list_view_keyboard():
+    """کیبورد نمایش لیست سرورها"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ سرور جدید", callback_data="add_server")],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_servers")],
+    ])
+    return keyboard
+
+def plans_list_view_keyboard():
+    """کیبورد نمایش لیست پلن‌های یک سرور"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_plans")],
+    ])
+    return keyboard
