@@ -1,51 +1,46 @@
+import json
 from aiogram import types, F
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from keyboards import admin_main_menu, admin_panel_menu, user_main_menu
+from aiogram.exceptions import TelegramBadRequest
+from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard
 from states import AdminAction
-from database import get_order, get_plan, update_order_status
+from database import get_order, get_plan_with_server, update_order_status
+from rebecca_api import RebeccaAPI
 
 def register_admin_handlers(dp):
-    
+
     @dp.message(CommandStart())
     async def cmd_start(message: types.Message):
         from bot import is_admin, logger
         logger.info(f"کاربر {message.from_user.id} دستور /start فرستاد")
         if is_admin(message.from_user.id):
-            await message.answer(
-                "سلام ادمین! 👋",
-                reply_markup=admin_main_menu()
-            )
+            await message.answer("سلام ادمین! 👋", reply_markup=admin_main_menu())
         else:
-            await message.answer(
-                "سلام! 👋 به bping خوش اومدی 🚀",
-                reply_markup=user_main_menu()
-            )
+            await message.answer("سلام! 👋 به bping خوش اومدی 🚀", reply_markup=user_main_menu())
+
+    async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup):
+        """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
+        try:
+            await callback.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest:
+            await callback.message.delete()
+            await callback.message.answer(text, reply_markup=markup)
 
     @dp.callback_query(F.data == "admin_panel")
     async def admin_panel(callback: types.CallbackQuery):
-        await callback.message.edit_text(
-            "⚙️ پنل ادمین",
-            reply_markup=admin_panel_menu()
-        )
+        await _edit_or_replace(callback, "⚙️ پنل ادمین", admin_panel_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "back_to_start")
     async def back_to_start(callback: types.CallbackQuery):
-        await callback.message.edit_text(
-            "🏠 دوباره اومدی صفحه اصلی!",
-            reply_markup=admin_main_menu()
-        )
+        await _edit_or_replace(callback, "🏠 منوی اصلی", admin_main_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_operation(callback: types.CallbackQuery, state: FSMContext):
-        """لغو هر عملیات در حال انجام و بازگشت به پنل ادمین"""
         await state.clear()
-        await callback.message.edit_text(
-            "❌ عملیات لغو شد.",
-            reply_markup=admin_panel_menu()
-        )
+        await _edit_or_replace(callback, "❌ عملیات لغو شد.", admin_panel_menu())
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("order_approve_"))
@@ -55,15 +50,46 @@ def register_admin_handlers(dp):
         if not order:
             await callback.answer("سفارش یافت نشد.", show_alert=True)
             return
+        if order["status"] != "pending":
+            await callback.answer("این سفارش قبلاً پردازش شده.", show_alert=True)
+            return
+
+        plan = await get_plan_with_server(order["plan_id"])
+
+        try:
+            service_ids = json.loads(plan["service_ids"] or "[]")
+            if not service_ids:
+                await callback.answer("سرویسی برای این سرور تنظیم نشده!", show_alert=True)
+                return
+            api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
+            user_data = await api.create_user(
+                service_id=service_ids[0],
+                data_limit_gb=plan["traffic"],
+                duration_days=plan["duration"]
+            )
+            sub_path = user_data.get("subscription_url", "")
+            subscription_url = await api.get_subscription_url(sub_path)
+            username = user_data.get("username", "")
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در ساخت یوزر برای سفارش #{order_id}: {e}")
+            await callback.answer(f"خطا در ساخت یوزر: {e}", show_alert=True)
+            return
 
         await update_order_status(order_id, "approved")
         await callback.message.edit_caption(
-            callback.message.caption + "\n\n✅ <b>تایید شد</b>",
-            parse_mode="HTML"
+            callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{username}</code>",
+            parse_mode="HTML",
+            reply_markup=after_order_keyboard()
         )
         await callback.bot.send_message(
             chat_id=order["user_id"],
-            text="✅ سفارش شما تایید شد!\nبه زودی اطلاعات اتصال برای شما ارسال خواهد شد."
+            text=(
+                f"✅ <b>سفارش شما تایید شد!</b>\n\n"
+                f"🔗 لینک اشتراک شما:\n<code>{subscription_url}</code>\n\n"
+                f"این لینک را در اپلیکیشن VPN خود وارد کنید."
+            ),
+            parse_mode="HTML"
         )
         await callback.answer("سفارش تایید شد.")
 
@@ -74,11 +100,15 @@ def register_admin_handlers(dp):
         if not order:
             await callback.answer("سفارش یافت نشد.", show_alert=True)
             return
+        if order["status"] != "pending":
+            await callback.answer("این سفارش قبلاً پردازش شده.", show_alert=True)
+            return
 
         await update_order_status(order_id, "rejected")
         await callback.message.edit_caption(
             callback.message.caption + "\n\n❌ <b>رد شد</b>",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=after_order_keyboard()
         )
         await callback.bot.send_message(
             chat_id=order["user_id"],
@@ -89,7 +119,11 @@ def register_admin_handlers(dp):
     @dp.callback_query(F.data.startswith("order_reject_reason_"))
     async def order_reject_reason_start(callback: types.CallbackQuery, state: FSMContext):
         order_id = int(callback.data.replace("order_reject_reason_", ""))
-        await state.update_data(order_id=order_id, admin_message_id=callback.message.message_id)
+        order = await get_order(order_id)
+        if not order or order["status"] != "pending":
+            await callback.answer("این سفارش قبلاً پردازش شده.", show_alert=True)
+            return
+        await state.update_data(order_id=order_id)
         await state.set_state(AdminAction.waiting_for_rejection_reason)
         await callback.message.reply(
             "✏️ دلیل رد را بنویسید (یا /skip برای رد بدون دلیل):"
@@ -113,4 +147,4 @@ def register_admin_handlers(dp):
         if message.text != "/skip":
             await message.copy_to(chat_id=order["user_id"])
 
-        await message.answer("✅ سفارش رد شد و کاربر مطلع شد.")
+        await message.answer("✅ سفارش رد شد و کاربر مطلع شد.", reply_markup=after_order_keyboard())

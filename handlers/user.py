@@ -5,7 +5,7 @@ from keyboards import (
     user_main_menu, user_servers_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard
 )
-from database import get_servers, get_plans, get_plan, get_setting, create_order
+from database import get_servers, get_plans, get_plan, get_setting, set_setting, create_order
 
 def register_user_handlers(dp):
 
@@ -21,8 +21,7 @@ def register_user_handlers(dp):
             return
 
         if len(servers) == 1:
-            # اگه فقط یه سرور داریم، مستقیم پلن‌ها رو نشون می‌ده
-            await show_plans(callback, servers[0]["id"])
+            await show_plans(callback, servers[0]["id"], multiple_servers=False)
         else:
             await callback.message.edit_text(
                 "🖥 لطفاً یک سرور انتخاب کنید:",
@@ -33,10 +32,19 @@ def register_user_handlers(dp):
     @dp.callback_query(F.data.startswith("user_server_"))
     async def user_select_server(callback: types.CallbackQuery):
         server_id = int(callback.data.replace("user_server_", ""))
-        await show_plans(callback, server_id)
+        await show_plans(callback, server_id, multiple_servers=True)
         await callback.answer()
 
-    async def show_plans(callback: types.CallbackQuery, server_id: int):
+    @dp.callback_query(F.data == "user_main")
+    async def user_main(callback: types.CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text(
+            "🏠 منوی اصلی",
+            reply_markup=user_main_menu()
+        )
+        await callback.answer()
+
+    async def show_plans(callback: types.CallbackQuery, server_id: int, multiple_servers: bool = False):
         plans = await get_plans(server_id, only_active=True)
         if not plans:
             await callback.message.edit_text(
@@ -44,9 +52,10 @@ def register_user_handlers(dp):
                 reply_markup=user_main_menu()
             )
             return
+        show_price = (await get_setting("show_plan_price")) == "1"
         await callback.message.edit_text(
             "📦 یک پلن انتخاب کنید:",
-            reply_markup=user_plans_keyboard(plans, server_id)
+            reply_markup=user_plans_keyboard(plans, server_id, multiple_servers, show_price)
         )
 
     @dp.callback_query(F.data.startswith("user_plan_"))
