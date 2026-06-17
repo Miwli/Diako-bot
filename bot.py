@@ -45,7 +45,15 @@ async def admin_panel(callback: types.CallbackQuery):
         "⚙️ پنل ادمین",
         reply_markup=admin_panel_menu()        
     )
-    await callback.answer
+    await callback.answer()
+
+@dp.callback_query(F.data == "back_to_start")
+async def back_to_start(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "🏠 دوباره اومدی صفحه اصلی!",
+        reply_markup=admin_main_menu()
+    )
+    await callback.answer()
 
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")  # LOG START

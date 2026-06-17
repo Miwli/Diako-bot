@@ -13,4 +13,4 @@ def admin_panel_menu():
         [InlineKeyboardButton(text="📦 پلن‌ها", callback_data="admin_plans")],
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])
- 
+    return keyboard
