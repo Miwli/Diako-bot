@@ -2,15 +2,18 @@ from datetime import datetime, timezone, timedelta
 import jdatetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
-from states import BuyVPN
+from states import BuyVPN, TopUp
 from keyboards import (
     user_main_menu, user_servers_keyboard, user_services_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
-    user_service_detail_keyboard, confirm_delete_service_keyboard
+    user_service_detail_keyboard, confirm_delete_service_keyboard,
+    wallet_keyboard, admin_topup_keyboard
 )
 from database import (
     get_servers, get_plans, get_plan, get_setting, create_order,
-    get_user_services, get_user_service, update_order_status
+    get_user_services, get_user_service, update_order_status,
+    get_or_create_user, get_user_wallet_stats, get_transactions,
+    add_balance, add_transaction, create_top_up_request, get_top_up_request, update_top_up_status
 )
 from rebecca_api import RebeccaAPI
 
@@ -80,6 +83,150 @@ def _service_text(order, live=None) -> str:
     return "\n".join(parts)
 
 def register_user_handlers(dp):
+
+    @dp.callback_query(F.data.in_({"free_test", "support", "tutorial", "referral"}))
+    async def coming_soon(callback: types.CallbackQuery):
+        await callback.answer("🔜 به زودی...", show_alert=True)
+
+    # ─── پروفایل ──────────────────────────────────
+
+    @dp.callback_query(F.data == "profile")
+    async def profile_page(callback: types.CallbackQuery):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        u = callback.from_user
+        user = await get_or_create_user(u.id, u.first_name, u.username)
+        stats = await get_user_wallet_stats(u.id)
+        username_line = f"📱 یوزرنیم : @{u.username}" if u.username else "📱 یوزرنیم : —"
+        text = (
+            f"👤 {u.first_name}\n\n"
+            f"{'━' * 24}\n"
+            f"🆔 آیدی تلگرام : <code>{u.id}</code>\n"
+            f"{username_line}\n"
+            f"📅 تاریخ عضویت : {_to_jalali(user['created_at'])}\n"
+            f"💰 موجودی : <b>{stats['balance']:,} تومان</b>\n"
+            f"🎫 کد معرف : <code>{user['referral_code']}</code>\n"
+            f"{'━' * 24}"
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")],
+        ])
+        await _edit_or_replace(callback, text, kb)
+        await callback.answer()
+
+    # ─── شارژ حساب ────────────────────────────────
+
+    @dp.callback_query(F.data == "top_up")
+    async def top_up_start(callback: types.CallbackQuery, state: FSMContext):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 بازگشت", callback_data="wallet")],
+        ])
+        await _edit_or_replace(
+            callback,
+            "💳 <b>شارژ حساب</b>\n\n"
+            "مبلغ مورد نظر را به <b>تومان</b> وارد کنید:\n"
+            "مثلاً: <code>50000</code>",
+            kb
+        )
+        await state.set_state(TopUp.waiting_for_amount)
+        await callback.answer()
+
+    @dp.message(TopUp.waiting_for_amount)
+    async def top_up_amount(message: types.Message, state: FSMContext):
+        raw = message.text.strip().replace(",", "").replace("،", "")
+        if not raw.isdigit() or int(raw) < 10000:
+            await message.answer(
+                "❌ مبلغ معتبر نیست.\nحداقل شارژ <b>۱۰,۰۰۰ تومان</b> است.",
+                parse_mode="HTML"
+            )
+            return
+        amount = int(raw)
+        await state.update_data(amount=amount)
+        card_number = await get_setting("card_number")
+        card_owner  = await get_setting("card_owner")
+        await message.answer(
+            f"💳 <b>اطلاعات پرداخت</b>\n\n"
+            f"مبلغ: <b>{amount:,} تومان</b>\n\n"
+            f"شماره کارت:\n<code>{card_number or '—'}</code>\n"
+            f"به نام: <b>{card_owner or '—'}</b>\n\n"
+            "بعد از واریز، تصویر رسید را ارسال کنید.",
+            parse_mode="HTML"
+        )
+        await state.set_state(TopUp.waiting_for_receipt)
+
+    @dp.message(TopUp.waiting_for_receipt)
+    async def top_up_receipt(message: types.Message, state: FSMContext):
+        if not message.photo:
+            await message.answer("لطفاً تصویر رسید پرداخت را ارسال کنید.")
+            return
+        data = await state.get_data()
+        amount = data["amount"]
+        u = message.from_user
+        await get_or_create_user(u.id, u.first_name, u.username)
+        file_id = message.photo[-1].file_id
+        request_id = await create_top_up_request(u.id, u.username, amount, file_id)
+        await state.clear()
+
+        from bot import ADMIN_IDS
+        caption = (
+            f"💳 <b>درخواست شارژ حساب</b>\n\n"
+            f"👤 کاربر: {u.full_name}"
+            + (f" (@{u.username})" if u.username else "") +
+            f"\n🆔 آیدی: <code>{u.id}</code>\n"
+            f"💰 مبلغ: <b>{amount:,} تومان</b>\n"
+            f"🔖 شماره درخواست: #{request_id}"
+        )
+        for admin_id in ADMIN_IDS:
+            await message.bot.send_photo(
+                chat_id=admin_id,
+                photo=file_id,
+                caption=caption,
+                reply_markup=admin_topup_keyboard(request_id),
+                parse_mode="HTML"
+            )
+        await message.answer(
+            "✅ درخواست شارژ شما ثبت شد.\nپس از تایید ادمین، موجودی به حسابتان اضافه می‌شود.",
+            reply_markup=wallet_keyboard()
+        )
+
+    # ─── کیف پول ──────────────────────────────────
+
+    @dp.callback_query(F.data == "wallet")
+    async def wallet_page(callback: types.CallbackQuery):
+        u = callback.from_user
+        await get_or_create_user(u.id, u.first_name, u.username)
+        stats = await get_user_wallet_stats(u.id)
+        name = u.first_name or "کاربر"
+        text = (
+            f"👤 {name} عزیز\n\n"
+            f"{'━' * 24}\n"
+            f"💰 موجودی\n"
+            f"<b>{stats['balance']:,} تومان</b>\n"
+            f"{'━' * 24}\n\n"
+            f"🛒 سرویس‌های خریداری‌شده    <b>{stats['services']}</b> عدد\n"
+            f"📑 فاکتورهای پرداخت‌شده     <b>{stats['invoices']}</b> عدد"
+        )
+        await _edit_or_replace(callback, text, wallet_keyboard())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "wallet_history")
+    async def wallet_history(callback: types.CallbackQuery):
+        txs = await get_transactions(callback.from_user.id)
+        if not txs:
+            await callback.answer("هنوز تراکنشی ثبت نشده.", show_alert=True)
+            return
+        lines = ["📜 <b>تاریخچه تراکنش‌ها</b>\n" + "━" * 24]
+        for tx in txs:
+            icon = "➕" if tx["amount"] > 0 else "➖"
+            lines.append(
+                f"{icon} {abs(tx['amount']):,} تومان\n"
+                f"   {tx['description'] or ''}\n"
+                f"   📅 {_to_jalali(tx['created_at'])}"
+            )
+        text = "\n" + "━" * 24 + "\n"
+        text = lines[0] + ("\n" + "─" * 24 + "\n").join([""] + lines[1:])
+        await _edit_or_replace(callback, text, wallet_keyboard())
+        await callback.answer()
 
     @dp.callback_query(F.data == "buy_vpn")
     async def buy_vpn(callback: types.CallbackQuery):

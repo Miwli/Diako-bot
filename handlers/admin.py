@@ -6,9 +6,12 @@ from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard
+from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard
 from states import AdminAction
-from database import get_order, get_plan_with_server, update_order_status, update_order_vpn_info
+from database import (
+    get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
+    get_top_up_request, update_top_up_status, add_balance, add_transaction, get_or_create_user
+)
 from rebecca_api import RebeccaAPI
 
 def _make_qr(data: str) -> BufferedInputFile:
@@ -146,6 +149,54 @@ def register_admin_handlers(dp):
             "✏️ دلیل رد را بنویسید (یا /skip برای رد بدون دلیل):"
         )
         await callback.answer()
+
+    # ─── شارژ حساب ────────────────────────────────
+
+    @dp.callback_query(F.data.startswith("topup_approve_"))
+    async def topup_approve(callback: types.CallbackQuery):
+        request_id = int(callback.data.replace("topup_approve_", ""))
+        req = await get_top_up_request(request_id)
+        if not req:
+            await callback.answer("درخواست یافت نشد.", show_alert=True)
+            return
+        if req["status"] != "pending":
+            await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
+            return
+        await update_top_up_status(request_id, "approved")
+        await get_or_create_user(req["user_id"], "", req["username"])
+        await add_balance(req["user_id"], req["amount"])
+        await add_transaction(req["user_id"], req["amount"], "charge", f"شارژ حساب #{request_id}")
+        await callback.message.edit_caption(
+            callback.message.caption + f"\n\n✅ <b>تایید شد</b>",
+            parse_mode="HTML"
+        )
+        await callback.bot.send_message(
+            chat_id=req["user_id"],
+            text=f"✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{req['amount']:,} تومان</b> به کیف پول شما اضافه شد.",
+            parse_mode="HTML"
+        )
+        await callback.answer("شارژ تایید شد.")
+
+    @dp.callback_query(F.data.startswith("topup_reject_"))
+    async def topup_reject(callback: types.CallbackQuery):
+        request_id = int(callback.data.replace("topup_reject_", ""))
+        req = await get_top_up_request(request_id)
+        if not req:
+            await callback.answer("درخواست یافت نشد.", show_alert=True)
+            return
+        if req["status"] != "pending":
+            await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
+            return
+        await update_top_up_status(request_id, "rejected")
+        await callback.message.edit_caption(
+            callback.message.caption + "\n\n❌ <b>رد شد</b>",
+            parse_mode="HTML"
+        )
+        await callback.bot.send_message(
+            chat_id=req["user_id"],
+            text="❌ متأسفانه درخواست شارژ حساب شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
+        )
+        await callback.answer("درخواست رد شد.")
 
     @dp.message(AdminAction.waiting_for_rejection_reason)
     async def order_reject_with_reason(message: types.Message, state: FSMContext):

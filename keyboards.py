@@ -4,8 +4,21 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextBu
 
 def user_main_menu():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛒 خرید VPN",     callback_data="buy_vpn")],
-        [InlineKeyboardButton(text="📋 سرویس‌های من", callback_data="my_services")],
+        [InlineKeyboardButton(text="🔐 خرید اشتراک",    callback_data="buy_vpn")],
+        [
+            InlineKeyboardButton(text="💎 کیف پول",      callback_data="wallet"),
+            InlineKeyboardButton(text="⚡️ تست رایگان",  callback_data="free_test"),
+            InlineKeyboardButton(text="📡 سرویس‌های من", callback_data="my_services"),
+        ],
+        [
+            InlineKeyboardButton(text="💳 شارژ حساب",    callback_data="top_up"),
+            InlineKeyboardButton(text="🎧 پشتیبانی",     callback_data="support"),
+            InlineKeyboardButton(text="👤 پروفایل",      callback_data="profile"),
+        ],
+        [
+            InlineKeyboardButton(text="📚 آموزش و راهنما", callback_data="tutorial"),
+            InlineKeyboardButton(text="🤝 زیر مجموعه",     callback_data="referral"),
+        ],
     ])
     return keyboard
 
@@ -247,6 +260,19 @@ def subscription_approved_keyboard(subscription_url: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 کپی لینک اشتراک", copy_text=CopyTextButton(text=subscription_url))],
         [InlineKeyboardButton(text="🗂 سرویس‌های من",     callback_data="my_services")],
+    ])
+
+def wallet_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 شارژ حساب",          callback_data="top_up")],
+        [InlineKeyboardButton(text="📜 تاریخچه تراکنش‌ها", callback_data="wallet_history")],
+        [InlineKeyboardButton(text="🔙 بازگشت",             callback_data="user_main")],
+    ])
+
+def admin_topup_keyboard(request_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ تایید شارژ", callback_data=f"topup_approve_{request_id}")],
+        [InlineKeyboardButton(text="❌ رد",          callback_data=f"topup_reject_{request_id}")],
     ])
 
 def after_order_keyboard():

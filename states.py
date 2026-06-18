@@ -25,3 +25,7 @@ class AdminAction(StatesGroup):
 class SetCardInfo(StatesGroup):
     waiting_for_card_number = State()
     waiting_for_card_owner  = State()
+
+class TopUp(StatesGroup):
+    waiting_for_amount  = State()
+    waiting_for_receipt = State()

@@ -61,6 +61,43 @@ async def init_db():
                 await db.commit()
             except Exception:
                 pass
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id       INTEGER PRIMARY KEY,
+                first_name    TEXT,
+                username      TEXT,
+                balance       INTEGER DEFAULT 0,
+                referral_code TEXT UNIQUE,
+                created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN referral_code TEXT")
+            await db.commit()
+        except Exception:
+            pass
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL,
+                amount      INTEGER NOT NULL,
+                type        TEXT NOT NULL,
+                description TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS top_up_requests (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id         INTEGER NOT NULL,
+                username        TEXT,
+                amount          INTEGER NOT NULL,
+                receipt_file_id TEXT NOT NULL,
+                status          TEXT NOT NULL DEFAULT 'pending',
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         await db.commit()
 
 # ─── توابع سرورها ─────────────────────────────
@@ -295,5 +332,120 @@ async def update_order_status(order_id: int, status: str, rejection_reason: str 
         await db.execute(
             "UPDATE orders SET status = ?, rejection_reason = ? WHERE id = ?",
             (status, rejection_reason, order_id)
+        )
+        await db.commit()
+
+# ─── توابع کاربران و کیف پول ───────────────────
+
+async def get_or_create_user(user_id: int, first_name: str, username: str = None):
+    """ساخت یا بروزرسانی رکورد کاربر"""
+    import random, string
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        existing = await cursor.fetchone()
+        if existing:
+            update_code = ""
+            params = [first_name, username]
+            if not existing["referral_code"]:
+                while True:
+                    code = "BP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                    cur = await db.execute("SELECT 1 FROM users WHERE referral_code = ?", (code,))
+                    if not await cur.fetchone():
+                        break
+                update_code = ", referral_code = ?"
+                params.append(code)
+            params.append(user_id)
+            await db.execute(
+                f"UPDATE users SET first_name = ?, username = ?{update_code} WHERE user_id = ?",
+                params
+            )
+        else:
+            while True:
+                code = "BP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                cur = await db.execute("SELECT 1 FROM users WHERE referral_code = ?", (code,))
+                if not await cur.fetchone():
+                    break
+            await db.execute(
+                "INSERT INTO users (user_id, first_name, username, referral_code) VALUES (?, ?, ?, ?)",
+                (user_id, first_name, username, code)
+            )
+        await db.commit()
+        cursor = await db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        return await cursor.fetchone()
+
+async def get_user_wallet_stats(user_id: int) -> dict:
+    """آمار کیف پول: موجودی، تعداد سرویس‌ها، تعداد فاکتورها"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+        user = await cursor.fetchone()
+        balance = user["balance"] if user else 0
+
+        cursor = await db.execute(
+            "SELECT COUNT(*) as cnt FROM orders WHERE user_id = ? AND status = 'approved'",
+            (user_id,)
+        )
+        services = (await cursor.fetchone())["cnt"]
+
+        cursor = await db.execute(
+            "SELECT COUNT(*) as cnt FROM orders WHERE user_id = ? AND status != 'rejected'",
+            (user_id,)
+        )
+        invoices = (await cursor.fetchone())["cnt"]
+
+        return {"balance": balance, "services": services, "invoices": invoices}
+
+async def get_transactions(user_id: int, limit: int = 20):
+    """گرفتن تاریخچه تراکنش‌های کاربر"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit)
+        )
+        return await cursor.fetchall()
+
+async def add_transaction(user_id: int, amount: int, type: str, description: str = None):
+    """ثبت تراکنش جدید"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)",
+            (user_id, amount, type, description)
+        )
+        await db.commit()
+
+async def add_balance(user_id: int, amount: int):
+    """اضافه کردن موجودی به کیف پول کاربر"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+            (amount, user_id)
+        )
+        await db.commit()
+
+async def create_top_up_request(user_id: int, username: str, amount: int, receipt_file_id: str) -> int:
+    """ثبت درخواست شارژ حساب"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO top_up_requests (user_id, username, amount, receipt_file_id) VALUES (?, ?, ?, ?)",
+            (user_id, username, amount, receipt_file_id)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_top_up_request(request_id: int):
+    """گرفتن یک درخواست شارژ با id"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM top_up_requests WHERE id = ?", (request_id,))
+        return await cursor.fetchone()
+
+async def update_top_up_status(request_id: int, status: str):
+    """آپدیت وضعیت درخواست شارژ"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE top_up_requests SET status = ? WHERE id = ?",
+            (status, request_id)
         )
         await db.commit()
