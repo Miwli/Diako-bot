@@ -205,6 +205,11 @@ def register_admin_handlers(dp):
         order_id = data["order_id"]
         order = await get_order(order_id)
 
+        if not order or order["status"] != "pending":
+            await state.clear()
+            await message.answer("این سفارش قبلاً پردازش شده.", reply_markup=after_order_keyboard())
+            return
+
         reason = message.text if message.text and message.text != "/skip" else None
         await update_order_status(order_id, "rejected", rejection_reason=reason)
         await state.clear()
