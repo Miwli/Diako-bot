@@ -10,7 +10,7 @@ from keyboards import (
     wallet_keyboard, admin_topup_keyboard
 )
 from database import (
-    get_servers, get_plans, get_plan, get_plan_with_server, get_setting, create_order,
+    get_servers, get_plans, get_plan, get_plan_with_server, get_setting, set_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user_wallet_stats, get_transactions,
     add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
@@ -255,14 +255,35 @@ def register_user_handlers(dp):
         await show_plans(callback, server_id, multiple_servers=True)
         await callback.answer()
 
-    @dp.callback_query(F.data == "user_main")
-    async def user_main(callback: types.CallbackQuery, state: FSMContext):
+    async def _send_main_menu(target, user: types.User):
         from bot import is_admin
         from keyboards import admin_main_menu
+        menu = admin_main_menu() if is_admin(user.id) else user_main_menu()
+        name = user.first_name or "کاربر"
+        caption = f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
+        banner = await get_setting("banner_file_id")
+
+        if isinstance(target, types.CallbackQuery):
+            try:
+                await target.message.delete()
+            except Exception:
+                pass
+            msg = target.message
+            if banner:
+                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+            else:
+                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
+            await target.answer()
+        else:
+            if banner:
+                await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+            else:
+                await target.answer(caption, reply_markup=menu, parse_mode="HTML")
+
+    @dp.callback_query(F.data == "user_main")
+    async def user_main(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        menu = admin_main_menu() if is_admin(callback.from_user.id) else user_main_menu()
-        await _edit_or_replace(callback, "🏠 منوی اصلی", menu)
-        await callback.answer()
+        await _send_main_menu(callback, callback.from_user)
 
     @dp.callback_query(F.data == "my_services")
     async def my_services(callback: types.CallbackQuery):

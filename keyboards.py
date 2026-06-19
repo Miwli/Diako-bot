@@ -39,6 +39,7 @@ def admin_panel_menu():
         [InlineKeyboardButton(text="🎧 تنظیمات پشتیبانی",       callback_data="admin_support")],
         [InlineKeyboardButton(text="📢 پیام همگانی",             callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="📊 آمار و گزارش",           callback_data="admin_stats")],
+        [InlineKeyboardButton(text="⚙️ تنظیمات عمومی",         callback_data="admin_general")],
         [InlineKeyboardButton(text="🔙 بازگشت",                 callback_data="back_to_start")],
     ])
     return keyboard
@@ -47,6 +48,16 @@ def cancel_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="❌ لغو", callback_data="cancel")],
     ])
+
+def admin_general_menu(has_banner: bool):
+    rows = [
+        [InlineKeyboardButton(
+            text="🗑 حذف بنر" if has_banner else "🖼 آپلود بنر",
+            callback_data="admin_banner_delete" if has_banner else "admin_banner_upload"
+        )],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def back_to_servers_menu():
     return InlineKeyboardMarkup(inline_keyboard=[

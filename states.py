@@ -34,3 +34,6 @@ class EditPlan(StatesGroup):
     waiting_for_price    = State()
     waiting_for_duration = State()
     waiting_for_traffic  = State()
+
+class GeneralSettings(StatesGroup):
+    waiting_for_banner = State()

@@ -6,12 +6,13 @@ from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard
-from states import AdminAction
+from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard, admin_general_menu
+from states import AdminAction, GeneralSettings
 from database import (
     get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
     get_top_up_request, update_top_up_status, approve_top_up_atomic,
-    add_balance, add_balance_and_transaction, get_or_create_user
+    add_balance, add_balance_and_transaction, get_or_create_user,
+    get_setting, set_setting
 )
 from rebecca_api import RebeccaAPI
 
@@ -30,11 +31,12 @@ def register_admin_handlers(dp):
     @dp.message(CommandStart())
     async def cmd_start(message: types.Message):
         from bot import is_admin, logger
+        from handlers.user import _send_main_menu
         logger.info(f"کاربر {message.from_user.id} دستور /start فرستاد")
         if is_admin(message.from_user.id):
             await message.answer("سلام ادمین! 👋", reply_markup=admin_main_menu())
         else:
-            await message.answer("سلام! 👋 به bping خوش اومدی 🚀", reply_markup=user_main_menu())
+            await _send_main_menu(message, message.from_user)
 
     async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
         """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
@@ -55,6 +57,33 @@ def register_admin_handlers(dp):
     }))
     async def admin_coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
+
+    # ─── تنظیمات عمومی ────────────────────────────
+    @dp.callback_query(F.data == "admin_general")
+    async def admin_general(callback: types.CallbackQuery):
+        banner = await get_setting("banner_file_id")
+        status = "✅ بنر فعال است." if banner else "❌ بنر تنظیم نشده."
+        await _edit_or_replace(callback, f"⚙️ تنظیمات عمومی\n\n{status}", admin_general_menu(has_banner=bool(banner)))
+        await callback.answer()
+
+    @dp.callback_query(F.data == "admin_banner_upload")
+    async def admin_banner_upload(callback: types.CallbackQuery, state: FSMContext):
+        await state.set_state(GeneralSettings.waiting_for_banner)
+        await callback.message.edit_text("🖼 عکس بنر را ارسال کنید:")
+        await callback.answer()
+
+    @dp.message(GeneralSettings.waiting_for_banner, F.photo)
+    async def admin_banner_save(message: types.Message, state: FSMContext):
+        file_id = message.photo[-1].file_id
+        await set_setting("banner_file_id", file_id)
+        await state.clear()
+        await message.answer("✅ بنر ذخیره شد.", reply_markup=admin_general_menu(has_banner=True))
+
+    @dp.callback_query(F.data == "admin_banner_delete")
+    async def admin_banner_delete(callback: types.CallbackQuery):
+        await set_setting("banner_file_id", "")
+        await _edit_or_replace(callback, "⚙️ تنظیمات عمومی\n\n❌ بنر تنظیم نشده.", admin_general_menu(has_banner=False))
+        await callback.answer("🗑 بنر حذف شد.")
 
     @dp.callback_query(F.data == "back_to_start")
     async def back_to_start(callback: types.CallbackQuery):
