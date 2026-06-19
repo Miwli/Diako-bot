@@ -430,6 +430,19 @@ async def add_balance(user_id: int, amount: int):
         )
         await db.commit()
 
+async def add_balance_and_transaction(user_id: int, amount: int, type: str, description: str = None):
+    """تغییر موجودی + ثبت تراکنش در یک transaction اتمیک"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+            (amount, user_id)
+        )
+        await db.execute(
+            "INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)",
+            (user_id, amount, type, description)
+        )
+        await db.commit()
+
 async def deduct_balance_if_sufficient(user_id: int, amount: int) -> bool:
     """کسر موجودی فقط اگه کافی باشه — اتمیک، بدون race condition"""
     async with aiosqlite.connect(DB_PATH) as db:

@@ -13,7 +13,7 @@ from database import (
     get_servers, get_plans, get_plan, get_plan_with_server, get_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user_wallet_stats, get_transactions,
-    add_balance, add_transaction, deduct_balance_if_sufficient,
+    add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
     create_top_up_request, get_top_up_request, update_top_up_status
 )
 from rebecca_api import RebeccaAPI
@@ -514,7 +514,7 @@ def register_user_handlers(dp):
             order_id = await create_order(u.id, u.username or u.first_name, plan_id, "wallet")
             await update_order_status(order_id, "approved")
             await update_order_vpn_info(order_id, username, subscription_url)
-            await add_transaction(u.id, -plan["price"], "purchase", f"خرید پلن {plan['name']}")
+            await add_balance_and_transaction(u.id, -plan["price"], "purchase", f"خرید پلن {plan['name']}")
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ثبت سفارش wallet plan #{plan_id} — حذف یوزر {username}: {e}")

@@ -11,7 +11,7 @@ from states import AdminAction
 from database import (
     get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
     get_top_up_request, update_top_up_status, approve_top_up_atomic,
-    add_balance, add_transaction, get_or_create_user
+    add_balance, add_balance_and_transaction, get_or_create_user
 )
 from rebecca_api import RebeccaAPI
 
@@ -176,8 +176,7 @@ def register_admin_handlers(dp):
             await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
             return
         await get_or_create_user(req["user_id"], "", req["username"])
-        await add_balance(req["user_id"], req["amount"])
-        await add_transaction(req["user_id"], req["amount"], "charge", f"شارژ حساب #{request_id}")
+        await add_balance_and_transaction(req["user_id"], req["amount"], "charge", f"شارژ حساب #{request_id}")
         await callback.message.edit_caption(
             callback.message.caption + f"\n\n✅ <b>تایید شد</b>",
             parse_mode="HTML"
