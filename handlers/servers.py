@@ -183,7 +183,8 @@ def register_server_handlers(dp):
                 reply_markup=cancel_keyboard()
             )
             return
-        selected = current_ids or []
+        live_ids = {s["id"] for s in services}
+        selected = [sid for sid in (current_ids or []) if sid in live_ids]
         await state.update_data(services=services, selected_service_ids=selected)
         await state.set_state(AddServer.waiting_for_service)
         text = "✏️ سرویس‌های این سرور رو ویرایش کن:" if edit_mode else \

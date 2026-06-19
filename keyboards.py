@@ -49,15 +49,34 @@ def cancel_keyboard():
         [InlineKeyboardButton(text="❌ لغو", callback_data="cancel")],
     ])
 
-def admin_general_menu(has_banner: bool):
-    rows = [
+def admin_general_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎨 ظاهر ربات",     callback_data="admin_banner_and_text")],
+        [InlineKeyboardButton(text="🔙 بازگشت",        callback_data="admin_panel")],
+    ])
+
+def admin_banner_and_text_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🖼 تنظیمات بنر",  callback_data="admin_banner_settings")],
+        [InlineKeyboardButton(text="✏️ تنظیمات متن",  callback_data="admin_text_settings")],
+        [InlineKeyboardButton(text="🔙 بازگشت",        callback_data="admin_general")],
+    ])
+
+def admin_text_settings_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ ویرایش متن",  callback_data="admin_banner_caption")],
+        [InlineKeyboardButton(text="🛠 ساخت متن",    callback_data="admin_build_text")],
+        [InlineKeyboardButton(text="🔙 بازگشت",       callback_data="admin_banner_and_text")],
+    ])
+
+def admin_banner_settings_menu(has_banner: bool):
+    return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🗑 حذف بنر" if has_banner else "🖼 آپلود بنر",
             callback_data="admin_banner_delete" if has_banner else "admin_banner_upload"
         )],
-        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_general")],
+    ])
 
 def back_to_servers_menu():
     return InlineKeyboardMarkup(inline_keyboard=[

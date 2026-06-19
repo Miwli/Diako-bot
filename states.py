@@ -36,4 +36,7 @@ class EditPlan(StatesGroup):
     waiting_for_traffic  = State()
 
 class GeneralSettings(StatesGroup):
-    waiting_for_banner = State()
+    waiting_for_banner     = State()
+    waiting_for_caption    = State()
+    waiting_for_emoji_text = State()
+

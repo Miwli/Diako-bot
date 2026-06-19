@@ -12,7 +12,9 @@ class RebeccaAPI:
         }
 
     async def get_subscription_url(self, sub_path: str) -> str:
-        """ساخت URL کامل لینک ساب — با دامنه اختصاصی ادمین یا آدرس پنل"""
+        """ساخت URL کامل لینک ساب — اگه URL کامل بود همونو برگردون"""
+        if sub_path.startswith("http"):
+            return sub_path
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.get(f"{self.base_url}/api/admin", ssl=False) as resp:
                 if resp.status == 200:
@@ -52,11 +54,13 @@ class RebeccaAPI:
 
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(
-                f"{self.base_url}/api/user",
+                f"{self.base_url}/api/v2/users",
                 json=payload,
                 ssl=False
             ) as resp:
-                resp.raise_for_status()
+                if not resp.ok:
+                    body = await resp.text()
+                    raise Exception(f"HTTP {resp.status}: {body}")
                 return await resp.json()
 
     async def delete_user(self, username: str) -> None:

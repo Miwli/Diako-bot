@@ -88,7 +88,8 @@ async def _send_main_menu(target, user: types.User):
     from keyboards import admin_main_menu
     menu = admin_main_menu() if is_admin(user.id) else user_main_menu()
     name = user.first_name or "کاربر"
-    caption = f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
+    custom_caption = await get_setting("banner_caption")
+    caption = custom_caption.replace("{name}", name) if custom_caption else f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
     banner = await get_setting("banner_file_id")
 
     if isinstance(target, types.CallbackQuery):
@@ -98,13 +99,13 @@ async def _send_main_menu(target, user: types.User):
             pass
         msg = target.message
         if banner:
-            await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+            await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
         else:
             await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
         await target.answer()
     else:
         if banner:
-            await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+            await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
         else:
             await target.answer(caption, reply_markup=menu, parse_mode="HTML")
 

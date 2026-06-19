@@ -1,4 +1,5 @@
 import json
+import html as html_lib
 import qrcode
 from io import BytesIO
 from aiogram import types, F
@@ -6,8 +7,9 @@ from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
-from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard, admin_general_menu
+from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard, admin_general_menu, admin_banner_settings_menu, admin_banner_and_text_menu, admin_text_settings_menu
 from states import AdminAction, GeneralSettings
+from aiogram.filters import Command
 from database import (
     get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
     get_top_up_request, update_top_up_status, approve_top_up_atomic,
@@ -33,10 +35,7 @@ def register_admin_handlers(dp):
         from bot import is_admin, logger
         from handlers.user import _send_main_menu
         logger.info(f"کاربر {message.from_user.id} دستور /start فرستاد")
-        if is_admin(message.from_user.id):
-            await message.answer("سلام ادمین! 👋", reply_markup=admin_main_menu())
-        else:
-            await _send_main_menu(message, message.from_user)
+        await _send_main_menu(message, message.from_user)
 
     async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
         """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
@@ -61,9 +60,19 @@ def register_admin_handlers(dp):
     # ─── تنظیمات عمومی ────────────────────────────
     @dp.callback_query(F.data == "admin_general")
     async def admin_general(callback: types.CallbackQuery):
+        await _edit_or_replace(callback, "⚙️ تنظیمات عمومی", admin_general_menu())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "admin_banner_and_text")
+    async def admin_banner_and_text(callback: types.CallbackQuery):
+        await _edit_or_replace(callback, "🎨 ظاهر ربات", admin_banner_and_text_menu())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "admin_banner_settings")
+    async def admin_banner_settings(callback: types.CallbackQuery):
         banner = await get_setting("banner_file_id")
         status = "✅ بنر فعال است." if banner else "❌ بنر تنظیم نشده."
-        await _edit_or_replace(callback, f"⚙️ تنظیمات عمومی\n\n{status}", admin_general_menu(has_banner=bool(banner)))
+        await _edit_or_replace(callback, f"🖼 تنظیمات بنر\n\n{status}", admin_banner_settings_menu(has_banner=bool(banner)))
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_upload")
@@ -77,18 +86,92 @@ def register_admin_handlers(dp):
         file_id = message.photo[-1].file_id
         await set_setting("banner_file_id", file_id)
         await state.clear()
-        await message.answer("✅ بنر ذخیره شد.", reply_markup=admin_general_menu(has_banner=True))
+        await message.answer("✅ بنر ذخیره شد.", reply_markup=admin_banner_settings_menu(has_banner=True))
 
     @dp.callback_query(F.data == "admin_banner_delete")
     async def admin_banner_delete(callback: types.CallbackQuery):
         await set_setting("banner_file_id", "")
-        await _edit_or_replace(callback, "⚙️ تنظیمات عمومی\n\n❌ بنر تنظیم نشده.", admin_general_menu(has_banner=False))
+        await _edit_or_replace(callback, "🖼 تنظیمات بنر\n\n❌ بنر تنظیم نشده.", admin_banner_settings_menu(has_banner=False))
         await callback.answer("🗑 بنر حذف شد.")
+
+    @dp.callback_query(F.data == "admin_text_settings")
+    async def admin_text_settings(callback: types.CallbackQuery):
+        await _edit_or_replace(callback, "✏️ تنظیمات متن", admin_text_settings_menu())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "admin_banner_caption")
+    async def admin_banner_caption_start(callback: types.CallbackQuery, state: FSMContext):
+        current = await get_setting("banner_caption") or ""
+        text = (
+            "✏️ متن فعلی بنر:\n"
+            f"<code>{current or '(پیش‌فرض)'}</code>\n\n"
+            "متن جدید را ارسال کنید.\n"
+            "می‌توانید از <code>{name}</code> برای نام کاربر استفاده کنید."
+        )
+        await state.set_state(GeneralSettings.waiting_for_caption)
+        await callback.message.edit_text(text, parse_mode="HTML")
+        await callback.answer()
+
+    @dp.message(GeneralSettings.waiting_for_caption, F.text)
+    async def admin_banner_caption_save(message: types.Message, state: FSMContext):
+        await set_setting("banner_caption", message.text.strip())
+        await state.clear()
+        await message.answer("✅ متن بنر ذخیره شد.", reply_markup=admin_text_settings_menu())
+
+    @dp.callback_query(F.data == "admin_build_text")
+    async def admin_build_text_start(callback: types.CallbackQuery, state: FSMContext):
+        await state.set_state(GeneralSettings.waiting_for_emoji_text)
+        await callback.message.edit_text(
+            "🛠 پیام خود را همراه با استیکر پرمیوم ارسال کنید.\n"
+            "ربات اموجی‌ها را با تگ HTML جایگزین می‌کند."
+        )
+        await callback.answer()
+
+    @dp.message(GeneralSettings.waiting_for_emoji_text)
+    async def admin_build_text_process(message: types.Message, state: FSMContext):
+        await state.clear()
+        text = message.text or message.caption or ""
+        entities = message.entities or message.caption_entities or []
+        custom_emojis = [e for e in entities if getattr(e, "custom_emoji_id", None)]
+
+        if not text:
+            await message.answer("❌ پیام خالی است.", reply_markup=admin_text_settings_menu())
+            return
+
+        if not custom_emojis:
+            await message.answer(
+                "❌ استیکر پرمیوم‌ای پیدا نشد. مطمئن شو اشتراک پرمیوم داری و استیکر custom emoji فرستادی.",
+                reply_markup=admin_text_settings_menu()
+            )
+            return
+
+        raw = text.encode("utf-16-le")
+        parts = []
+        cursor = 0
+        for e in sorted(custom_emojis, key=lambda x: x.offset):
+            e_start = e.offset * 2
+            e_end = (e.offset + e.length) * 2
+            parts.append(raw[cursor:e_start].decode("utf-16-le"))
+            fallback = raw[e_start:e_end].decode("utf-16-le")
+            parts.append(f'<tg-emoji emoji-id="{e.custom_emoji_id}">{fallback}</tg-emoji>')
+            cursor = e_end
+        parts.append(raw[cursor:].decode("utf-16-le"))
+        result = "".join(parts)
+
+        # پیام اول: پیش‌نمایش واقعی با اموجی پرمیوم
+        await message.answer(f"✅ پیش‌نمایش:\n\n{result}", parse_mode="HTML")
+        # پیام دوم: متن خام برای کپی (escape می‌کنیم تا تگ‌ها به صورت متن نمایش داده شن)
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
+        copy_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 کپی متن", copy_text=CopyTextButton(text=result))],
+        ])
+        await message.answer(f"<code>{html_lib.escape(result)}</code>", parse_mode="HTML", reply_markup=copy_kb)
+        await message.answer("⬆️", reply_markup=admin_text_settings_menu())
 
     @dp.callback_query(F.data == "back_to_start")
     async def back_to_start(callback: types.CallbackQuery):
-        await _edit_or_replace(callback, "🏠 منوی اصلی", admin_main_menu())
-        await callback.answer()
+        from handlers.user import _send_main_menu
+        await _send_main_menu(callback, callback.from_user)
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_operation(callback: types.CallbackQuery, state: FSMContext):
@@ -110,13 +193,26 @@ def register_admin_handlers(dp):
         plan = await get_plan_with_server(order["plan_id"])
 
         try:
-            service_ids = json.loads(plan["service_ids"] or "[]")
-            if not service_ids:
+            stored_ids = json.loads(plan["service_ids"] or "[]")
+            if not stored_ids:
                 await callback.answer("سرویسی برای این سرور تنظیم نشده!", show_alert=True)
                 return
             api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
+
+            # سرویس‌های زنده رو از پنل می‌گیریم و اولین ID معتبر رو انتخاب می‌کنیم
+            live_services = await api.get_services()
+            live_ids = {s["id"] for s in live_services}
+            service_id = next((sid for sid in stored_ids if sid in live_ids), None)
+            if service_id is None:
+                await callback.answer(
+                    "❌ سرویس‌های انتخاب‌شده برای این سرور دیگه توی پنل Rebecca وجود ندارن.\n"
+                    "از پنل ادمین → مدیریت سرورها → سرویس‌ها رو آپدیت کن.",
+                    show_alert=True
+                )
+                return
+
             user_data = await api.create_user(
-                service_id=service_ids[0],
+                service_id=service_id,
                 data_limit_gb=plan["traffic"],
                 duration_days=plan["duration"]
             )
