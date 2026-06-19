@@ -132,7 +132,7 @@ def register_user_handlers(dp):
         await state.set_state(TopUp.waiting_for_amount)
         await callback.answer()
 
-    @dp.message(TopUp.waiting_for_amount)
+    @dp.message(TopUp.waiting_for_amount, F.text)
     async def top_up_amount(message: types.Message, state: FSMContext):
         raw = message.text.strip().replace(",", "").replace("،", "")
         if not raw.isdigit() or int(raw) < 10000:
