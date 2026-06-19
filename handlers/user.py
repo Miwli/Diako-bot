@@ -10,10 +10,11 @@ from keyboards import (
     wallet_keyboard, admin_topup_keyboard
 )
 from database import (
-    get_servers, get_plans, get_plan, get_setting, create_order,
-    get_user_services, get_user_service, update_order_status,
+    get_servers, get_plans, get_plan, get_plan_with_server, get_setting, create_order,
+    get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user_wallet_stats, get_transactions,
-    add_balance, add_transaction, create_top_up_request, get_top_up_request, update_top_up_status
+    add_balance, add_transaction, deduct_balance_if_sufficient,
+    create_top_up_request, get_top_up_request, update_top_up_status
 )
 from rebecca_api import RebeccaAPI
 
@@ -412,6 +413,9 @@ def register_user_handlers(dp):
             await callback.answer("پلن مورد نظر یافت نشد.", show_alert=True)
             return
 
+        stats = await get_user_wallet_stats(callback.from_user.id)
+        has_balance = stats["balance"] >= plan["price"]
+
         text = (
             f"🧾 <b>پیش‌فاکتور</b>\n"
             f"{'─' * 24}\n"
@@ -421,14 +425,17 @@ def register_user_handlers(dp):
             f"{'─' * 24}\n"
             f"💰 <b>مبلغ قابل پرداخت:</b> {plan['price']:,} تومان"
         )
+        if has_balance:
+            text += f"\n💎 <b>موجودی کیف پول:</b> {stats['balance']:,} تومان"
+
         await callback.message.edit_text(
             text,
-            reply_markup=proforma_keyboard(plan_id),
+            reply_markup=proforma_keyboard(plan_id, has_balance=has_balance),
             parse_mode="HTML"
         )
         await callback.answer()
 
-    @dp.callback_query(F.data.startswith("pay_"))
+    @dp.callback_query(F.data.startswith("pay_") & ~F.data.startswith("pay_wallet_"))
     async def pay_plan(callback: types.CallbackQuery, state: FSMContext):
         plan_id = int(callback.data.replace("pay_", ""))
 
@@ -457,6 +464,79 @@ def register_user_handlers(dp):
             f"{'─' * 24}\n\n"
             f"📸 پس از واریز، تصویر رسید را ارسال کنید.",
             reply_markup=payment_info_keyboard(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("pay_wallet_"))
+    async def pay_with_wallet(callback: types.CallbackQuery):
+        from keyboards import subscription_approved_keyboard
+        plan_id = int(callback.data.replace("pay_wallet_", ""))
+        plan = await get_plan_with_server(plan_id)
+        if not plan:
+            await callback.answer("پلن یافت نشد.", show_alert=True)
+            return
+
+        u = callback.from_user
+        await get_or_create_user(u.id, u.first_name, u.username)
+
+        import json
+        service_ids = json.loads(plan["service_ids"] or "[]")
+        if not service_ids:
+            await callback.answer("سرویسی برای این پلن تنظیم نشده!", show_alert=True)
+            return
+
+        # کسر اتمیک — اگه موجودی کافی نباشه یا همزمان کسر شده باشه False برمی‌گردونه
+        deducted = await deduct_balance_if_sufficient(u.id, plan["price"])
+        if not deducted:
+            await callback.answer("موجودی کافی نیست.", show_alert=True)
+            return
+
+        try:
+            api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
+            user_data = await api.create_user(
+                service_id=service_ids[0],
+                data_limit_gb=plan["traffic"],
+                duration_days=plan["duration"]
+            )
+            sub_path = user_data.get("subscription_url", "")
+            subscription_url = await api.get_subscription_url(sub_path)
+            username = user_data.get("username", "")
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {e}")
+            # پول برگشت داده می‌شه چون API خطا داد
+            await add_balance(u.id, plan["price"])
+            await callback.answer(f"خطا در اتصال به پنل: {e}", show_alert=True)
+            return
+
+        try:
+            order_id = await create_order(u.id, u.username or u.first_name, plan_id, "wallet")
+            await update_order_status(order_id, "approved")
+            await update_order_vpn_info(order_id, username, subscription_url)
+            await add_transaction(u.id, -plan["price"], "purchase", f"خرید پلن {plan['name']}")
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در ثبت سفارش wallet plan #{plan_id} — حذف یوزر {username}: {e}")
+            try:
+                await api.delete_user(username)
+            except Exception:
+                pass
+            await add_balance(u.id, plan["price"])
+            await callback.answer("خطا در ثبت سفارش. مبلغ به حسابتان برگشت داده شد.", show_alert=True)
+            return
+
+        from handlers.admin import _make_qr
+        qr_file = _make_qr(subscription_url)
+        await callback.message.delete()
+        await callback.message.answer_photo(
+            photo=qr_file,
+            caption=(
+                f"✅ <b>خرید با کیف پول انجام شد!</b>\n\n"
+                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
+                f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
+            ),
+            reply_markup=subscription_approved_keyboard(subscription_url),
             parse_mode="HTML"
         )
         await callback.answer()

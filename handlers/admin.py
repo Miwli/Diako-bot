@@ -93,8 +93,19 @@ def register_admin_handlers(dp):
             await callback.answer(f"خطا در ساخت یوزر: {e}", show_alert=True)
             return
 
-        await update_order_status(order_id, "approved")
-        await update_order_vpn_info(order_id, username, subscription_url)
+        try:
+            await update_order_status(order_id, "approved")
+            await update_order_vpn_info(order_id, username, subscription_url)
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در ذخیره سفارش #{order_id} — حذف یوزر {username}: {e}")
+            try:
+                await api.delete_user(username)
+            except Exception:
+                pass
+            await callback.answer(f"خطا در ثبت اطلاعات: {e}", show_alert=True)
+            return
+
         await callback.message.edit_caption(
             callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{username}</code>",
             parse_mode="HTML",
