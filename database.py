@@ -222,6 +222,12 @@ async def toggle_plan_status(plan_id: int):
         )
         await db.commit()
 
+async def update_plan_field(plan_id: int, field: str, value: int):
+    """ویرایش یک فیلد از پلن"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(f"UPDATE plans SET {field} = ? WHERE id = ?", (value, plan_id))
+        await db.commit()
+
 async def update_plan(plan_id: int, name: str, price: int, duration: int, traffic: int):
     """ویرایش پلن"""
     async with aiosqlite.connect(DB_PATH) as db:
@@ -424,6 +430,16 @@ async def add_balance(user_id: int, amount: int):
         )
         await db.commit()
 
+async def deduct_balance_if_sufficient(user_id: int, amount: int) -> bool:
+    """کسر موجودی فقط اگه کافی باشه — اتمیک، بدون race condition"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?",
+            (amount, user_id, amount)
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
 async def create_top_up_request(user_id: int, username: str, amount: int, receipt_file_id: str) -> int:
     """ثبت درخواست شارژ حساب"""
     async with aiosqlite.connect(DB_PATH) as db:
@@ -449,3 +465,13 @@ async def update_top_up_status(request_id: int, status: str):
             (status, request_id)
         )
         await db.commit()
+
+async def approve_top_up_atomic(request_id: int) -> bool:
+    """تایید اتمیک — فقط اگه هنوز pending باشه موفق می‌شه"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "UPDATE top_up_requests SET status = 'approved' WHERE id = ? AND status = 'pending'",
+            (request_id,)
+        )
+        await db.commit()
+        return cursor.rowcount > 0

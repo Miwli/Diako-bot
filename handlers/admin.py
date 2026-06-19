@@ -10,7 +10,8 @@ from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_o
 from states import AdminAction
 from database import (
     get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
-    get_top_up_request, update_top_up_status, add_balance, add_transaction, get_or_create_user
+    get_top_up_request, update_top_up_status, approve_top_up_atomic,
+    add_balance, add_transaction, get_or_create_user
 )
 from rebecca_api import RebeccaAPI
 
@@ -159,10 +160,10 @@ def register_admin_handlers(dp):
         if not req:
             await callback.answer("درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] != "pending":
+        approved = await approve_top_up_atomic(request_id)
+        if not approved:
             await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
             return
-        await update_top_up_status(request_id, "approved")
         await get_or_create_user(req["user_id"], "", req["username"])
         await add_balance(req["user_id"], req["amount"])
         await add_transaction(req["user_id"], req["amount"], "charge", f"شارژ حساب #{request_id}")
