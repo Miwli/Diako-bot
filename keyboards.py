@@ -4,20 +4,20 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextBu
 
 def user_main_menu():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔐 خرید اشتراک",    callback_data="buy_vpn")],
+        [InlineKeyboardButton(text="🔐 خرید اشتراک",      callback_data="buy_vpn")],
         [
-            InlineKeyboardButton(text="💎 کیف پول",      callback_data="wallet"),
-            InlineKeyboardButton(text="⚡️ تست رایگان",  callback_data="free_test"),
-            InlineKeyboardButton(text="📡 سرویس‌های من", callback_data="my_services"),
+            InlineKeyboardButton(text="💎 کیف پول",        callback_data="wallet"),
+            InlineKeyboardButton(text="🎁 تست رایگان",     callback_data="free_test"),
+            InlineKeyboardButton(text="📡 سرویس‌های من",   callback_data="my_services"),
         ],
         [
-            InlineKeyboardButton(text="💳 شارژ حساب",    callback_data="top_up"),
-            InlineKeyboardButton(text="🎧 پشتیبانی",     callback_data="support"),
-            InlineKeyboardButton(text="👤 پروفایل",      callback_data="profile"),
-        ],
-        [
+            InlineKeyboardButton(text="🎧 پشتیبانی",       callback_data="support"),
+            InlineKeyboardButton(text="👤 پروفایل",        callback_data="profile"),
             InlineKeyboardButton(text="📚 آموزش و راهنما", callback_data="tutorial"),
-            InlineKeyboardButton(text="🤝 زیر مجموعه",     callback_data="referral"),
+        ],
+        [
+            InlineKeyboardButton(text="💰 دعوت دوستان",   callback_data="referral"),
+            InlineKeyboardButton(text="🌐 تغییر زبان",    callback_data="language"),
         ],
     ])
     return keyboard
@@ -132,24 +132,37 @@ def servers_list_keyboard(servers, mode="select_server"):
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def plans_table_keyboard(plans, server_id: int):
-    buttons = []
+    buttons = [[
+        InlineKeyboardButton(text="📦 پلن",  callback_data="noop"),
+        InlineKeyboardButton(text="وضعیت", callback_data="noop"),
+        InlineKeyboardButton(text="🗑 حذف", callback_data="noop"),
+    ]]
     for p in plans:
         status = "✅" if p["is_active"] else "❌"
-        label = f"📦 {p['name']} | {p['traffic']} گیگ / {p['duration']} روز / {p['price']:,} ت"
-        buttons.append([InlineKeyboardButton(text=label, callback_data="noop")])
+        pid, sid = p["id"], server_id
         buttons.append([
-            InlineKeyboardButton(text=f"{status} وضعیت", callback_data=f"toggle_plan_{p['id']}"),
-            InlineKeyboardButton(text="⚙️ تنظیمات",      callback_data=f"plan_settings_{p['id']}_{server_id}"),
+            InlineKeyboardButton(text=p["name"], callback_data=f"toggle_plan_settings_{pid}_{sid}"),
+            InlineKeyboardButton(text=status,    callback_data=f"toggle_plan_{pid}_{sid}"),
+            InlineKeyboardButton(text="🗑",      callback_data=f"delete_plan_{pid}_{sid}"),
         ])
-    buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_plans")])
+    buttons.append([InlineKeyboardButton(text="➕ پلن جدید", callback_data="add_plan")])
+    buttons.append([InlineKeyboardButton(text="🔙 بازگشت",   callback_data="admin_plans")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def plan_settings_keyboard(plan_id: int, server_id: int, is_active: bool):
     toggle_text = "❌ غیرفعال کردن" if is_active else "✅ فعال کردن"
+    pid, sid = plan_id, server_id
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=toggle_text,     callback_data=f"toggle_plan_settings_{plan_id}_{server_id}")],
-        [InlineKeyboardButton(text="🗑 حذف پلن",   callback_data=f"delete_plan_{plan_id}_{server_id}")],
-        [InlineKeyboardButton(text="🔙 بازگشت",    callback_data=f"view_plans_{server_id}")],
+        [InlineKeyboardButton(text="💰 ویرایش قیمت",        callback_data=f"edit_plan_price_{pid}_{sid}")],
+        [
+            InlineKeyboardButton(text="📅 ویرایش روز",      callback_data=f"edit_plan_duration_{pid}_{sid}"),
+            InlineKeyboardButton(text="📊 ویرایش حجم",      callback_data=f"edit_plan_traffic_{pid}_{sid}"),
+        ],
+        [
+            InlineKeyboardButton(text=toggle_text,           callback_data=f"toggle_plan_settings_{pid}_{sid}"),
+            InlineKeyboardButton(text="🗑 حذف پلن",         callback_data=f"delete_plan_{pid}_{sid}"),
+        ],
+        [InlineKeyboardButton(text="🔙 بازگشت",             callback_data=f"view_plans_{sid}")],
     ])
 
 def confirm_delete_plan_keyboard(plan_id: int, server_id: int):
@@ -203,11 +216,13 @@ def user_plans_keyboard(plans, server_id, multiple_servers: bool = False, show_p
     buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data=back_target)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def proforma_keyboard(plan_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 پرداخت", callback_data=f"pay_{plan_id}")],
-        [InlineKeyboardButton(text="❌ انصراف",  callback_data="user_main")],
-    ])
+def proforma_keyboard(plan_id, has_balance: bool = False):
+    buttons = []
+    if has_balance:
+        buttons.append([InlineKeyboardButton(text="💎 پرداخت با کیف پول", callback_data=f"pay_wallet_{plan_id}")])
+    buttons.append([InlineKeyboardButton(text="💳 پرداخت کارت به کارت", callback_data=f"pay_{plan_id}")])
+    buttons.append([InlineKeyboardButton(text="❌ انصراف", callback_data="user_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def payment_info_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[

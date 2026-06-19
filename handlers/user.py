@@ -85,7 +85,7 @@ def _service_text(order, live=None) -> str:
 
 def register_user_handlers(dp):
 
-    @dp.callback_query(F.data.in_({"free_test", "support", "tutorial", "referral"}))
+    @dp.callback_query(F.data.in_({"free_test", "support", "tutorial", "referral", "language"}))
     async def coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
 
