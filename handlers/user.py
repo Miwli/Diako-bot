@@ -83,6 +83,31 @@ def _service_text(order, live=None) -> str:
     parts.append(f"🗓 خرید : {_to_jalali(order['created_at'])}")
     return "\n".join(parts)
 
+async def _send_main_menu(target, user: types.User):
+    from bot import is_admin
+    from keyboards import admin_main_menu
+    menu = admin_main_menu() if is_admin(user.id) else user_main_menu()
+    name = user.first_name or "کاربر"
+    caption = f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
+    banner = await get_setting("banner_file_id")
+
+    if isinstance(target, types.CallbackQuery):
+        try:
+            await target.message.delete()
+        except Exception:
+            pass
+        msg = target.message
+        if banner:
+            await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+        else:
+            await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
+        await target.answer()
+    else:
+        if banner:
+            await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
+        else:
+            await target.answer(caption, reply_markup=menu, parse_mode="HTML")
+
 def register_user_handlers(dp):
 
     @dp.callback_query(F.data.in_({"free_test", "support", "tutorial", "referral", "language"}))
@@ -254,31 +279,6 @@ def register_user_handlers(dp):
         server_id = int(callback.data.replace("user_server_", ""))
         await show_plans(callback, server_id, multiple_servers=True)
         await callback.answer()
-
-    async def _send_main_menu(target, user: types.User):
-        from bot import is_admin
-        from keyboards import admin_main_menu
-        menu = admin_main_menu() if is_admin(user.id) else user_main_menu()
-        name = user.first_name or "کاربر"
-        caption = f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
-        banner = await get_setting("banner_file_id")
-
-        if isinstance(target, types.CallbackQuery):
-            try:
-                await target.message.delete()
-            except Exception:
-                pass
-            msg = target.message
-            if banner:
-                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
-            else:
-                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
-            await target.answer()
-        else:
-            if banner:
-                await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML")
-            else:
-                await target.answer(caption, reply_markup=menu, parse_mode="HTML")
 
     @dp.callback_query(F.data == "user_main")
     async def user_main(callback: types.CallbackQuery, state: FSMContext):
