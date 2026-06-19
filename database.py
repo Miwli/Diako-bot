@@ -222,8 +222,12 @@ async def toggle_plan_status(plan_id: int):
         )
         await db.commit()
 
+_ALLOWED_PLAN_FIELDS = {"price", "duration", "traffic"}
+
 async def update_plan_field(plan_id: int, field: str, value: int):
     """ویرایش یک فیلد از پلن"""
+    if field not in _ALLOWED_PLAN_FIELDS:
+        raise ValueError(f"فیلد مجاز نیست: {field}")
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(f"UPDATE plans SET {field} = ? WHERE id = ?", (value, plan_id))
         await db.commit()
