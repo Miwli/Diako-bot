@@ -29,3 +29,8 @@ class SetCardInfo(StatesGroup):
 class TopUp(StatesGroup):
     waiting_for_amount  = State()
     waiting_for_receipt = State()
+
+class EditPlan(StatesGroup):
+    waiting_for_price    = State()
+    waiting_for_duration = State()
+    waiting_for_traffic  = State()
