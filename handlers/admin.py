@@ -49,6 +49,13 @@ def register_admin_handlers(dp):
         await _edit_or_replace(callback, "⚙️ پنل ادمین", admin_panel_menu())
         await callback.answer()
 
+    @dp.callback_query(F.data.in_({
+        "admin_users", "admin_discount", "admin_free_test",
+        "admin_referral", "admin_support", "admin_broadcast", "admin_stats"
+    }))
+    async def admin_coming_soon(callback: types.CallbackQuery):
+        await callback.answer("🔜 به زودی...", show_alert=True)
+
     @dp.callback_query(F.data == "back_to_start")
     async def back_to_start(callback: types.CallbackQuery):
         await _edit_or_replace(callback, "🏠 منوی اصلی", admin_main_menu())

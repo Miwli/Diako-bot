@@ -29,10 +29,17 @@ def admin_main_menu():
 
 def admin_panel_menu():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖥 مدیریت سرورها", callback_data="admin_servers")],
-        [InlineKeyboardButton(text="📦 پلن‌ها",         callback_data="admin_plans")],
-        [InlineKeyboardButton(text="💰 مدیریت مالی",   callback_data="admin_finance")],
-        [InlineKeyboardButton(text="🔙 بازگشت",        callback_data="back_to_start")],
+        [InlineKeyboardButton(text="🖥 مدیریت سرورها",          callback_data="admin_servers")],
+        [InlineKeyboardButton(text="📦 پلن‌ها",                  callback_data="admin_plans")],
+        [InlineKeyboardButton(text="💰 مدیریت مالی",            callback_data="admin_finance")],
+        [InlineKeyboardButton(text="👥 مدیریت کاربران",         callback_data="admin_users")],
+        [InlineKeyboardButton(text="🎟 کدهای تخفیف",            callback_data="admin_discount")],
+        [InlineKeyboardButton(text="🎁 تنظیمات تست رایگان",     callback_data="admin_free_test")],
+        [InlineKeyboardButton(text="💰 تنظیمات دعوت دوستان",   callback_data="admin_referral")],
+        [InlineKeyboardButton(text="🎧 تنظیمات پشتیبانی",       callback_data="admin_support")],
+        [InlineKeyboardButton(text="📢 پیام همگانی",             callback_data="admin_broadcast")],
+        [InlineKeyboardButton(text="📊 آمار و گزارش",           callback_data="admin_stats")],
+        [InlineKeyboardButton(text="🔙 بازگشت",                 callback_data="back_to_start")],
     ])
     return keyboard
 
