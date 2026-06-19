@@ -36,13 +36,13 @@ def register_admin_handlers(dp):
         else:
             await message.answer("سلام! 👋 به bping خوش اومدی 🚀", reply_markup=user_main_menu())
 
-    async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup):
+    async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
         """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
         try:
-            await callback.message.edit_text(text, reply_markup=markup)
+            await callback.message.edit_text(text, reply_markup=markup, parse_mode=parse_mode)
         except TelegramBadRequest:
             await callback.message.delete()
-            await callback.message.answer(text, reply_markup=markup)
+            await callback.message.answer(text, reply_markup=markup, parse_mode=parse_mode)
 
     @dp.callback_query(F.data == "admin_panel")
     async def admin_panel(callback: types.CallbackQuery):
