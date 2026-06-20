@@ -83,3 +83,7 @@ class AdminUserManagement(StatesGroup):
     waiting_for_ban_reason    = State()
     waiting_for_direct_msg    = State()
 
+class Broadcast(StatesGroup):
+    waiting_for_content = State()
+    waiting_for_confirm = State()
+

@@ -13,6 +13,7 @@ from handlers.support import register_support_handlers
 from handlers.tutorial import register_tutorial_handlers
 from handlers.referral import register_referral_handlers
 from handlers.admin_users import register_admin_users_handlers
+from handlers.broadcast import register_broadcast_handlers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,6 +40,7 @@ register_support_handlers(dp)
 register_tutorial_handlers(dp)
 register_referral_handlers(dp)
 register_admin_users_handlers(dp)
+register_broadcast_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
 

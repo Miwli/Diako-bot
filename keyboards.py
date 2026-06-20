@@ -544,6 +544,25 @@ def user_referral_keyboard(ref_link: str):
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])
 
+# ─── کیبوردهای پیام همگانی ────────────────────
+
+def admin_broadcast_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 همه کاربران",             callback_data="broadcast_target_all")],
+        [InlineKeyboardButton(text="✅ کاربران با سرویس فعال",   callback_data="broadcast_target_active")],
+        [InlineKeyboardButton(text="🔙 بازگشت",                  callback_data="admin_panel")],
+    ])
+
+def admin_broadcast_confirm_keyboard(count: int, target: str):
+    label = "همه کاربران" if target == "all" else "کاربران با سرویس فعال"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"✅ ارسال به {count:,} {label}",
+            callback_data="broadcast_confirm"
+        )],
+        [InlineKeyboardButton(text="❌ انصراف", callback_data="broadcast_cancel")],
+    ])
+
 # ─── کیبوردهای مدیریت کاربران ─────────────────
 
 def admin_users_menu():

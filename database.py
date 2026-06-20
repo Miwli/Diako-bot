@@ -972,3 +972,22 @@ async def get_user_order_counts(user_id: int) -> dict:
         )
         rows = await cur.fetchall()
         return {row[0]: row[1] for row in rows}
+
+# ─── توابع پیام همگانی ────────────────────────
+
+async def get_all_user_ids() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT user_id FROM users WHERE is_banned = 0 OR is_banned IS NULL"
+        )
+        return [row[0] for row in await cur.fetchall()]
+
+async def get_active_service_user_ids() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            """SELECT DISTINCT o.user_id FROM orders o
+               JOIN users u ON o.user_id = u.user_id
+               WHERE o.status = 'approved'
+                 AND (u.is_banned = 0 OR u.is_banned IS NULL)"""
+        )
+        return [row[0] for row in await cur.fetchall()]
