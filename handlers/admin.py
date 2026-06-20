@@ -54,7 +54,7 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data.in_({
         "admin_users", "admin_discount",
-        "admin_referral", "admin_support", "admin_broadcast", "admin_stats"
+        "admin_referral", "admin_broadcast", "admin_stats"
     }))
     async def admin_coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
@@ -284,7 +284,13 @@ def register_admin_handlers(dp):
     @dp.callback_query(F.data == "admin_banner_upload")
     async def admin_banner_upload(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(GeneralSettings.waiting_for_banner)
-        await callback.message.edit_text("🖼 عکس بنر را ارسال کنید:")
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        await callback.message.edit_text(
+            "🖼 عکس بنر را ارسال کنید:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_banner_settings")]
+            ])
+        )
         await callback.answer()
 
     @dp.message(GeneralSettings.waiting_for_banner, F.photo)
@@ -293,6 +299,14 @@ def register_admin_handlers(dp):
         await set_setting("banner_file_id", file_id)
         await state.clear()
         await message.answer("✅ بنر ذخیره شد.", reply_markup=admin_banner_settings_menu(has_banner=True))
+
+    @dp.callback_query(F.data == "admin_banner_settings", GeneralSettings.waiting_for_banner)
+    async def admin_banner_upload_cancel(callback: types.CallbackQuery, state: FSMContext):
+        await state.clear()
+        banner = await get_setting("banner_file_id")
+        status = "✅ بنر فعال است." if banner else "❌ بنر تنظیم نشده."
+        await _edit_or_replace(callback, f"🖼 تنظیمات بنر\n\n{status}", admin_banner_settings_menu(has_banner=bool(banner)))
+        await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_delete")
     async def admin_banner_delete(callback: types.CallbackQuery):
@@ -307,22 +321,45 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data == "admin_banner_caption")
     async def admin_banner_caption_start(callback: types.CallbackQuery, state: FSMContext):
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         current = await get_setting("banner_caption") or ""
         text = (
             "✏️ متن فعلی بنر:\n"
-            f"<code>{current or '(پیش‌فرض)'}</code>\n\n"
+            f"<blockquote>{current or '(پیش‌فرض)'}</blockquote>\n\n"
             "متن جدید را ارسال کنید.\n"
-            "می‌توانید از <code>{name}</code> برای نام کاربر استفاده کنید."
+            "از <code>{name}</code> برای نام کاربر استفاده کنید.\n"
+            "<i>ایموجی پرمیوم هم پشتیبانی می‌شه.</i>"
         )
         await state.set_state(GeneralSettings.waiting_for_caption)
-        await callback.message.edit_text(text, parse_mode="HTML")
+        await callback.message.edit_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_text_settings")]
+            ])
+        )
         await callback.answer()
 
     @dp.message(GeneralSettings.waiting_for_caption, F.text)
     async def admin_banner_caption_save(message: types.Message, state: FSMContext):
-        await set_setting("banner_caption", message.text.strip())
+        import json as _json
+        text = message.text
+        entities = message.entities or []
+        has_premium = any(e.type == "custom_emoji" for e in entities)
+        await set_setting("banner_caption", text)
+        if entities:
+            await set_setting("banner_caption_entities", _json.dumps([e.model_dump() for e in entities]))
+        else:
+            await set_setting("banner_caption_entities", "")
         await state.clear()
-        await message.answer("✅ متن بنر ذخیره شد.", reply_markup=admin_text_settings_menu())
+        note = " (با ایموجی پرمیوم)" if has_premium else ""
+        await message.answer(f"✅ متن بنر{note} ذخیره شد.", reply_markup=admin_text_settings_menu())
+
+    @dp.callback_query(F.data == "admin_text_settings", GeneralSettings.waiting_for_caption)
+    async def admin_banner_caption_cancel(callback: types.CallbackQuery, state: FSMContext):
+        await state.clear()
+        await _edit_or_replace(callback, "✏️ تنظیمات متن", admin_text_settings_menu())
+        await callback.answer()
 
     @dp.callback_query(F.data == "admin_build_text")
     async def admin_build_text_start(callback: types.CallbackQuery, state: FSMContext):

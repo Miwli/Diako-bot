@@ -47,3 +47,11 @@ class FreeTestSettings(StatesGroup):
     waiting_for_server_duration = State()
     waiting_for_server_traffic  = State()
 
+class Support(StatesGroup):
+    waiting_for_first_message = State()
+    in_conversation           = State()
+
+class AdminSupportSettings(StatesGroup):
+    waiting_for_group_id   = State()
+    waiting_for_ticket_msg = State()
+

@@ -111,6 +111,71 @@ async def init_db():
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS tickets (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL,
+                topic_id   INTEGER,
+                group_id   INTEGER,
+                status     TEXT DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+
+# ─── توابع تیکت ──────────────────────────────
+
+async def create_ticket(user_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO tickets (user_id) VALUES (?)", (user_id,)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_ticket(ticket_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,))
+        return await cursor.fetchone()
+
+async def get_ticket_by_topic(topic_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM tickets WHERE topic_id = ?", (topic_id,))
+        return await cursor.fetchone()
+
+async def get_user_open_ticket(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM tickets WHERE user_id = ? AND status = 'open' ORDER BY created_at DESC LIMIT 1",
+            (user_id,)
+        )
+        return await cursor.fetchone()
+
+async def get_user_tickets(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM tickets WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,)
+        )
+        return await cursor.fetchall()
+
+async def set_ticket_topic(ticket_id: int, topic_id: int, group_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE tickets SET topic_id = ?, group_id = ? WHERE id = ?",
+            (topic_id, group_id, ticket_id)
+        )
+        await db.commit()
+
+async def close_ticket(ticket_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE tickets SET status = 'closed' WHERE id = ?", (ticket_id,)
+        )
         await db.commit()
 
 # ─── توابع سرورها ─────────────────────────────

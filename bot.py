@@ -9,6 +9,7 @@ from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
 from handlers.user import register_user_handlers
 from handlers.finance import register_finance_handlers
+from handlers.support import register_support_handlers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,6 +32,7 @@ def is_admin(user_id: int) -> bool:
 register_admin_handlers(dp)
 register_server_handlers(dp)
 register_plan_handlers(dp)
+register_support_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
 

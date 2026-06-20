@@ -387,3 +387,34 @@ def after_order_keyboard():
             InlineKeyboardButton(text="🏠 منوی اصلی", callback_data="back_to_start"),
         ],
     ])
+
+def support_menu_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📨 تیکت جدید",    callback_data="new_ticket")],
+        [InlineKeyboardButton(text="📋 تیکت‌های من",  callback_data="my_tickets")],
+        [InlineKeyboardButton(text="🔙 بازگشت",       callback_data="user_main")],
+    ])
+
+def ticket_keyboard(ticket_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ بستن تیکت",      callback_data=f"close_ticket_{ticket_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت به منو", callback_data="user_main")],
+    ])
+
+def my_tickets_keyboard(tickets):
+    rows = []
+    for t in tickets:
+        icon = "🟢" if t["status"] == "open" else "🔴"
+        rows.append([InlineKeyboardButton(
+            text=f"{icon} تیکت #{t['id']}",
+            callback_data=f"view_ticket_{t['id']}"
+        )])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="support")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_support_settings_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🆔 تنظیم آیدی گروه",   callback_data="admin_support_set_group")],
+        [InlineKeyboardButton(text="✏️ ویرایش متن تیکت",   callback_data="admin_support_edit_msg")],
+        [InlineKeyboardButton(text="🔙 بازگشت",             callback_data="admin_panel")],
+    ])
