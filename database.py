@@ -87,6 +87,7 @@ async def init_db():
             "referral_code":  "TEXT",
             "free_test_uses": "INTEGER DEFAULT 0",
             "referral_by":    "TEXT",
+            "is_banned":      "INTEGER DEFAULT 0",
         }.items():
             try:
                 await db.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
@@ -876,3 +877,98 @@ async def get_referral_stats(referrer_id: int) -> dict:
         )
         row = await cur.fetchone()
         return {"count": row["count"], "total": row["total"]}
+
+# ─── توابع مدیریت کاربران (ادمین) ─────────────
+
+_USERS_PER_PAGE = 8
+
+async def get_users_count(filter_type: str = "newest") -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        if filter_type == "banned":
+            cur = await db.execute("SELECT COUNT(*) FROM users WHERE is_banned = 1")
+        else:
+            cur = await db.execute("SELECT COUNT(*) FROM users")
+        row = await cur.fetchone()
+        return row[0]
+
+async def get_users_paginated(page: int, filter_type: str = "newest"):
+    offset = page * _USERS_PER_PAGE
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        if filter_type == "topbuyers":
+            cur = await db.execute(
+                """SELECT u.*, COUNT(o.id) as order_count
+                   FROM users u
+                   LEFT JOIN orders o ON u.user_id = o.user_id AND o.status = 'approved'
+                   GROUP BY u.user_id
+                   ORDER BY order_count DESC LIMIT ? OFFSET ?""",
+                (_USERS_PER_PAGE, offset)
+            )
+        elif filter_type == "banned":
+            cur = await db.execute(
+                "SELECT * FROM users WHERE is_banned = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (_USERS_PER_PAGE, offset)
+            )
+        else:
+            cur = await db.execute(
+                "SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (_USERS_PER_PAGE, offset)
+            )
+        return await cur.fetchall()
+
+async def search_users(query: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        if query.lstrip('-').isdigit():
+            cur = await db.execute("SELECT * FROM users WHERE user_id = ?", (int(query),))
+            rows = await cur.fetchall()
+            if rows:
+                return rows
+        username = query.lstrip('@')
+        cur = await db.execute(
+            "SELECT * FROM users WHERE username LIKE ? OR first_name LIKE ? LIMIT 20",
+            (f"%{username}%", f"%{query}%")
+        )
+        return await cur.fetchall()
+
+async def ban_user(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET is_banned = 1 WHERE user_id = ?", (user_id,))
+        await db.commit()
+
+async def unban_user(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET is_banned = 0 WHERE user_id = ?", (user_id,))
+        await db.commit()
+
+async def admin_adjust_balance(user_id: int, delta: int, description: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        if delta >= 0:
+            await db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (delta, user_id))
+        else:
+            await db.execute("UPDATE users SET balance = MAX(0, balance + ?) WHERE user_id = ?", (delta, user_id))
+        tx_type = "admin_credit" if delta >= 0 else "admin_deduct"
+        await db.execute(
+            "INSERT INTO transactions (user_id, amount, type, description) VALUES (?, ?, ?, ?)",
+            (user_id, abs(delta), tx_type, description)
+        )
+        await db.commit()
+
+async def get_user_ticket_counts(user_id: int) -> tuple:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT status, COUNT(*) FROM tickets WHERE user_id = ? GROUP BY status",
+            (user_id,)
+        )
+        rows = await cur.fetchall()
+        counts = {row[0]: row[1] for row in rows}
+        return counts.get("open", 0), counts.get("closed", 0)
+
+async def get_user_order_counts(user_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT status, COUNT(*) FROM orders WHERE user_id = ? GROUP BY status",
+            (user_id,)
+        )
+        rows = await cur.fetchall()
+        return {row[0]: row[1] for row in rows}

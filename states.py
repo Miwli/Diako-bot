@@ -76,3 +76,10 @@ class ReferralSettings(StatesGroup):
     waiting_for_percent_value  = State()
     waiting_for_discount_value = State()
 
+class AdminUserManagement(StatesGroup):
+    waiting_for_search_query  = State()
+    waiting_for_add_amount    = State()
+    waiting_for_deduct_amount = State()
+    waiting_for_ban_reason    = State()
+    waiting_for_direct_msg    = State()
+

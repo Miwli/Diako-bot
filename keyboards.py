@@ -543,3 +543,48 @@ def user_referral_keyboard(ref_link: str):
         [InlineKeyboardButton(text="📋 کپی لینک دعوت", copy_text=CopyTextButton(text=ref_link))],
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])
+
+# ─── کیبوردهای مدیریت کاربران ─────────────────
+
+def admin_users_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔍 جستجوی کاربر",      callback_data="admin_users_search")],
+        [InlineKeyboardButton(text="🕐 جدیدترین‌ها",        callback_data="admin_ul_newest_0")],
+        [InlineKeyboardButton(text="🏆 بیشترین خرید",       callback_data="admin_ul_topbuyers_0")],
+        [InlineKeyboardButton(text="🚫 کاربران بن‌شده",     callback_data="admin_ul_banned_0")],
+        [InlineKeyboardButton(text="🔙 بازگشت",             callback_data="admin_panel")],
+    ])
+
+def admin_user_list_keyboard(users, page: int, filter_type: str, total: int):
+    per_page = 8
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    rows = []
+    for u in users:
+        mark = "🚫 " if u["is_banned"] else ""
+        name = u["first_name"] or ""
+        uname = f" (@{u['username']})" if u["username"] else ""
+        rows.append([InlineKeyboardButton(
+            text=f"{mark}{name}{uname}",
+            callback_data=f"admin_up_{u['user_id']}"
+        )])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀️ قبلی", callback_data=f"admin_ul_{filter_type}_{page-1}"))
+    nav.append(InlineKeyboardButton(text=f"📄 {page+1}/{total_pages}", callback_data="noop"))
+    if (page + 1) * per_page < total:
+        nav.append(InlineKeyboardButton(text="بعدی ▶️", callback_data=f"admin_ul_{filter_type}_{page+1}"))
+    rows.append(nav)
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_users")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_user_profile_keyboard(user_id: int, is_banned: bool):
+    ban_btn = ("✅ آنبن کاربر", f"admin_ua_unban_{user_id}") if is_banned else ("🚫 بن کردن", f"admin_ua_ban_{user_id}")
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ افزودن موجودی",    callback_data=f"admin_ua_addbal_{user_id}"),
+         InlineKeyboardButton(text="➖ کسر موجودی",       callback_data=f"admin_ua_dedbal_{user_id}")],
+        [InlineKeyboardButton(text=ban_btn[0],            callback_data=ban_btn[1]),
+         InlineKeyboardButton(text="📨 ارسال پیام",       callback_data=f"admin_ua_msg_{user_id}")],
+        [InlineKeyboardButton(text="🎁 اعطای تست رایگان", callback_data=f"admin_ua_freetest_{user_id}"),
+         InlineKeyboardButton(text="📋 سرویس‌ها",         callback_data=f"admin_ua_services_{user_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت",           callback_data="admin_users")],
+    ])

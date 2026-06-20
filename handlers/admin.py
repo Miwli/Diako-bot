@@ -102,6 +102,12 @@ def register_admin_handlers(dp):
 
         await get_or_create_user(u.id, u.first_name, u.username)
 
+        from database import get_user as _get_user
+        _u = await _get_user(u.id)
+        if _u and _u["is_banned"] and not is_admin(u.id):
+            await message.answer("⛔️ دسترسی شما به ربات محدود شده است.")
+            return
+
         args = message.text.split(maxsplit=1)
         if len(args) > 1 and args[1].startswith("ref_"):
             ref_code = args[1][4:]
@@ -135,7 +141,7 @@ def register_admin_handlers(dp):
         await callback.answer()
 
     @dp.callback_query(F.data.in_({
-        "admin_users", "admin_discount",
+        "admin_discount",
         "admin_broadcast", "admin_stats"
     }))
     async def admin_coming_soon(callback: types.CallbackQuery):
