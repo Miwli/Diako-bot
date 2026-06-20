@@ -544,6 +544,14 @@ def user_referral_keyboard(ref_link: str):
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])
 
+# ─── کیبوردهای آمار ───────────────────────────
+
+def admin_stats_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 بروزرسانی", callback_data="admin_stats")],
+        [InlineKeyboardButton(text="🔙 بازگشت",    callback_data="admin_panel")],
+    ])
+
 # ─── کیبوردهای پیام همگانی ────────────────────
 
 def admin_broadcast_menu():

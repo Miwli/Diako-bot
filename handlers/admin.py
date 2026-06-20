@@ -142,7 +142,6 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data.in_({
         "admin_discount",
-        "admin_stats"
     }))
     async def admin_coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)

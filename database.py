@@ -991,3 +991,66 @@ async def get_active_service_user_ids() -> list:
                  AND (u.is_banned = 0 OR u.is_banned IS NULL)"""
         )
         return [row[0] for row in await cur.fetchall()]
+
+# ─── آمار ────────────────────────────────────────
+
+_IR = "+3 hours', '+30 minutes"  # Iran time offset برای SQLite
+
+async def get_admin_stats() -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+
+        def q(sql, *a): return db.execute(sql, a)
+
+        async def one(sql, *a):
+            cur = await db.execute(sql, a)
+            return (await cur.fetchone())[0]
+
+        total_users   = await one("SELECT COUNT(*) FROM users")
+        users_today   = await one(f"SELECT COUNT(*) FROM users WHERE date(created_at, '{_IR}') = date('now', '{_IR}')")
+        users_week    = await one(f"SELECT COUNT(*) FROM users WHERE created_at >= datetime('now', '-7 days')")
+        users_month   = await one(f"SELECT COUNT(*) FROM users WHERE strftime('%Y-%m', created_at, '{_IR}') = strftime('%Y-%m', 'now', '{_IR}')")
+        banned_users  = await one("SELECT COUNT(*) FROM users WHERE is_banned = 1")
+
+        total_orders   = await one("SELECT COUNT(*) FROM orders WHERE status = 'approved' AND (order_type = 'purchase' OR order_type IS NULL)")
+        pending_orders = await one("SELECT COUNT(*) FROM orders WHERE status = 'pending'")
+        free_tests     = await one("SELECT COUNT(*) FROM orders WHERE status = 'approved' AND order_type = 'free_test'")
+
+        rev_total = await one(
+            "SELECT COALESCE(SUM(p.price),0) FROM orders o LEFT JOIN plans p ON o.plan_id=p.id "
+            "WHERE o.status='approved' AND (o.order_type='purchase' OR o.order_type IS NULL)"
+        )
+        rev_month = await one(
+            f"SELECT COALESCE(SUM(p.price),0) FROM orders o LEFT JOIN plans p ON o.plan_id=p.id "
+            f"WHERE o.status='approved' AND (o.order_type='purchase' OR o.order_type IS NULL) "
+            f"AND strftime('%Y-%m', o.created_at, '{_IR}') = strftime('%Y-%m', 'now', '{_IR}')"
+        )
+        rev_today = await one(
+            f"SELECT COALESCE(SUM(p.price),0) FROM orders o LEFT JOIN plans p ON o.plan_id=p.id "
+            f"WHERE o.status='approved' AND (o.order_type='purchase' OR o.order_type IS NULL) "
+            f"AND date(o.created_at, '{_IR}') = date('now', '{_IR}')"
+        )
+
+        total_wallet   = await one("SELECT COALESCE(SUM(balance),0) FROM users WHERE balance > 0")
+        total_referrals= await one("SELECT COUNT(*) FROM referrals")
+        open_tickets   = await one("SELECT COUNT(*) FROM tickets WHERE status='open'")
+        total_tickets  = await one("SELECT COUNT(*) FROM tickets")
+
+        cur = await db.execute(
+            "SELECT COALESCE(p.name,'—'), COUNT(*) as cnt FROM orders o "
+            "LEFT JOIN plans p ON o.plan_id=p.id "
+            "WHERE o.status='approved' AND (o.order_type='purchase' OR o.order_type IS NULL) "
+            "GROUP BY o.plan_id ORDER BY cnt DESC LIMIT 3"
+        )
+        top_plans = [(r[0], r[1]) for r in await cur.fetchall()]
+
+        return {
+            "total_users": total_users, "users_today": users_today,
+            "users_week": users_week, "users_month": users_month,
+            "banned_users": banned_users,
+            "total_orders": total_orders, "pending_orders": pending_orders,
+            "free_tests": free_tests,
+            "rev_total": rev_total, "rev_month": rev_month, "rev_today": rev_today,
+            "total_wallet": total_wallet, "total_referrals": total_referrals,
+            "open_tickets": open_tickets, "total_tickets": total_tickets,
+            "top_plans": top_plans,
+        }
