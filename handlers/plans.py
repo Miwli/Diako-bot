@@ -11,6 +11,12 @@ from database import (
     delete_plan, toggle_plan_status, get_setting, set_setting, update_plan_field
 )
 
+def _fmt_dur(val) -> str:
+    return "♾️ بی‌نهایت" if int(val) == 0 else f"{val} روز"
+
+def _fmt_trf(val) -> str:
+    return "♾️ بی‌نهایت" if int(val) == 0 else f"{val} گیگابایت"
+
 def register_plan_handlers(dp):
 
     @dp.callback_query(F.data == "admin_plans")
@@ -73,22 +79,24 @@ def register_plan_handlers(dp):
             await message.answer("❌ قیمت باید عدد باشه! دوباره بفرست:")
             return
         await state.update_data(price=int(message.text))
-        await message.answer("📅 مدت رو بفرست (روز):", reply_markup=cancel_keyboard())
+        await message.answer("📅 مدت رو بفرست (روز):\n<i>برای بی‌نهایت عدد 0 وارد کن</i>", reply_markup=cancel_keyboard(), parse_mode="HTML")
         await state.set_state(AddPlan.waiting_for_duration)
 
     @dp.message(AddPlan.waiting_for_duration)
     async def add_plan_duration(message: types.Message, state: FSMContext):
-        if not message.text.isdigit():
-            await message.answer("❌ مدت باید عدد باشه! دوباره بفرست:")
+        raw = message.text.strip()
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer("❌ عدد صحیح وارد کن. مثال: 30 یا 0 برای بی‌نهایت")
             return
-        await state.update_data(duration=int(message.text))
-        await message.answer("📊 حجم رو بفرست (گیگابایت):", reply_markup=cancel_keyboard())
+        await state.update_data(duration=int(raw))
+        await message.answer("📊 حجم رو بفرست (گیگابایت):\n<i>برای بی‌نهایت عدد 0 وارد کن</i>", reply_markup=cancel_keyboard(), parse_mode="HTML")
         await state.set_state(AddPlan.waiting_for_traffic)
 
     @dp.message(AddPlan.waiting_for_traffic)
     async def add_plan_traffic(message: types.Message, state: FSMContext):
-        if not message.text.isdigit():
-            await message.answer("❌ حجم باید عدد باشه! دوباره بفرست:")
+        raw = message.text.strip()
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer("❌ عدد صحیح وارد کن. مثال: 50 یا 0 برای بی‌نهایت")
             return
         data = await state.get_data()
         await add_plan(
@@ -96,7 +104,7 @@ def register_plan_handlers(dp):
             name=data["name"],
             price=data["price"],
             duration=data["duration"],
-            traffic=int(message.text)
+            traffic=int(raw)
         )
         await state.clear()
         await message.answer("✅ پلن با موفقیت اضافه شد!", reply_markup=admin_plans_menu())
@@ -150,8 +158,8 @@ def register_plan_handlers(dp):
             f"⚙️ <b>تنظیمات پلن</b>\n"
             f"{'─' * 24}\n"
             f"📦 <b>{plan['name']}</b>\n"
-            f"📊 حجم: {plan['traffic']} گیگابایت\n"
-            f"📅 مدت: {plan['duration']} روز\n"
+            f"📊 حجم: {_fmt_trf(plan['traffic'])}\n"
+            f"📅 مدت: {_fmt_dur(plan['duration'])}\n"
             f"💰 قیمت: {plan['price']:,} تومان\n"
             f"📌 وضعیت: {status}",
             reply_markup=plan_settings_keyboard(plan_id, server_id, plan["is_active"]),
@@ -202,8 +210,9 @@ def register_plan_handlers(dp):
         await state.update_data(plan_id=plan_id, server_id=server_id)
         await state.set_state(EditPlan.waiting_for_duration)
         await callback.message.edit_text(
-            f"📅 مدت فعلی پلن <b>{plan['name']}</b>: {plan['duration']} روز\n\n"
-            "مدت جدید را به <b>روز</b> وارد کنید:",
+            f"📅 مدت فعلی پلن <b>{plan['name']}</b>: {_fmt_dur(plan['duration'])}\n\n"
+            "مدت جدید را به <b>روز</b> وارد کنید:\n"
+            "<i>برای بی‌نهایت عدد 0 وارد کنید</i>",
             reply_markup=cancel_keyboard(),
             parse_mode="HTML"
         )
@@ -212,8 +221,8 @@ def register_plan_handlers(dp):
     @dp.message(EditPlan.waiting_for_duration)
     async def edit_plan_duration_save(message: types.Message, state: FSMContext):
         raw = message.text.strip()
-        if not raw.isdigit() or int(raw) < 1:
-            await message.answer("❌ مدت معتبر نیست. عدد صحیح مثبت وارد کنید.")
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer("❌ عدد صحیح وارد کنید. مثال: 30 یا 0 برای بی‌نهایت")
             return
         data = await state.get_data()
         await update_plan_field(data["plan_id"], "duration", int(raw))
@@ -235,8 +244,9 @@ def register_plan_handlers(dp):
         await state.update_data(plan_id=plan_id, server_id=server_id)
         await state.set_state(EditPlan.waiting_for_traffic)
         await callback.message.edit_text(
-            f"📊 حجم فعلی پلن <b>{plan['name']}</b>: {plan['traffic']} گیگابایت\n\n"
-            "حجم جدید را به <b>گیگابایت</b> وارد کنید:",
+            f"📊 حجم فعلی پلن <b>{plan['name']}</b>: {_fmt_trf(plan['traffic'])}\n\n"
+            "حجم جدید را به <b>گیگابایت</b> وارد کنید:\n"
+            "<i>برای بی‌نهایت عدد 0 وارد کنید</i>",
             reply_markup=cancel_keyboard(),
             parse_mode="HTML"
         )
@@ -245,8 +255,8 @@ def register_plan_handlers(dp):
     @dp.message(EditPlan.waiting_for_traffic)
     async def edit_plan_traffic_save(message: types.Message, state: FSMContext):
         raw = message.text.strip()
-        if not raw.isdigit() or int(raw) < 1:
-            await message.answer("❌ حجم معتبر نیست. عدد صحیح مثبت وارد کنید.")
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer("❌ عدد صحیح وارد کنید. مثال: 50 یا 0 برای بی‌نهایت")
             return
         data = await state.get_data()
         await update_plan_field(data["plan_id"], "traffic", int(raw))
@@ -284,8 +294,8 @@ def register_plan_handlers(dp):
             f"⚙️ <b>تنظیمات پلن</b>\n"
             f"{'─' * 24}\n"
             f"📦 <b>{plan['name']}</b>\n"
-            f"📊 حجم: {plan['traffic']} گیگابایت\n"
-            f"📅 مدت: {plan['duration']} روز\n"
+            f"📊 حجم: {_fmt_trf(plan['traffic'])}\n"
+            f"📅 مدت: {_fmt_dur(plan['duration'])}\n"
             f"💰 قیمت: {plan['price']:,} تومان\n"
             f"📌 وضعیت: {status}",
             reply_markup=plan_settings_keyboard(plan_id, server_id, plan["is_active"]),

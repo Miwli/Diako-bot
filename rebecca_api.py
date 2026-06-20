@@ -37,11 +37,13 @@ class RebeccaAPI:
                 data = await resp.json()
                 return data.get("services", [])
 
-    async def create_user(self, service_id: int, data_limit_gb: int, duration_days: int) -> dict:
-        """ساخت یوزر جدید با استفاده از service_id"""
+    async def create_user(self, service_id: int, data_limit_gb: float, duration_days: float = 0,
+                          duration_hours: float = 0) -> dict:
+        """ساخت یوزر — duration_days یا duration_hours (0 = بی‌نهایت) | data_limit_gb=0 = نامحدود"""
         username = self._random_username()
-        expire_ts = int(time.time()) + (duration_days * 86400)
-        data_limit_bytes = data_limit_gb * 1024 * 1024 * 1024
+        total_hours = duration_hours if duration_hours else duration_days * 24
+        expire_ts = 0 if total_hours == 0 else int(time.time()) + int(total_hours * 3600)
+        data_limit_bytes = 0 if data_limit_gb == 0 else int(data_limit_gb * 1024 * 1024 * 1024)
 
         payload = {
             "username": username,

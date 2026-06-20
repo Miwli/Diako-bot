@@ -55,6 +55,43 @@ def admin_general_menu():
         [InlineKeyboardButton(text="🔙 بازگشت",        callback_data="admin_panel")],
     ])
 
+def admin_free_test_menu(servers: list):
+    rows = [[InlineKeyboardButton(
+        text=f"⚙️ تنظیمات پیش‌فرض (همه سرورها)",
+        callback_data="admin_free_test_global"
+    )]]
+    for s in servers:
+        status = "✅" if s["free_test_enabled"] else "❌"
+        rows.append([InlineKeyboardButton(
+            text=f"{s['name']}  {status}",
+            callback_data=f"admin_free_test_server_{s['id']}"
+        )])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_free_test_global_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✏️ ویرایش مدت",    callback_data="admin_free_test_global_duration"),
+            InlineKeyboardButton(text="✏️ ویرایش حجم",    callback_data="admin_free_test_global_traffic"),
+        ],
+        [InlineKeyboardButton(text="🔢 تعداد مجاز دریافت", callback_data="admin_free_test_max_uses")],
+        [InlineKeyboardButton(text="📡 اعمال روی همه سرورها", callback_data="admin_free_test_apply_all")],
+        [InlineKeyboardButton(text="🔄 ریست همه کاربران",  callback_data="admin_free_test_reset_all")],
+        [InlineKeyboardButton(text="🔙 بازگشت",            callback_data="admin_free_test")],
+    ])
+
+def admin_free_test_server_menu(server_id: int, is_enabled: bool):
+    toggle_text = "❌ غیرفعال کردن" if is_enabled else "✅ فعال کردن"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=toggle_text, callback_data=f"admin_free_test_toggle_{server_id}")],
+        [
+            InlineKeyboardButton(text="✏️ ویرایش مدت",  callback_data=f"admin_free_test_duration_{server_id}"),
+            InlineKeyboardButton(text="✏️ ویرایش حجم",  callback_data=f"admin_free_test_traffic_{server_id}"),
+        ],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_free_test")],
+    ])
+
 def admin_banner_and_text_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🖼 تنظیمات بنر",  callback_data="admin_banner_settings")],
@@ -231,6 +268,22 @@ def card_settings_keyboard():
     ])
 
 # ─── کاربر ────────────────────────────────────
+
+def free_test_servers_keyboard(servers):
+    buttons = []
+    for s in servers:
+        buttons.append([InlineKeyboardButton(
+            text=f"🖥 {s['name']}",
+            callback_data=f"free_test_server_{s['id']}"
+        )])
+    buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def free_test_confirm_keyboard(server_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ دریافت تست رایگان", callback_data=f"free_test_confirm_{server_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت",            callback_data="user_main")],
+    ])
 
 def user_servers_keyboard(servers):
     buttons = []

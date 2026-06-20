@@ -15,10 +15,17 @@ async def init_db():
                 is_active   INTEGER DEFAULT 1
             )
         """)
-        # migration: اضافه کردن service_ids به جدول قدیمی (اگه وجود نداشت)
-        for col in ("service_id", "service_ids"):
+        # migration: اضافه کردن ستون‌های جدید به servers
+        server_migrations = {
+            "service_id":         "TEXT",
+            "service_ids":        "TEXT",
+            "free_test_enabled":  "INTEGER DEFAULT 0",
+            "free_test_duration": "INTEGER DEFAULT 1",
+            "free_test_traffic":  "INTEGER DEFAULT 1",
+        }
+        for col, col_type in server_migrations.items():
             try:
-                await db.execute(f"ALTER TABLE servers ADD COLUMN {col} TEXT")
+                await db.execute(f"ALTER TABLE servers ADD COLUMN {col} {col_type}")
                 await db.commit()
             except Exception:
                 pass
@@ -55,9 +62,14 @@ async def init_db():
                 FOREIGN KEY (plan_id) REFERENCES plans(id)
             )
         """)
-        for col in ("vpn_username", "subscription_url"):
+        for col, col_type in {
+            "vpn_username":       "TEXT",
+            "subscription_url":   "TEXT",
+            "order_type":         "TEXT DEFAULT 'purchase'",
+            "free_test_server_id":"INTEGER",
+        }.items():
             try:
-                await db.execute(f"ALTER TABLE orders ADD COLUMN {col} TEXT")
+                await db.execute(f"ALTER TABLE orders ADD COLUMN {col} {col_type}")
                 await db.commit()
             except Exception:
                 pass
@@ -71,11 +83,12 @@ async def init_db():
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        try:
-            await db.execute("ALTER TABLE users ADD COLUMN referral_code TEXT")
-            await db.commit()
-        except Exception:
-            pass
+        for col, col_type in {"referral_code": "TEXT", "free_test_uses": "INTEGER DEFAULT 0"}.items():
+            try:
+                await db.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
+                await db.commit()
+            except Exception:
+                pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS transactions (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,6 +184,51 @@ async def update_server_token(server_id: int, panel_token: str):
             "UPDATE servers SET panel_token = ? WHERE id = ?",
             (panel_token, server_id)
         )
+        await db.commit()
+
+async def update_server_free_test(server_id: int, enabled: int = None, duration: float = None, traffic: float = None):
+    """بروزرسانی تنظیمات تست رایگان یک سرور"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        if enabled is not None:
+            await db.execute("UPDATE servers SET free_test_enabled = ? WHERE id = ?", (enabled, server_id))
+        if duration is not None:
+            await db.execute("UPDATE servers SET free_test_duration = ? WHERE id = ?", (duration, server_id))
+        if traffic is not None:
+            await db.execute("UPDATE servers SET free_test_traffic = ? WHERE id = ?", (traffic, server_id))
+        await db.commit()
+
+async def apply_free_test_to_all(duration: float, traffic: float):
+    """اعمال تنظیمات تست رایگان روی همه سرورها"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE servers SET free_test_duration = ?, free_test_traffic = ?",
+            (duration, traffic)
+        )
+        await db.commit()
+
+async def increment_free_test_uses(user_id: int):
+    """یک واحد به تعداد دفعات استفاده از تست رایگان اضافه کن"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET free_test_uses = COALESCE(free_test_uses, 0) + 1 WHERE user_id = ?",
+            (user_id,)
+        )
+        await db.commit()
+
+async def get_free_test_uses(user_id: int) -> int:
+    """تعداد دفعاتی که کاربر تست گرفته"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT free_test_uses FROM users WHERE user_id = ?", (user_id,))
+        row = await cursor.fetchone()
+        return row[0] if row and row[0] is not None else 0
+
+async def reset_free_test_uses(user_id: int = None):
+    """ریست تعداد استفاده — اگه user_id داده نشه همه رو ریست می‌کنه"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        if user_id is not None:
+            await db.execute("UPDATE users SET free_test_uses = 0 WHERE user_id = ?", (user_id,))
+        else:
+            await db.execute("UPDATE users SET free_test_uses = 0")
         await db.commit()
 
 # ─── توابع پلن‌ها ──────────────────────────────
@@ -307,33 +365,58 @@ async def update_order_vpn_info(order_id: int, vpn_username: str, subscription_u
         )
         await db.commit()
 
+async def create_free_test_order(user_id: int, username: str, server_id: int) -> int:
+    """ساخت سفارش تست رایگان"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO orders (user_id, username, plan_id, receipt_file_id, order_type, free_test_server_id) "
+            "VALUES (?, ?, 0, 'free_test', 'free_test', ?)",
+            (user_id, username, server_id)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_free_test_servers():
+    """سرورهای دارای تست رایگان فعال"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM servers WHERE is_active = 1 AND free_test_enabled = 1"
+        )
+        return await cursor.fetchall()
+
+_SERVICE_SELECT = """
+    SELECT o.*,
+        COALESCE(p.name, '🎁 تست رایگان') as plan_name,
+        COALESCE(s1.name, s2.name)         as server_name,
+        COALESCE(s1.panel_url, s2.panel_url)     as panel_url,
+        COALESCE(s1.panel_token, s2.panel_token) as panel_token
+    FROM orders o
+    LEFT JOIN plans   p  ON o.plan_id = p.id
+    LEFT JOIN servers s1 ON p.server_id = s1.id
+    LEFT JOIN servers s2 ON o.free_test_server_id = s2.id
+"""
+
 async def get_user_services(user_id: int):
     """لیست سرویس‌های فعال یک کاربر"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute("""
-            SELECT orders.*, plans.name as plan_name,
-                   servers.name as server_name, servers.panel_url, servers.panel_token
-            FROM orders
-            JOIN plans ON orders.plan_id = plans.id
-            JOIN servers ON plans.server_id = servers.id
-            WHERE orders.user_id = ? AND orders.status = 'approved'
-            ORDER BY orders.created_at DESC
-        """, (user_id,))
+        cursor = await db.execute(
+            _SERVICE_SELECT +
+            "WHERE o.user_id = ? AND o.status = 'approved' ORDER BY o.created_at DESC",
+            (user_id,)
+        )
         return await cursor.fetchall()
 
 async def get_user_service(order_id: int, user_id: int):
     """گرفتن یک سرویس با تایید مالکیت"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute("""
-            SELECT orders.*, plans.name as plan_name,
-                   servers.name as server_name, servers.panel_url, servers.panel_token
-            FROM orders
-            JOIN plans ON orders.plan_id = plans.id
-            JOIN servers ON plans.server_id = servers.id
-            WHERE orders.id = ? AND orders.user_id = ? AND orders.status = 'approved'
-        """, (order_id, user_id))
+        cursor = await db.execute(
+            _SERVICE_SELECT +
+            "WHERE o.id = ? AND o.user_id = ? AND o.status = 'approved'",
+            (order_id, user_id)
+        )
         return await cursor.fetchone()
 
 async def update_order_status(order_id: int, status: str, rejection_reason: str = None):

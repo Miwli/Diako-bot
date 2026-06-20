@@ -7,14 +7,17 @@ from keyboards import (
     user_main_menu, user_servers_keyboard, user_services_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
     user_service_detail_keyboard, confirm_delete_service_keyboard,
-    wallet_keyboard, admin_topup_keyboard
+    wallet_keyboard, admin_topup_keyboard,
+    free_test_servers_keyboard, free_test_confirm_keyboard
 )
 from database import (
     get_servers, get_plans, get_plan, get_plan_with_server, get_setting, set_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user_wallet_stats, get_transactions,
     add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
-    create_top_up_request, get_top_up_request, update_top_up_status
+    create_top_up_request, get_top_up_request, update_top_up_status,
+    get_free_test_servers, create_free_test_order,
+    get_free_test_uses, increment_free_test_uses
 )
 from rebecca_api import RebeccaAPI
 
@@ -111,9 +114,156 @@ async def _send_main_menu(target, user: types.User):
 
 def register_user_handlers(dp):
 
-    @dp.callback_query(F.data.in_({"free_test", "support", "tutorial", "referral", "language"}))
+    @dp.callback_query(F.data.in_({"support", "tutorial", "referral", "language"}))
     async def coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
+
+    # ─── تست رایگان ──────────────────────────────
+
+    def _fmt_dur(val) -> str:
+        return "♾️ بی‌نهایت" if float(val or 0) == 0 else f"{val} ساعت"
+
+    def _fmt_trf(val) -> str:
+        return "♾️ بی‌نهایت" if float(val or 0) == 0 else f"{val} گیگابایت"
+
+    async def _check_free_test_eligibility(user_id: int):
+        """بررسی واجد شرایط بودن — (ok, reason)"""
+        max_uses = int(await get_setting("free_test_max_uses") or "1")
+        uses = await get_free_test_uses(user_id)
+        if max_uses != 0 and uses >= max_uses:
+            return False, f"شما قبلاً از تست رایگان استفاده کرده‌اید.\n({'بار' if max_uses == 1 else f'{max_uses} بار'} مجاز)"
+        return True, None
+
+    @dp.callback_query(F.data == "free_test")
+    async def free_test_start(callback: types.CallbackQuery):
+        u = callback.from_user
+        ok, reason = await _check_free_test_eligibility(u.id)
+        if not ok:
+            await callback.answer(f"❌ {reason}", show_alert=True)
+            return
+
+        servers = await get_free_test_servers()
+        if not servers:
+            await callback.answer("در حال حاضر تست رایگان در دسترس نیست.", show_alert=True)
+            return
+
+        if len(servers) == 1:
+            await _show_free_test_confirm(callback, servers[0])
+        else:
+            await _edit_or_replace(
+                callback,
+                "🎁 <b>تست رایگان</b>\n\nسرور مورد نظر را انتخاب کنید:",
+                free_test_servers_keyboard(servers)
+            )
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("free_test_server_"))
+    async def free_test_select_server(callback: types.CallbackQuery):
+        server_id = int(callback.data.replace("free_test_server_", ""))
+        ok, reason = await _check_free_test_eligibility(callback.from_user.id)
+        if not ok:
+            await callback.answer(f"❌ {reason}", show_alert=True)
+            return
+        from database import get_server
+        server = await get_server(server_id)
+        if not server or not server["free_test_enabled"]:
+            await callback.answer("این سرور تست رایگان ندارد.", show_alert=True)
+            return
+        await _show_free_test_confirm(callback, server)
+        await callback.answer()
+
+    async def _show_free_test_confirm(callback, server):
+        dur = _fmt_dur(server["free_test_duration"])
+        trf = _fmt_trf(server["free_test_traffic"])
+        text = (
+            f"🎁 <b>تست رایگان</b>\n"
+            f"{'─' * 24}\n"
+            f"🖥 سرور: <b>{server['name']}</b>\n"
+            f"⏱ مدت: <b>{dur}</b>\n"
+            f"📊 حجم: <b>{trf}</b>\n"
+            f"{'─' * 24}\n\n"
+            "با زدن دکمه زیر سرویس تست برات ساخته می‌شه:"
+        )
+        await _edit_or_replace(callback, text, free_test_confirm_keyboard(server["id"]))
+
+    @dp.callback_query(F.data.startswith("free_test_confirm_"))
+    async def free_test_confirm(callback: types.CallbackQuery):
+        from handlers.admin import _make_qr
+        from keyboards import subscription_approved_keyboard
+        import json
+
+        server_id = int(callback.data.replace("free_test_confirm_", ""))
+        u = callback.from_user
+
+        ok, reason = await _check_free_test_eligibility(u.id)
+        if not ok:
+            await callback.answer(f"❌ {reason}", show_alert=True)
+            return
+
+        from database import get_server
+        server = await get_server(server_id)
+        if not server or not server["free_test_enabled"] or not server["is_active"]:
+            await callback.answer("این سرور در دسترس نیست.", show_alert=True)
+            return
+
+        service_ids = json.loads(server["service_ids"] or "[]")
+        if not service_ids:
+            await callback.answer("سرویسی برای این سرور تنظیم نشده. با پشتیبانی تماس بگیرید.", show_alert=True)
+            return
+
+        await callback.message.edit_text("⏳ در حال ساخت سرویس تست...")
+
+        try:
+            api = RebeccaAPI(server["panel_url"], server["panel_token"])
+
+            live_services = await api.get_services()
+            live_ids = {s["id"] for s in live_services}
+            service_id = next((sid for sid in service_ids if sid in live_ids), None)
+            if service_id is None:
+                await callback.message.edit_text(
+                    "❌ خطا در ساخت سرویس. با پشتیبانی تماس بگیرید.",
+                    reply_markup=free_test_confirm_keyboard(server_id)
+                )
+                return
+
+            user_data = await api.create_user(
+                service_id=service_id,
+                data_limit_gb=float(server["free_test_traffic"] or 0),
+                duration_hours=float(server["free_test_duration"] or 0),
+            )
+            sub_path = user_data.get("subscription_url", "")
+            subscription_url = await api.get_subscription_url(sub_path)
+            username = user_data.get("username", "")
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در ساخت تست رایگان برای سرور #{server_id}: {e}")
+            await callback.message.edit_text(
+                f"❌ خطا در اتصال به پنل:\n<code>{e}</code>\n\nدوباره امتحان کنید.",
+                reply_markup=free_test_confirm_keyboard(server_id),
+                parse_mode="HTML"
+            )
+            return
+
+        await get_or_create_user(u.id, u.first_name, u.username)
+        order_id = await create_free_test_order(u.id, u.username or u.first_name, server_id)
+        await update_order_status(order_id, "approved")
+        await update_order_vpn_info(order_id, username, subscription_url)
+        await increment_free_test_uses(u.id)
+
+        qr_file = _make_qr(subscription_url)
+        await callback.message.delete()
+        await callback.message.answer_photo(
+            photo=qr_file,
+            caption=(
+                f"✅ <b>سرویس تست رایگان آماده‌ست!</b>\n\n"
+                f"🖥 سرور: {server['name']}\n\n"
+                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
+                "لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
+            ),
+            reply_markup=subscription_approved_keyboard(subscription_url),
+            parse_mode="HTML"
+        )
+        await callback.answer()
 
     # ─── پروفایل ──────────────────────────────────
 
@@ -334,6 +484,9 @@ def register_user_handlers(dp):
         order = await get_user_service(order_id, callback.from_user.id)
         if not order:
             await callback.answer("سرویس یافت نشد.", show_alert=True)
+            return
+        if order["order_type"] == "free_test":
+            await callback.answer("سرویس تست رایگان قابل تمدید نیست.", show_alert=True)
             return
         plan = await get_plan(order["plan_id"])
         if not plan:

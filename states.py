@@ -40,3 +40,10 @@ class GeneralSettings(StatesGroup):
     waiting_for_caption    = State()
     waiting_for_emoji_text = State()
 
+class FreeTestSettings(StatesGroup):
+    waiting_for_global_duration = State()
+    waiting_for_global_traffic  = State()
+    waiting_for_max_uses        = State()
+    waiting_for_server_duration = State()
+    waiting_for_server_traffic  = State()
+
