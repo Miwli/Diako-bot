@@ -37,6 +37,7 @@ def admin_panel_menu():
         [InlineKeyboardButton(text="🎁 تنظیمات تست رایگان",     callback_data="admin_free_test")],
         [InlineKeyboardButton(text="💰 تنظیمات دعوت دوستان",   callback_data="admin_referral")],
         [InlineKeyboardButton(text="🎧 تنظیمات پشتیبانی",       callback_data="admin_support")],
+        [InlineKeyboardButton(text="📚 مدیریت آموزش‌ها",        callback_data="admin_tutorials")],
         [InlineKeyboardButton(text="📢 پیام همگانی",             callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="📊 آمار و گزارش",           callback_data="admin_stats")],
         [InlineKeyboardButton(text="⚙️ تنظیمات عمومی",         callback_data="admin_general")],
@@ -417,4 +418,82 @@ def admin_support_settings_keyboard():
         [InlineKeyboardButton(text="🆔 تنظیم آیدی گروه",   callback_data="admin_support_set_group")],
         [InlineKeyboardButton(text="✏️ ویرایش متن تیکت",   callback_data="admin_support_edit_msg")],
         [InlineKeyboardButton(text="🔙 بازگشت",             callback_data="admin_panel")],
+    ])
+
+# ─── کیبوردهای آموزش (ادمین) ──────────────────
+
+def admin_tutorials_menu(tutorials: list):
+    rows = [[InlineKeyboardButton(text="➕ افزودن آموزش جدید", callback_data="tutorial_add")]]
+    for t in tutorials:
+        status = "✅" if t["is_active"] else "❌"
+        rows.append([InlineKeyboardButton(
+            text=f"{status} {t['title']}",
+            callback_data=f"tutorial_item_{t['id']}"
+        )])
+    rows.append([InlineKeyboardButton(text="📋 سوالات متداول", callback_data="admin_faqs")])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_tutorial_item_keyboard(tutorial_id: int, is_active: bool, is_first: bool, is_last: bool):
+    rows = [
+        [
+            InlineKeyboardButton(text="✏️ ویرایش عنوان",   callback_data=f"tutorial_edit_title_{tutorial_id}"),
+            InlineKeyboardButton(text="🔄 ویرایش محتوا",   callback_data=f"tutorial_edit_content_{tutorial_id}"),
+        ],
+        [
+            InlineKeyboardButton(text="⬆️" if not is_first else "·", callback_data=f"tutorial_move_up_{tutorial_id}"),
+            InlineKeyboardButton(text="✅ فعال" if is_active else "❌ غیرفعال", callback_data=f"tutorial_toggle_{tutorial_id}"),
+            InlineKeyboardButton(text="⬇️" if not is_last else "·", callback_data=f"tutorial_move_down_{tutorial_id}"),
+        ],
+        [InlineKeyboardButton(text="🗑 حذف", callback_data=f"tutorial_delete_{tutorial_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_tutorials")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_faqs_menu(faqs: list):
+    rows = [[InlineKeyboardButton(text="➕ افزودن سوال جدید", callback_data="faq_add")]]
+    for f in faqs:
+        status = "✅" if f["is_active"] else "❌"
+        rows.append([InlineKeyboardButton(
+            text=f"{status} {f['question']}",
+            callback_data=f"faq_item_{f['id']}"
+        )])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_tutorials")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_faq_item_keyboard(faq_id: int, is_active: bool):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✏️ ویرایش سوال",  callback_data=f"faq_edit_q_{faq_id}"),
+            InlineKeyboardButton(text="✏️ ویرایش جواب",  callback_data=f"faq_edit_a_{faq_id}"),
+        ],
+        [InlineKeyboardButton(
+            text="✅ فعال" if is_active else "❌ غیرفعال",
+            callback_data=f"faq_toggle_{faq_id}"
+        )],
+        [InlineKeyboardButton(text="🗑 حذف", callback_data=f"faq_delete_{faq_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_faqs")],
+    ])
+
+# ─── کیبوردهای آموزش (کاربر) ──────────────────
+
+def user_tutorials_keyboard(tutorials: list):
+    rows = [[InlineKeyboardButton(text=t["title"], callback_data=f"tutorial_view_{t['id']}")] for t in tutorials]
+    rows.append([InlineKeyboardButton(text="❓ سوالات متداول", callback_data="user_faqs")])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def user_faqs_keyboard(faqs: list):
+    rows = [[InlineKeyboardButton(text=f["question"], callback_data=f"faq_view_{f['id']}")] for f in faqs]
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="tutorial")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def back_to_tutorials_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="tutorial")]
+    ])
+
+def back_to_faqs_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_faqs")]
     ])

@@ -55,3 +55,19 @@ class AdminSupportSettings(StatesGroup):
     waiting_for_group_id   = State()
     waiting_for_ticket_msg = State()
 
+class AddTutorial(StatesGroup):
+    waiting_for_title   = State()
+    waiting_for_content = State()
+
+class EditTutorial(StatesGroup):
+    waiting_for_title   = State()
+    waiting_for_content = State()
+
+class AddFAQ(StatesGroup):
+    waiting_for_question = State()
+    waiting_for_answer   = State()
+
+class EditFAQ(StatesGroup):
+    waiting_for_question = State()
+    waiting_for_answer   = State()
+

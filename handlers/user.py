@@ -167,7 +167,7 @@ async def _send_main_menu(target, user: types.User):
 
 def register_user_handlers(dp):
 
-    @dp.callback_query(F.data.in_({"tutorial", "referral", "language"}))
+    @dp.callback_query(F.data.in_({"referral", "language"}))
     async def coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
 

@@ -121,6 +121,28 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS tutorials (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                title        TEXT NOT NULL,
+                content_type TEXT NOT NULL DEFAULT 'text',
+                file_id      TEXT,
+                caption      TEXT,
+                order_index  INTEGER DEFAULT 0,
+                is_active    INTEGER DEFAULT 1,
+                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS faqs (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                question    TEXT NOT NULL,
+                answer      TEXT NOT NULL,
+                order_index INTEGER DEFAULT 0,
+                is_active   INTEGER DEFAULT 1,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         await db.commit()
 
 # ─── توابع تیکت ──────────────────────────────
@@ -640,3 +662,112 @@ async def approve_top_up_atomic(request_id: int) -> bool:
         )
         await db.commit()
         return cursor.rowcount > 0
+
+# ─── توابع آموزش ─────────────────────────────
+
+async def get_tutorials(active_only: bool = False):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        q = "SELECT * FROM tutorials"
+        if active_only:
+            q += " WHERE is_active = 1"
+        q += " ORDER BY order_index, id"
+        cursor = await db.execute(q)
+        return await cursor.fetchall()
+
+async def get_tutorial(tutorial_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM tutorials WHERE id = ?", (tutorial_id,))
+        return await cursor.fetchone()
+
+async def create_tutorial(title: str, content_type: str, file_id: str | None, caption: str | None) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO tutorials (title, content_type, file_id, caption, order_index) "
+            "SELECT ?, ?, ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM tutorials",
+            (title, content_type, file_id, caption)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def update_tutorial(tutorial_id: int, title: str, content_type: str, file_id: str | None, caption: str | None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE tutorials SET title=?, content_type=?, file_id=?, caption=? WHERE id=?",
+            (title, content_type, file_id, caption, tutorial_id)
+        )
+        await db.commit()
+
+async def toggle_tutorial(tutorial_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE tutorials SET is_active = 1 - is_active WHERE id = ?", (tutorial_id,))
+        await db.commit()
+
+async def delete_tutorial(tutorial_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM tutorials WHERE id = ?", (tutorial_id,))
+        await db.commit()
+
+async def move_tutorial(tutorial_id: int, direction: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT order_index FROM tutorials WHERE id = ?", (tutorial_id,))
+        row = await cur.fetchone()
+        if not row:
+            return
+        idx = row["order_index"]
+        if direction == "up":
+            swap = await db.execute(
+                "SELECT id, order_index FROM tutorials WHERE order_index < ? ORDER BY order_index DESC LIMIT 1", (idx,))
+        else:
+            swap = await db.execute(
+                "SELECT id, order_index FROM tutorials WHERE order_index > ? ORDER BY order_index ASC LIMIT 1", (idx,))
+        other = await swap.fetchone()
+        if other:
+            await db.execute("UPDATE tutorials SET order_index=? WHERE id=?", (other["order_index"], tutorial_id))
+            await db.execute("UPDATE tutorials SET order_index=? WHERE id=?", (idx, other["id"]))
+            await db.commit()
+
+# ─── توابع FAQ ───────────────────────────────
+
+async def get_faqs(active_only: bool = False):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        q = "SELECT * FROM faqs"
+        if active_only:
+            q += " WHERE is_active = 1"
+        q += " ORDER BY order_index, id"
+        cursor = await db.execute(q)
+        return await cursor.fetchall()
+
+async def get_faq(faq_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM faqs WHERE id = ?", (faq_id,))
+        return await cursor.fetchone()
+
+async def create_faq(question: str, answer: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO faqs (question, answer, order_index) "
+            "SELECT ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM faqs",
+            (question, answer)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def update_faq(faq_id: int, question: str, answer: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE faqs SET question=?, answer=? WHERE id=?", (question, answer, faq_id))
+        await db.commit()
+
+async def toggle_faq(faq_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE faqs SET is_active = 1 - is_active WHERE id = ?", (faq_id,))
+        await db.commit()
+
+async def delete_faq(faq_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM faqs WHERE id = ?", (faq_id,))
+        await db.commit()
