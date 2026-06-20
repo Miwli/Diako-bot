@@ -679,16 +679,21 @@ def register_user_handlers(dp):
             return
 
         plan = await get_plan(plan_id)
+        fsm_data = await state.get_data()
+        discount_amount = fsm_data.get("discount_amount", 0)
+        final_price = plan["price"] - discount_amount
         await state.update_data(plan_id=plan_id)
         await state.set_state(BuyVPN.waiting_for_receipt)
 
-        owner_line = f"👤 <b>به نام:</b> {card_owner}\n" if card_owner else ""
+        owner_line    = f"👤 <b>به نام:</b> {card_owner}\n" if card_owner else ""
+        discount_line = f"🎟 <b>تخفیف:</b> {discount_amount:,} تومان\n" if discount_amount else ""
         await callback.message.edit_text(
             f"💳 <b>اطلاعات پرداخت</b>\n"
             f"{'─' * 24}\n"
             f"💳 <b>شماره کارت:</b>\n<code>{card_number}</code>\n"
             f"{owner_line}"
-            f"💰 <b>مبلغ:</b> {plan['price']:,} تومان\n"
+            f"{discount_line}"
+            f"💰 <b>مبلغ:</b> {final_price:,} تومان\n"
             f"{'─' * 24}\n\n"
             f"📸 پس از واریز، تصویر رسید را ارسال کنید.",
             reply_markup=payment_info_keyboard(),
@@ -796,6 +801,16 @@ def register_user_handlers(dp):
             plan_id=plan_id,
             receipt_file_id=receipt_file_id
         )
+
+        discount_code   = data.get("discount_code")
+        discount_amount = data.get("discount_amount", 0)
+        discount_code_id= data.get("discount_code_id")
+        if discount_code and discount_amount:
+            from database import update_order_discount, use_discount_code
+            await update_order_discount(order_id, discount_code, discount_amount)
+            if discount_code_id:
+                await use_discount_code(discount_code_id)
+
         await state.clear()
 
         await message.answer(
@@ -803,6 +818,8 @@ def register_user_handlers(dp):
             "⏳ پس از بررسی توسط پشتیبانی، نتیجه به شما اعلام خواهد شد."
         )
 
+        final_price   = plan["price"] - discount_amount
+        discount_line = f"🎟 کد تخفیف: <code>{discount_code}</code> ({discount_amount:,} تومان)\n" if discount_code else ""
         admin_text = (
             f"🛎 <b>سفارش جدید — شماره #{order_id}</b>\n"
             f"{'─' * 24}\n"
@@ -811,7 +828,8 @@ def register_user_handlers(dp):
             f"📦 پلن: <b>{plan['name']}</b>\n"
             f"📊 حجم: {plan['traffic']} گیگابایت\n"
             f"📅 مدت: {plan['duration']} روز\n"
-            f"💰 مبلغ: <b>{plan['price']:,} تومان</b>\n"
+            f"{discount_line}"
+            f"💰 مبلغ: <b>{final_price:,} تومان</b>\n"
             f"{'─' * 24}\n"
             f"پس از بررسی رسید، وضعیت سفارش را تعیین کنید:"
         )

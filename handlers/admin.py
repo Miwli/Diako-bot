@@ -140,9 +140,7 @@ def register_admin_handlers(dp):
         await _edit_or_replace(callback, "⚙️ پنل ادمین", admin_panel_menu())
         await callback.answer()
 
-    @dp.callback_query(F.data.in_({
-        "admin_discount",
-    }))
+    @dp.callback_query(F.data.in_(set()))
     async def admin_coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
 

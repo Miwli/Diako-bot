@@ -15,6 +15,7 @@ from handlers.referral import register_referral_handlers
 from handlers.admin_users import register_admin_users_handlers
 from handlers.broadcast import register_broadcast_handlers
 from handlers.stats import register_stats_handlers
+from handlers.discount import register_discount_handlers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,6 +44,7 @@ register_referral_handlers(dp)
 register_admin_users_handlers(dp)
 register_broadcast_handlers(dp)
 register_stats_handlers(dp)
+register_discount_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
 

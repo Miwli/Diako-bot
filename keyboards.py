@@ -307,11 +307,13 @@ def user_plans_keyboard(plans, server_id, multiple_servers: bool = False, show_p
     buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data=back_target)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def proforma_keyboard(plan_id, has_balance: bool = False):
+def proforma_keyboard(plan_id, has_balance: bool = False, has_discount: bool = False):
     buttons = []
     if has_balance:
         buttons.append([InlineKeyboardButton(text="💎 پرداخت با کیف پول", callback_data=f"pay_wallet_{plan_id}")])
     buttons.append([InlineKeyboardButton(text="💳 پرداخت کارت به کارت", callback_data=f"pay_{plan_id}")])
+    if not has_discount:
+        buttons.append([InlineKeyboardButton(text="🎟 وارد کردن کد تخفیف", callback_data=f"apply_discount_{plan_id}")])
     buttons.append([InlineKeyboardButton(text="❌ انصراف", callback_data="user_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -542,6 +544,42 @@ def user_referral_keyboard(ref_link: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 کپی لینک دعوت", copy_text=CopyTextButton(text=ref_link))],
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
+    ])
+
+# ─── کیبوردهای کد تخفیف ──────────────────────
+
+def admin_discount_menu(codes):
+    rows = [[InlineKeyboardButton(text="➕ افزودن کد تخفیف", callback_data="discount_add")]]
+    for c in codes:
+        mark   = "✅" if c["is_active"] else "❌"
+        type_  = "٪" if c["type"] == "percent" else "T"
+        uses   = f"{c['used_count']}" + (f"/{c['max_uses']}" if c["max_uses"] else "")
+        rows.append([InlineKeyboardButton(
+            text=f"{mark} {c['code']}  —  {c['value']}{type_}  ({uses})",
+            callback_data=f"discount_item_{c['id']}"
+        )])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def admin_discount_item_keyboard(code_id: int, is_active: bool):
+    toggle = "❌ غیرفعال کردن" if is_active else "✅ فعال کردن"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=toggle,           callback_data=f"discount_toggle_{code_id}"),
+         InlineKeyboardButton(text="🗑 حذف",          callback_data=f"discount_delete_{code_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت",      callback_data="admin_discount")],
+    ])
+
+def discount_type_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="٪ درصدی",        callback_data="discount_type_percent")],
+        [InlineKeyboardButton(text="💵 مبلغ ثابت",   callback_data="discount_type_fixed")],
+        [InlineKeyboardButton(text="🔙 انصراف",      callback_data="admin_discount")],
+    ])
+
+def discount_expiry_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="♾ بدون تاریخ انقضا", callback_data="discount_expiry_none")],
+        [InlineKeyboardButton(text="🔙 انصراف",           callback_data="admin_discount")],
     ])
 
 # ─── کیبوردهای آمار ───────────────────────────

@@ -172,6 +172,28 @@ async def init_db():
                 await db.commit()
             except Exception:
                 pass
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS discount_codes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                code        TEXT UNIQUE NOT NULL,
+                type        TEXT NOT NULL DEFAULT 'percent',
+                value       INTEGER NOT NULL,
+                max_uses    INTEGER DEFAULT 0,
+                used_count  INTEGER DEFAULT 0,
+                is_active   INTEGER DEFAULT 1,
+                expires_at  TEXT,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        for col, col_type in {
+            "discount_code":   "TEXT",
+            "discount_amount": "INTEGER DEFAULT 0",
+        }.items():
+            try:
+                await db.execute(f"ALTER TABLE orders ADD COLUMN {col} {col_type}")
+                await db.commit()
+            except Exception:
+                pass
         await db.commit()
 
 # ─── توابع تیکت ──────────────────────────────
@@ -1054,3 +1076,69 @@ async def get_admin_stats() -> dict:
             "open_tickets": open_tickets, "total_tickets": total_tickets,
             "top_plans": top_plans,
         }
+
+# ─── توابع کد تخفیف ──────────────────────────
+
+async def create_discount_code(code: str, type_: str, value: int, max_uses: int, expires_at: str = None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO discount_codes (code, type, value, max_uses, expires_at) VALUES (?,?,?,?,?)",
+            (code.upper(), type_, value, max_uses, expires_at)
+        )
+        await db.commit()
+
+async def get_discount_codes():
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM discount_codes ORDER BY created_at DESC")
+        return await cur.fetchall()
+
+async def get_discount_code_by_id(code_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM discount_codes WHERE id = ?", (code_id,))
+        return await cur.fetchone()
+
+async def validate_discount_code(code_text: str):
+    """اگه کد معتبر باشه row برمی‌گردونه، وگرنه None"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM discount_codes WHERE code = ? AND is_active = 1",
+            (code_text.upper(),)
+        )
+        row = await cur.fetchone()
+        if not row:
+            return None
+        if row["max_uses"] > 0 and row["used_count"] >= row["max_uses"]:
+            return None
+        if row["expires_at"] and row["expires_at"] < __import__("datetime").date.today().isoformat():
+            return None
+        return row
+
+async def use_discount_code(code_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE discount_codes SET used_count = used_count + 1 WHERE id = ?", (code_id,)
+        )
+        await db.commit()
+
+async def toggle_discount_code(code_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE discount_codes SET is_active = 1 - is_active WHERE id = ?", (code_id,)
+        )
+        await db.commit()
+
+async def delete_discount_code(code_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM discount_codes WHERE id = ?", (code_id,))
+        await db.commit()
+
+async def update_order_discount(order_id: int, discount_code: str, discount_amount: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE orders SET discount_code = ?, discount_amount = ? WHERE id = ?",
+            (discount_code, discount_amount, order_id)
+        )
+        await db.commit()

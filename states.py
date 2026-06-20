@@ -87,3 +87,13 @@ class Broadcast(StatesGroup):
     waiting_for_content = State()
     waiting_for_confirm = State()
 
+class AddDiscountCode(StatesGroup):
+    waiting_for_code     = State()
+    waiting_for_type     = State()
+    waiting_for_value    = State()
+    waiting_for_max_uses = State()
+    waiting_for_expiry   = State()
+
+class ApplyDiscount(StatesGroup):
+    waiting_for_code = State()
+
