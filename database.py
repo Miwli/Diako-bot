@@ -123,26 +123,40 @@ async def init_db():
         """)
         await db.execute("""
             CREATE TABLE IF NOT EXISTS tutorials (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                title        TEXT NOT NULL,
-                content_type TEXT NOT NULL DEFAULT 'text',
-                file_id      TEXT,
-                caption      TEXT,
-                order_index  INTEGER DEFAULT 0,
-                is_active    INTEGER DEFAULT 1,
-                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                title            TEXT NOT NULL,
+                content_type     TEXT NOT NULL DEFAULT 'text',
+                file_id          TEXT,
+                caption          TEXT,
+                caption_entities TEXT,
+                order_index      INTEGER DEFAULT 0,
+                is_active        INTEGER DEFAULT 1,
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        for col in ["caption_entities"]:
+            try:
+                await db.execute(f"ALTER TABLE tutorials ADD COLUMN {col} TEXT")
+                await db.commit()
+            except Exception:
+                pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS faqs (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                question    TEXT NOT NULL,
-                answer      TEXT NOT NULL,
-                order_index INTEGER DEFAULT 0,
-                is_active   INTEGER DEFAULT 1,
-                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                question        TEXT NOT NULL,
+                answer          TEXT NOT NULL,
+                answer_entities TEXT,
+                order_index     INTEGER DEFAULT 0,
+                is_active       INTEGER DEFAULT 1,
+                created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        for col in ["answer_entities"]:
+            try:
+                await db.execute(f"ALTER TABLE faqs ADD COLUMN {col} TEXT")
+                await db.commit()
+            except Exception:
+                pass
         await db.commit()
 
 # ─── توابع تیکت ──────────────────────────────
@@ -681,21 +695,21 @@ async def get_tutorial(tutorial_id: int):
         cursor = await db.execute("SELECT * FROM tutorials WHERE id = ?", (tutorial_id,))
         return await cursor.fetchone()
 
-async def create_tutorial(title: str, content_type: str, file_id: str | None, caption: str | None) -> int:
+async def create_tutorial(title: str, content_type: str, file_id: str | None, caption: str | None, caption_entities: str | None = None) -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "INSERT INTO tutorials (title, content_type, file_id, caption, order_index) "
-            "SELECT ?, ?, ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM tutorials",
-            (title, content_type, file_id, caption)
+            "INSERT INTO tutorials (title, content_type, file_id, caption, caption_entities, order_index) "
+            "SELECT ?, ?, ?, ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM tutorials",
+            (title, content_type, file_id, caption, caption_entities)
         )
         await db.commit()
         return cursor.lastrowid
 
-async def update_tutorial(tutorial_id: int, title: str, content_type: str, file_id: str | None, caption: str | None):
+async def update_tutorial(tutorial_id: int, title: str, content_type: str, file_id: str | None, caption: str | None, caption_entities: str | None = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "UPDATE tutorials SET title=?, content_type=?, file_id=?, caption=? WHERE id=?",
-            (title, content_type, file_id, caption, tutorial_id)
+            "UPDATE tutorials SET title=?, content_type=?, file_id=?, caption=?, caption_entities=? WHERE id=?",
+            (title, content_type, file_id, caption, caption_entities, tutorial_id)
         )
         await db.commit()
 
@@ -747,19 +761,19 @@ async def get_faq(faq_id: int):
         cursor = await db.execute("SELECT * FROM faqs WHERE id = ?", (faq_id,))
         return await cursor.fetchone()
 
-async def create_faq(question: str, answer: str) -> int:
+async def create_faq(question: str, answer: str, answer_entities: str | None = None) -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "INSERT INTO faqs (question, answer, order_index) "
-            "SELECT ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM faqs",
-            (question, answer)
+            "INSERT INTO faqs (question, answer, answer_entities, order_index) "
+            "SELECT ?, ?, ?, COALESCE(MAX(order_index) + 1, 0) FROM faqs",
+            (question, answer, answer_entities)
         )
         await db.commit()
         return cursor.lastrowid
 
-async def update_faq(faq_id: int, question: str, answer: str):
+async def update_faq(faq_id: int, question: str, answer: str, answer_entities: str | None = None):
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE faqs SET question=?, answer=? WHERE id=?", (question, answer, faq_id))
+        await db.execute("UPDATE faqs SET question=?, answer=?, answer_entities=? WHERE id=?", (question, answer, answer_entities, faq_id))
         await db.commit()
 
 async def toggle_faq(faq_id: int):

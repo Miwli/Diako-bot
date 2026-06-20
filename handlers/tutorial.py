@@ -1,9 +1,10 @@
+import json
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, MessageEntity
 from states import AddTutorial, EditTutorial, AddFAQ, EditFAQ
 from keyboards import (
-    admin_tutorials_menu, admin_tutorial_item_keyboard,
+    admin_tutorials_menu, admin_tutorial_list_menu, admin_tutorial_item_keyboard,
     admin_faqs_menu, admin_faq_item_keyboard,
     user_tutorials_keyboard, user_faqs_keyboard,
     back_to_tutorials_keyboard, back_to_faqs_keyboard,
@@ -15,7 +16,7 @@ from database import (
 )
 
 _CANCEL_TUTORIALS = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_tutorials")]
+    [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_tutorial_list")]
 ])
 _CANCEL_FAQS = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_faqs")]
@@ -29,11 +30,17 @@ def register_tutorial_handlers(dp):
     async def admin_tutorials(callback: types.CallbackQuery, state: FSMContext):
         from handlers.user import _edit_or_replace
         await state.clear()
+        await _edit_or_replace(callback, "📚 <b>مدیریت آموزش‌ها</b>", admin_tutorials_menu())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "admin_tutorial_list")
+    async def admin_tutorial_list(callback: types.CallbackQuery):
+        from handlers.user import _edit_or_replace
         tutorials = await get_tutorials()
         await _edit_or_replace(
             callback,
-            f"📚 <b>مدیریت آموزش‌ها</b>\n\n{len(tutorials)} آموزش ثبت شده",
-            admin_tutorials_menu(tutorials)
+            f"📖 <b>آموزش‌ها</b>\n\n{len(tutorials)} آموزش ثبت شده",
+            admin_tutorial_list_menu(tutorials)
         )
         await callback.answer()
 
@@ -61,24 +68,22 @@ def register_tutorial_handlers(dp):
     @dp.message(AddTutorial.waiting_for_content)
     async def tutorial_add_content(message: types.Message, state: FSMContext):
         data = await state.get_data()
-        content_type, file_id, caption = _parse_content(message)
+        content_type, file_id, caption, entities_json = _parse_content(message)
         if content_type is None:
             await message.answer("❌ نوع پیام پشتیبانی نمی‌شود. متن، عکس یا ویدیو ارسال کنید.")
             return
-        tid = await create_tutorial(data["title"], content_type, file_id, caption)
+        await create_tutorial(data["title"], content_type, file_id, caption, entities_json)
         await state.clear()
         tutorials = await get_tutorials()
         await message.answer(
             f"✅ آموزش «{data['title']}» اضافه شد.",
-            reply_markup=admin_tutorials_menu(tutorials)
+            reply_markup=admin_tutorial_list_menu(tutorials)
         )
 
     # ── ادمین: مدیریت آموزش موجود ─────────────────
 
-    @dp.callback_query(F.data.startswith("tutorial_item_"))
-    async def tutorial_item(callback: types.CallbackQuery):
+    async def _show_tutorial_item(callback: types.CallbackQuery, tid: int):
         from handlers.user import _edit_or_replace
-        tid = int(callback.data.removeprefix("tutorial_item_"))
         t = await get_tutorial(tid)
         if not t:
             await callback.answer("آموزش یافت نشد.", show_alert=True)
@@ -97,23 +102,28 @@ def register_tutorial_handlers(dp):
         )
         await callback.answer()
 
+    @dp.callback_query(F.data.startswith("tutorial_item_"))
+    async def tutorial_item(callback: types.CallbackQuery):
+        tid = int(callback.data.removeprefix("tutorial_item_"))
+        await _show_tutorial_item(callback, tid)
+
     @dp.callback_query(F.data.startswith("tutorial_toggle_"))
     async def tutorial_toggle(callback: types.CallbackQuery):
         tid = int(callback.data.removeprefix("tutorial_toggle_"))
         await toggle_tutorial(tid)
-        await tutorial_item(callback)
+        await _show_tutorial_item(callback, tid)
 
     @dp.callback_query(F.data.startswith("tutorial_move_up_"))
     async def tutorial_move_up(callback: types.CallbackQuery):
         tid = int(callback.data.removeprefix("tutorial_move_up_"))
         await move_tutorial(tid, "up")
-        await tutorial_item(callback)
+        await _show_tutorial_item(callback, tid)
 
     @dp.callback_query(F.data.startswith("tutorial_move_down_"))
     async def tutorial_move_down(callback: types.CallbackQuery):
         tid = int(callback.data.removeprefix("tutorial_move_down_"))
         await move_tutorial(tid, "down")
-        await tutorial_item(callback)
+        await _show_tutorial_item(callback, tid)
 
     @dp.callback_query(F.data.startswith("tutorial_delete_"))
     async def tutorial_delete(callback: types.CallbackQuery):
@@ -172,7 +182,7 @@ def register_tutorial_handlers(dp):
         await update_tutorial(tid, message.text.strip(), t["content_type"], t["file_id"], t["caption"])
         await state.clear()
         tutorials = await get_tutorials()
-        await message.answer("✅ عنوان ذخیره شد.", reply_markup=admin_tutorials_menu(tutorials))
+        await message.answer("✅ عنوان ذخیره شد.", reply_markup=admin_tutorial_list_menu(tutorials))
 
     # ── ادمین: ویرایش محتوا ────────────────────────
 
@@ -192,14 +202,14 @@ def register_tutorial_handlers(dp):
         data = await state.get_data()
         tid = data["tutorial_id"]
         t = await get_tutorial(tid)
-        content_type, file_id, caption = _parse_content(message)
+        content_type, file_id, caption, entities_json = _parse_content(message)
         if content_type is None:
             await message.answer("❌ نوع پیام پشتیبانی نمی‌شود.")
             return
-        await update_tutorial(tid, t["title"], content_type, file_id, caption)
+        await update_tutorial(tid, t["title"], content_type, file_id, caption, entities_json)
         await state.clear()
         tutorials = await get_tutorials()
-        await message.answer("✅ محتوا ذخیره شد.", reply_markup=admin_tutorials_menu(tutorials))
+        await message.answer("✅ محتوا ذخیره شد.", reply_markup=admin_tutorial_list_menu(tutorials))
 
     # ── ادمین: FAQ ─────────────────────────────────
 
@@ -232,7 +242,9 @@ def register_tutorial_handlers(dp):
     @dp.message(AddFAQ.waiting_for_answer, F.text)
     async def faq_add_answer(message: types.Message, state: FSMContext):
         data = await state.get_data()
-        await create_faq(data["question"], message.text.strip())
+        entities = message.entities or []
+        ej = json.dumps([e.model_dump() for e in entities]) if entities else None
+        await create_faq(data["question"], message.text, ej)
         await state.clear()
         faqs = await get_faqs()
         await message.answer("✅ سوال اضافه شد.", reply_markup=admin_faqs_menu(faqs))
@@ -329,7 +341,9 @@ def register_tutorial_handlers(dp):
         data = await state.get_data()
         fid = data["faq_id"]
         f = await get_faq(fid)
-        await update_faq(fid, f["question"], message.text.strip())
+        entities = message.entities or []
+        ej = json.dumps([e.model_dump() for e in entities]) if entities else None
+        await update_faq(fid, f["question"], message.text, ej)
         await state.clear()
         faqs = await get_faqs()
         await message.answer("✅ جواب ذخیره شد.", reply_markup=admin_faqs_menu(faqs))
@@ -364,27 +378,26 @@ def register_tutorial_handlers(dp):
             await callback.answer("این آموزش در دسترس نیست.", show_alert=True)
             return
         kb = back_to_tutorials_keyboard()
+        entities = _load_entities(t["caption_entities"])
         try:
             await callback.message.delete()
         except Exception:
             pass
+        send_kw = {"reply_markup": kb}
+        if entities:
+            send_kw["entities" if t["content_type"] == "text" else "caption_entities"] = entities
+        else:
+            send_kw["parse_mode"] = "HTML"
+
         if t["content_type"] == "text":
-            await callback.message.answer(
-                f"📖 <b>{t['title']}</b>\n\n{t['caption'] or ''}",
-                reply_markup=kb, parse_mode="HTML"
-            )
+            text = f"📖 <b>{t['title']}</b>\n\n{t['caption'] or ''}" if not entities else (t["caption"] or "")
+            await callback.message.answer(text, **send_kw)
         elif t["content_type"] == "photo":
-            await callback.message.answer_photo(
-                photo=t["file_id"],
-                caption=f"<b>{t['title']}</b>\n\n{t['caption'] or ''}",
-                reply_markup=kb, parse_mode="HTML"
-            )
+            cap = f"<b>{t['title']}</b>\n\n{t['caption'] or ''}" if not entities else (t["caption"] or "")
+            await callback.message.answer_photo(photo=t["file_id"], caption=cap, **send_kw)
         elif t["content_type"] == "video":
-            await callback.message.answer_video(
-                video=t["file_id"],
-                caption=f"<b>{t['title']}</b>\n\n{t['caption'] or ''}",
-                reply_markup=kb, parse_mode="HTML"
-            )
+            cap = f"<b>{t['title']}</b>\n\n{t['caption'] or ''}" if not entities else (t["caption"] or "")
+            await callback.message.answer_video(video=t["file_id"], caption=cap, **send_kw)
         await callback.answer()
 
     @dp.callback_query(F.data == "user_faqs")
@@ -407,28 +420,50 @@ def register_tutorial_handlers(dp):
 
     @dp.callback_query(F.data.startswith("faq_view_"))
     async def user_faq_view(callback: types.CallbackQuery):
-        from handlers.user import _edit_or_replace
         fid = int(callback.data.removeprefix("faq_view_"))
         f = await get_faq(fid)
         if not f or not f["is_active"]:
             await callback.answer("این سوال در دسترس نیست.", show_alert=True)
             return
-        await _edit_or_replace(
-            callback,
-            f"❓ <b>{f['question']}</b>\n\n{f['answer']}",
-            back_to_faqs_keyboard()
-        )
+        entities = _load_entities(f["answer_entities"])
+        kb = back_to_faqs_keyboard()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        if entities:
+            await callback.message.answer(f["answer"], entities=entities, reply_markup=kb)
+        else:
+            await callback.message.answer(
+                f"❓ <b>{f['question']}</b>\n\n{f['answer']}",
+                parse_mode="HTML", reply_markup=kb
+            )
         await callback.answer()
 
 
 def _parse_content(message: types.Message):
+    """نوع، file_id، caption، و entities رو از پیام استخراج می‌کنه"""
     if message.photo:
-        return "photo", message.photo[-1].file_id, message.caption
+        entities = message.caption_entities or []
+        ej = json.dumps([e.model_dump() for e in entities]) if entities else None
+        return "photo", message.photo[-1].file_id, message.caption, ej
     if message.video:
-        return "video", message.video.file_id, message.caption
+        entities = message.caption_entities or []
+        ej = json.dumps([e.model_dump() for e in entities]) if entities else None
+        return "video", message.video.file_id, message.caption, ej
     if message.text:
-        return "text", None, message.text
-    return None, None, None
+        entities = message.entities or []
+        ej = json.dumps([e.model_dump() for e in entities]) if entities else None
+        return "text", None, message.text, ej
+    return None, None, None, None
+
+def _load_entities(entities_json: str | None) -> list | None:
+    if not entities_json:
+        return None
+    try:
+        return [MessageEntity(**e) for e in json.loads(entities_json)]
+    except Exception:
+        return None
 
 def _type_label(content_type: str) -> str:
     return {"text": "📝 متن", "photo": "🖼 عکس", "video": "🎬 ویدیو"}.get(content_type, content_type)

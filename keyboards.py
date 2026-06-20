@@ -422,7 +422,14 @@ def admin_support_settings_keyboard():
 
 # ─── کیبوردهای آموزش (ادمین) ──────────────────
 
-def admin_tutorials_menu(tutorials: list):
+def admin_tutorials_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📖 آموزش‌ها",        callback_data="admin_tutorial_list")],
+        [InlineKeyboardButton(text="📋 سوالات متداول",   callback_data="admin_faqs")],
+        [InlineKeyboardButton(text="🔙 بازگشت",          callback_data="admin_panel")],
+    ])
+
+def admin_tutorial_list_menu(tutorials: list):
     rows = [[InlineKeyboardButton(text="➕ افزودن آموزش جدید", callback_data="tutorial_add")]]
     for t in tutorials:
         status = "✅" if t["is_active"] else "❌"
@@ -430,21 +437,22 @@ def admin_tutorials_menu(tutorials: list):
             text=f"{status} {t['title']}",
             callback_data=f"tutorial_item_{t['id']}"
         )])
-    rows.append([InlineKeyboardButton(text="📋 سوالات متداول", callback_data="admin_faqs")])
-    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_tutorials")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_tutorial_item_keyboard(tutorial_id: int, is_active: bool, is_first: bool, is_last: bool):
+    order_row = []
+    if not is_first:
+        order_row.append(InlineKeyboardButton(text="⬆️ بالاتر", callback_data=f"tutorial_move_up_{tutorial_id}"))
+    order_row.append(InlineKeyboardButton(text="✅ فعال" if is_active else "❌ غیرفعال", callback_data=f"tutorial_toggle_{tutorial_id}"))
+    if not is_last:
+        order_row.append(InlineKeyboardButton(text="⬇️ پایین‌تر", callback_data=f"tutorial_move_down_{tutorial_id}"))
     rows = [
         [
-            InlineKeyboardButton(text="✏️ ویرایش عنوان",   callback_data=f"tutorial_edit_title_{tutorial_id}"),
-            InlineKeyboardButton(text="🔄 ویرایش محتوا",   callback_data=f"tutorial_edit_content_{tutorial_id}"),
+            InlineKeyboardButton(text="✏️ ویرایش عنوان", callback_data=f"tutorial_edit_title_{tutorial_id}"),
+            InlineKeyboardButton(text="🔄 ویرایش محتوا", callback_data=f"tutorial_edit_content_{tutorial_id}"),
         ],
-        [
-            InlineKeyboardButton(text="⬆️" if not is_first else "·", callback_data=f"tutorial_move_up_{tutorial_id}"),
-            InlineKeyboardButton(text="✅ فعال" if is_active else "❌ غیرفعال", callback_data=f"tutorial_toggle_{tutorial_id}"),
-            InlineKeyboardButton(text="⬇️" if not is_last else "·", callback_data=f"tutorial_move_down_{tutorial_id}"),
-        ],
+        order_row,
         [InlineKeyboardButton(text="🗑 حذف", callback_data=f"tutorial_delete_{tutorial_id}")],
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_tutorials")],
     ]
