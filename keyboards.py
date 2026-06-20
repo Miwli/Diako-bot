@@ -35,7 +35,7 @@ def admin_panel_menu():
         [InlineKeyboardButton(text="👥 مدیریت کاربران",         callback_data="admin_users")],
         [InlineKeyboardButton(text="🎟 کدهای تخفیف",            callback_data="admin_discount")],
         [InlineKeyboardButton(text="🎁 تنظیمات تست رایگان",     callback_data="admin_free_test")],
-        [InlineKeyboardButton(text="💰 تنظیمات دعوت دوستان",   callback_data="admin_referral")],
+        [InlineKeyboardButton(text="🤝 تنظیمات دعوت دوستان",   callback_data="admin_referral")],
         [InlineKeyboardButton(text="🎧 تنظیمات پشتیبانی",       callback_data="admin_support")],
         [InlineKeyboardButton(text="📚 مدیریت آموزش‌ها",        callback_data="admin_tutorials")],
         [InlineKeyboardButton(text="📢 پیام همگانی",             callback_data="admin_broadcast")],
@@ -504,4 +504,42 @@ def back_to_tutorials_keyboard():
 def back_to_faqs_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_faqs")]
+    ])
+
+# ─── کیبوردهای دعوت دوستان (ادمین) ────────────
+
+def admin_referral_menu(enabled: bool, flat_en: bool, flat_amt: int,
+                        pct_en: bool, pct_val: int,
+                        free_en: bool,
+                        disc_en: bool, disc_val: int):
+    def _row(label, cb, active, detail=""):
+        mark = "✅" if active else "❌"
+        txt = f"{mark} {label}"
+        if detail:
+            txt += f" — {detail}"
+        return [InlineKeyboardButton(text=txt, callback_data=cb)]
+
+    system_btn = "🟢 سیستم فعال است" if enabled else "🔴 سیستم غیرفعال است"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=system_btn, callback_data="referral_toggle_system")],
+        _row("💵 جایزه ثابت دعوت‌کننده", "referral_flat",      flat_en, f"{flat_amt:,} تومان" if flat_en else ""),
+        _row("📊 پورسانت از هر خرید",     "referral_percent",   pct_en,  f"{pct_val}٪" if pct_en else ""),
+        _row("🎁 تست رایگان اضافه",        "referral_free_test", free_en),
+        _row("🎫 اعتبار خوش‌آمدگویی",     "referral_discount",  disc_en, f"{disc_val}٪ خرید" if disc_en else ""),
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="admin_panel")],
+    ])
+
+def admin_referral_sub_keyboard(cb_toggle: str, cb_edit: str | None, back: str = "admin_referral"):
+    rows = [[InlineKeyboardButton(text="🔄 روشن / خاموش", callback_data=cb_toggle)]]
+    if cb_edit:
+        rows.append([InlineKeyboardButton(text="✏️ تغییر مقدار", callback_data=cb_edit)])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data=back)])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+# ─── کیبوردهای دعوت دوستان (کاربر) ────────────
+
+def user_referral_keyboard(ref_link: str):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 کپی لینک دعوت", copy_text=CopyTextButton(text=ref_link))],
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")],
     ])

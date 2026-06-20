@@ -83,7 +83,11 @@ async def init_db():
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        for col, col_type in {"referral_code": "TEXT", "free_test_uses": "INTEGER DEFAULT 0"}.items():
+        for col, col_type in {
+            "referral_code":  "TEXT",
+            "free_test_uses": "INTEGER DEFAULT 0",
+            "referral_by":    "TEXT",
+        }.items():
             try:
                 await db.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
                 await db.commit()
@@ -119,6 +123,16 @@ async def init_db():
                 group_id   INTEGER,
                 status     TEXT DEFAULT 'open',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+                id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_id             INTEGER NOT NULL,
+                referred_id             INTEGER NOT NULL UNIQUE,
+                first_purchase_rewarded INTEGER DEFAULT 0,
+                total_commission        INTEGER DEFAULT 0,
+                created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         await db.execute("""
@@ -312,6 +326,15 @@ async def increment_free_test_uses(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "UPDATE users SET free_test_uses = COALESCE(free_test_uses, 0) + 1 WHERE user_id = ?",
+            (user_id,)
+        )
+        await db.commit()
+
+async def decrement_free_test_uses(user_id: int):
+    """یک تست رایگان رایگان اضافه بده (با کم کردن شمارنده)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET free_test_uses = MAX(0, COALESCE(free_test_uses, 0) - 1) WHERE user_id = ?",
             (user_id,)
         )
         await db.commit()
@@ -530,6 +553,12 @@ async def update_order_status(order_id: int, status: str, rejection_reason: str 
         await db.commit()
 
 # ─── توابع کاربران و کیف پول ───────────────────
+
+async def get_user(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        return await cur.fetchone()
 
 async def get_or_create_user(user_id: int, first_name: str, username: str = None):
     """ساخت یا بروزرسانی رکورد کاربر"""
@@ -785,3 +814,65 @@ async def delete_faq(faq_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("DELETE FROM faqs WHERE id = ?", (faq_id,))
         await db.commit()
+
+# ─── توابع دعوت دوستان ───────────────────────
+
+async def get_user_by_referral_code(code: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM users WHERE referral_code = ?", (code,))
+        return await cur.fetchone()
+
+async def set_referral_by(user_id: int, referral_code: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET referral_by = ? WHERE user_id = ? AND referral_by IS NULL",
+            (referral_code, user_id)
+        )
+        await db.commit()
+
+async def create_referral(referrer_id: int, referred_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute(
+                "INSERT OR IGNORE INTO referrals (referrer_id, referred_id) VALUES (?, ?)",
+                (referrer_id, referred_id)
+            )
+            await db.commit()
+        except Exception:
+            pass
+
+async def get_referral_by_referred(referred_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM referrals WHERE referred_id = ?", (referred_id,)
+        )
+        return await cur.fetchone()
+
+async def mark_first_purchase_rewarded(referred_id: int, commission: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE referrals SET first_purchase_rewarded = 1, total_commission = total_commission + ? WHERE referred_id = ?",
+            (commission, referred_id)
+        )
+        await db.commit()
+
+async def add_referral_commission(referred_id: int, commission: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE referrals SET total_commission = total_commission + ? WHERE referred_id = ?",
+            (commission, referred_id)
+        )
+        await db.commit()
+
+async def get_referral_stats(referrer_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT COUNT(*) as count, COALESCE(SUM(total_commission), 0) as total "
+            "FROM referrals WHERE referrer_id = ?",
+            (referrer_id,)
+        )
+        row = await cur.fetchone()
+        return {"count": row["count"], "total": row["total"]}

@@ -13,7 +13,7 @@ from keyboards import (
 from database import (
     get_servers, get_plans, get_plan, get_plan_with_server, get_setting, set_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
-    get_or_create_user, get_user_wallet_stats, get_transactions,
+    get_or_create_user, get_user, get_user_wallet_stats, get_transactions,
     add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
     create_top_up_request, get_top_up_request, update_top_up_status,
     get_free_test_servers, create_free_test_order,
@@ -167,7 +167,7 @@ async def _send_main_menu(target, user: types.User):
 
 def register_user_handlers(dp):
 
-    @dp.callback_query(F.data.in_({"referral", "language"}))
+    @dp.callback_query(F.data.in_({"language"}))
     async def coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
 

@@ -71,3 +71,8 @@ class EditFAQ(StatesGroup):
     waiting_for_question = State()
     waiting_for_answer   = State()
 
+class ReferralSettings(StatesGroup):
+    waiting_for_flat_amount    = State()
+    waiting_for_percent_value  = State()
+    waiting_for_discount_value = State()
+

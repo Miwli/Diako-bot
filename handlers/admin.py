@@ -16,9 +16,70 @@ from database import (
     add_balance, add_balance_and_transaction, get_or_create_user,
     get_setting, set_setting,
     get_servers, get_server, update_server_free_test, apply_free_test_to_all,
-    reset_free_test_uses
+    reset_free_test_uses,
+    get_referral_by_referred, mark_first_purchase_rewarded,
+    add_referral_commission, get_user,
 )
 from rebecca_api import RebeccaAPI
+
+async def _apply_referral_rewards(bot, buyer_id: int, price: int):
+    from bot import logger
+    referral = await get_referral_by_referred(buyer_id)
+    if not referral:
+        return
+    referrer_id = referral["referrer_id"]
+    is_first = not referral["first_purchase_rewarded"]
+
+    cfg_keys = [
+        "referral_enabled", "referral_flat_enabled", "referral_flat_amount",
+        "referral_percent_enabled", "referral_percent_value",
+        "referral_free_test_enabled",
+        "referral_discount_enabled", "referral_discount_value",
+    ]
+    cfg = {k: (await get_setting(k) or "0") for k in cfg_keys}
+    if cfg["referral_enabled"] != "1":
+        return
+
+    total_reward = 0
+
+    if is_first:
+        if cfg["referral_flat_enabled"] == "1":
+            flat = int(cfg["referral_flat_amount"] or "0")
+            if flat > 0:
+                await add_balance_and_transaction(referrer_id, flat, f"جایزه دعوت کاربر {buyer_id}")
+                total_reward += flat
+
+        if cfg["referral_free_test_enabled"] == "1":
+            try:
+                from database import decrement_free_test_uses
+                await decrement_free_test_uses(referrer_id)
+            except Exception as e:
+                logger.error(f"خطا در اعطای تست رایگان به {referrer_id}: {e}")
+
+        if cfg["referral_discount_enabled"] == "1":
+            pct = int(cfg["referral_discount_value"] or "0")
+            if pct > 0:
+                credit = price * pct // 100
+                await add_balance_and_transaction(buyer_id, credit, f"اعتبار خوش‌آمدگویی {pct}٪ اولین خرید")
+
+        await mark_first_purchase_rewarded(buyer_id, total_reward)
+
+    if cfg["referral_percent_enabled"] == "1":
+        pct = int(cfg["referral_percent_value"] or "0")
+        if pct > 0:
+            commission = price * pct // 100
+            if commission > 0:
+                await add_balance_and_transaction(referrer_id, commission, f"پورسانت {pct}٪ خرید کاربر {buyer_id}")
+                await add_referral_commission(buyer_id, commission)
+                try:
+                    await bot.send_message(
+                        referrer_id,
+                        f"💰 <b>پورسانت دریافت کردی!</b>\n"
+                        f"دوستت خرید کرد و <b>{commission:,} تومان</b> به کیف پولت اضافه شد.",
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
 
 def _make_qr(data: str) -> BufferedInputFile:
     qr = qrcode.QRCode(box_size=10, border=4)
@@ -36,8 +97,29 @@ def register_admin_handlers(dp):
     async def cmd_start(message: types.Message):
         from bot import is_admin, logger
         from handlers.user import _send_main_menu
-        logger.info(f"کاربر {message.from_user.id} دستور /start فرستاد")
-        await _send_main_menu(message, message.from_user)
+        u = message.from_user
+        logger.info(f"کاربر {u.id} دستور /start فرستاد")
+
+        await get_or_create_user(u.id, u.first_name, u.username)
+
+        args = message.text.split(maxsplit=1)
+        if len(args) > 1 and args[1].startswith("ref_"):
+            ref_code = args[1][4:]
+            from database import (
+                get_user_by_referral_code, set_referral_by,
+                create_referral, get_user, get_setting
+            )
+            referral_enabled = await get_setting("referral_enabled")
+            if referral_enabled == "1":
+                referrer = await get_user_by_referral_code(ref_code)
+                if referrer and referrer["user_id"] != u.id:
+                    cur_user = await get_user(u.id)
+                    if cur_user and not cur_user["referral_by"]:
+                        await set_referral_by(u.id, ref_code)
+                        await create_referral(referrer["user_id"], u.id)
+                        logger.info(f"کاربر {u.id} با لینک دعوت {ref_code} ثبت شد")
+
+        await _send_main_menu(message, u)
 
     async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
         """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
@@ -54,7 +136,7 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data.in_({
         "admin_users", "admin_discount",
-        "admin_referral", "admin_broadcast", "admin_stats"
+        "admin_broadcast", "admin_stats"
     }))
     async def admin_coming_soon(callback: types.CallbackQuery):
         await callback.answer("🔜 به زودی...", show_alert=True)
@@ -480,6 +562,8 @@ def register_admin_handlers(dp):
                 pass
             await callback.answer(f"خطا در ثبت اطلاعات: {e}", show_alert=True)
             return
+
+        await _apply_referral_rewards(callback.bot, order["user_id"], plan["price"])
 
         await callback.message.edit_caption(
             callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{username}</code>",
