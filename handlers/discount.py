@@ -225,10 +225,10 @@ def register_discount_handlers(dp):
         plan_id   = data["plan_id"]
         await state.clear()
 
-        code = await validate_discount_code(code_text)
+        code = await validate_discount_code(code_text, user_id=message.from_user.id)
         if not code:
             await message.answer(
-                "❌ این کد تخفیف معتبر نیست یا منقضی شده.",
+                "❌ این کد تخفیف معتبر نیست، منقضی شده یا قبلاً استفاده کرده‌اید.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🔙 بازگشت", callback_data=f"user_plan_{plan_id}")]
                 ])

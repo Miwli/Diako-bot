@@ -678,10 +678,65 @@ def register_user_handlers(dp):
             )
             return
 
-        plan = await get_plan(plan_id)
+        plan     = await get_plan_with_server(plan_id)
         fsm_data = await state.get_data()
-        discount_amount = fsm_data.get("discount_amount", 0)
-        final_price = plan["price"] - discount_amount
+        discount_amount  = fsm_data.get("discount_amount", 0)
+        discount_code    = fsm_data.get("discount_code")
+        discount_code_id = fsm_data.get("discount_code_id")
+        final_price      = plan["price"] - discount_amount
+
+        if final_price <= 0:
+            # رایگان شد — مستقیم سرویس بساز
+            await state.clear()
+            import json as _json
+            service_ids = _json.loads(plan["service_ids"] or "[]")
+            if not service_ids:
+                await callback.answer("سرویسی برای این پلن تنظیم نشده!", show_alert=True)
+                return
+            u = callback.from_user
+            await get_or_create_user(u.id, u.first_name, u.username)
+            try:
+                api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
+                live = await api.get_services()
+                live_ids = {s["id"] for s in live}
+                sid = next((s for s in service_ids if s in live_ids), None)
+                if not sid:
+                    await callback.answer("سرویس پنل یافت نشد.", show_alert=True)
+                    return
+                user_data = await api.create_user(sid, plan["traffic"], plan["duration"])
+                sub_path = user_data.get("subscription_url", "")
+                subscription_url = await api.get_subscription_url(sub_path)
+                vpn_username = user_data.get("username", "")
+            except Exception as e:
+                from bot import logger
+                logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {e}")
+                await callback.answer(f"خطا در اتصال به پنل: {e}", show_alert=True)
+                return
+            order_id = await create_order(u.id, u.username or u.first_name, plan_id, "discount_free")
+            await update_order_status(order_id, "approved")
+            await update_order_vpn_info(order_id, vpn_username, subscription_url)
+            if discount_code:
+                from database import update_order_discount, use_discount_code
+                await update_order_discount(order_id, discount_code, discount_amount)
+                if discount_code_id:
+                    await use_discount_code(discount_code_id, u.id)
+            from handlers.admin import _make_qr
+            from keyboards import subscription_approved_keyboard
+            qr = _make_qr(subscription_url)
+            await callback.message.delete()
+            await callback.message.answer_photo(
+                photo=qr,
+                caption=(
+                    f"✅ <b>سرویس با کد تخفیف ۱۰۰٪ فعال شد!</b>\n\n"
+                    f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
+                    f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
+                ),
+                reply_markup=subscription_approved_keyboard(subscription_url),
+                parse_mode="HTML"
+            )
+            await callback.answer()
+            return
+
         await state.update_data(plan_id=plan_id)
         await state.set_state(BuyVPN.waiting_for_receipt)
 
@@ -702,13 +757,19 @@ def register_user_handlers(dp):
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("pay_wallet_"))
-    async def pay_with_wallet(callback: types.CallbackQuery):
+    async def pay_with_wallet(callback: types.CallbackQuery, state: FSMContext):
         from keyboards import subscription_approved_keyboard
         plan_id = int(callback.data.replace("pay_wallet_", ""))
         plan = await get_plan_with_server(plan_id)
         if not plan:
             await callback.answer("پلن یافت نشد.", show_alert=True)
             return
+
+        fsm_data         = await state.get_data()
+        discount_amount  = fsm_data.get("discount_amount", 0)
+        discount_code    = fsm_data.get("discount_code")
+        discount_code_id = fsm_data.get("discount_code_id")
+        final_price      = max(0, plan["price"] - discount_amount)
 
         u = callback.from_user
         await get_or_create_user(u.id, u.first_name, u.username)
@@ -719,11 +780,11 @@ def register_user_handlers(dp):
             await callback.answer("سرویسی برای این پلن تنظیم نشده!", show_alert=True)
             return
 
-        # کسر اتمیک — اگه موجودی کافی نباشه یا همزمان کسر شده باشه False برمی‌گردونه
-        deducted = await deduct_balance_if_sufficient(u.id, plan["price"])
-        if not deducted:
-            await callback.answer("موجودی کافی نیست.", show_alert=True)
-            return
+        if final_price > 0:
+            deducted = await deduct_balance_if_sufficient(u.id, final_price)
+            if not deducted:
+                await callback.answer("موجودی کافی نیست.", show_alert=True)
+                return
 
         try:
             api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
@@ -738,8 +799,8 @@ def register_user_handlers(dp):
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {e}")
-            # پول برگشت داده می‌شه چون API خطا داد
-            await add_balance(u.id, plan["price"])
+            if final_price > 0:
+                await add_balance(u.id, final_price)
             await callback.answer(f"خطا در اتصال به پنل: {e}", show_alert=True)
             return
 
@@ -747,7 +808,13 @@ def register_user_handlers(dp):
             order_id = await create_order(u.id, u.username or u.first_name, plan_id, "wallet")
             await update_order_status(order_id, "approved")
             await update_order_vpn_info(order_id, username, subscription_url)
-            await add_balance_and_transaction(u.id, -plan["price"], "purchase", f"خرید پلن {plan['name']}")
+            if final_price > 0:
+                await add_balance_and_transaction(u.id, -final_price, "purchase", f"خرید پلن {plan['name']}")
+            if discount_code:
+                from database import update_order_discount, use_discount_code
+                await update_order_discount(order_id, discount_code, discount_amount)
+                if discount_code_id:
+                    await use_discount_code(discount_code_id, u.id)
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ثبت سفارش wallet plan #{plan_id} — حذف یوزر {username}: {e}")
@@ -755,10 +822,12 @@ def register_user_handlers(dp):
                 await api.delete_user(username)
             except Exception:
                 pass
-            await add_balance(u.id, plan["price"])
+            if final_price > 0:
+                await add_balance(u.id, final_price)
             await callback.answer("خطا در ثبت سفارش. مبلغ به حسابتان برگشت داده شد.", show_alert=True)
             return
 
+        await state.clear()
         from handlers.admin import _make_qr
         qr_file = _make_qr(subscription_url)
         await callback.message.delete()
@@ -809,7 +878,7 @@ def register_user_handlers(dp):
             from database import update_order_discount, use_discount_code
             await update_order_discount(order_id, discount_code, discount_amount)
             if discount_code_id:
-                await use_discount_code(discount_code_id)
+                await use_discount_code(discount_code_id, message.from_user.id)
 
         await state.clear()
 

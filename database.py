@@ -194,6 +194,14 @@ async def init_db():
                 await db.commit()
             except Exception:
                 pass
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS discount_code_uses (
+                code_id    INTEGER NOT NULL,
+                user_id    INTEGER NOT NULL,
+                used_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (code_id, user_id)
+            )
+        """)
         await db.commit()
 
 # ─── توابع تیکت ──────────────────────────────
@@ -1099,7 +1107,7 @@ async def get_discount_code_by_id(code_id: int):
         cur = await db.execute("SELECT * FROM discount_codes WHERE id = ?", (code_id,))
         return await cur.fetchone()
 
-async def validate_discount_code(code_text: str):
+async def validate_discount_code(code_text: str, user_id: int = None):
     """اگه کد معتبر باشه row برمی‌گردونه، وگرنه None"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -1114,13 +1122,25 @@ async def validate_discount_code(code_text: str):
             return None
         if row["expires_at"] and row["expires_at"] < __import__("datetime").date.today().isoformat():
             return None
+        if user_id is not None:
+            cur2 = await db.execute(
+                "SELECT 1 FROM discount_code_uses WHERE code_id = ? AND user_id = ?",
+                (row["id"], user_id)
+            )
+            if await cur2.fetchone():
+                return None
         return row
 
-async def use_discount_code(code_id: int):
+async def use_discount_code(code_id: int, user_id: int = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "UPDATE discount_codes SET used_count = used_count + 1 WHERE id = ?", (code_id,)
         )
+        if user_id is not None:
+            await db.execute(
+                "INSERT OR IGNORE INTO discount_code_uses (code_id, user_id) VALUES (?, ?)",
+                (code_id, user_id)
+            )
         await db.commit()
 
 async def toggle_discount_code(code_id: int):
