@@ -264,6 +264,7 @@ def register_user_handlers(dp):
             await callback.answer("سرویسی برای این سرور تنظیم نشده. با پشتیبانی تماس بگیرید.", show_alert=True)
             return
 
+        await callback.answer()
         await callback.message.edit_text("⏳ در حال ساخت سرویس تست...")
 
         try:
@@ -316,7 +317,6 @@ def register_user_handlers(dp):
             reply_markup=subscription_approved_keyboard(subscription_url),
             parse_mode="HTML"
         )
-        await callback.answer()
 
     # ─── پروفایل ──────────────────────────────────
 
@@ -516,6 +516,7 @@ def register_user_handlers(dp):
             await callback.answer("سرویس یافت نشد.", show_alert=True)
             return
 
+        await callback.answer()
         live = None
         try:
             api = RebeccaAPI(order["panel_url"], order["panel_token"])
@@ -529,7 +530,6 @@ def register_user_handlers(dp):
             _service_text(order, live),
             user_service_detail_keyboard(order_id, order["subscription_url"])
         )
-        await callback.answer()
 
     @dp.callback_query(F.data.startswith("renew_service_"))
     async def renew_service(callback: types.CallbackQuery):
@@ -579,13 +579,14 @@ def register_user_handlers(dp):
         if not order:
             await callback.answer("سرویس یافت نشد.", show_alert=True)
             return
+        await callback.answer()
         try:
             api = RebeccaAPI(order["panel_url"], order["panel_token"])
             await api.delete_user(order["vpn_username"])
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در حذف سرویس {order['vpn_username']}: {e}")
-            await callback.answer(f"خطا در حذف سرویس: {e}", show_alert=True)
+            await callback.message.answer(f"❌ خطا در حذف سرویس: {e}")
             return
         await update_order_status(order_id, "deleted")
         orders = await get_user_services(callback.from_user.id)
@@ -604,7 +605,6 @@ def register_user_handlers(dp):
                 "هنوز هیچ سرویسی نداری.",
                 user_services_keyboard([])
             )
-        await callback.answer("سرویس حذف شد.")
 
     @dp.callback_query(F.data.startswith("sub_link_"))
     async def send_sub_link(callback: types.CallbackQuery):
