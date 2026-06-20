@@ -83,6 +83,10 @@ async def _do_broadcast(bot, status_chat_id: int, status_msg_id: int,
 
         await asyncio.sleep(0.05)
 
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 پیام همگانی جدید", callback_data="admin_broadcast")],
+        [InlineKeyboardButton(text="🔙 پنل ادمین",         callback_data="admin_panel")],
+    ])
     try:
         await bot.edit_message_text(
             f"✅ پیام همگانی ارسال شد!\n\n"
@@ -90,7 +94,8 @@ async def _do_broadcast(bot, status_chat_id: int, status_msg_id: int,
             f"❌ ناموفق (بلاک یا ارور): {failed}\n"
             f"👥 کل: {total}",
             chat_id=status_chat_id,
-            message_id=status_msg_id
+            message_id=status_msg_id,
+            reply_markup=back_kb
         )
     except Exception:
         pass
