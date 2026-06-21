@@ -1,6 +1,8 @@
 import aiosqlite
+import os
 
-DB_PATH = "bot.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data", "bot.db")
+
 
 async def init_db():
     """ساخت جداول دیتابیس"""
