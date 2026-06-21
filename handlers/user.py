@@ -21,7 +21,7 @@ from database import (
 )
 from rebecca_api import RebeccaAPI
 
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
 
@@ -139,7 +139,7 @@ async def _send_main_menu(target, user: types.User):
     if custom_caption:
         caption, entities = _apply_name(custom_caption, entities or [], name)
     else:
-        caption = f"سلام {name} 👋 به <b>bping</b> خوش اومدی"
+        caption = f"سلام {name} 👋 خوش اومدی"
     banner = await get_setting("banner_file_id")
 
     send_kwargs = {"reply_markup": menu, "protect_content": True} if banner else {"reply_markup": menu}
@@ -148,22 +148,27 @@ async def _send_main_menu(target, user: types.User):
     else:
         send_kwargs["parse_mode"] = "HTML"
 
-    if isinstance(target, types.CallbackQuery):
-        try:
-            await target.message.delete()
-        except Exception:
-            pass
-        msg = target.message
-        if banner:
-            await msg.answer_photo(photo=banner, caption=caption, **send_kwargs)
+    try:
+        if isinstance(target, types.CallbackQuery):
+            try:
+                await target.message.delete()
+            except Exception:
+                pass
+            msg = target.message
+            if banner:
+                await msg.answer_photo(photo=banner, caption=caption, **send_kwargs)
+            else:
+                await msg.answer(caption, **send_kwargs)
+            await target.answer()
         else:
-            await msg.answer(caption, **send_kwargs)
-        await target.answer()
-    else:
-        if banner:
-            await target.answer_photo(photo=banner, caption=caption, **send_kwargs)
-        else:
-            await target.answer(caption, reply_markup=menu, parse_mode="HTML")
+            if banner:
+                await target.answer_photo(photo=banner, caption=caption, **send_kwargs)
+            else:
+                await target.answer(caption, reply_markup=menu, parse_mode="HTML")
+    except TelegramForbiddenError:
+        from bot import logger
+        user_id = target.from_user.id if isinstance(target, types.CallbackQuery) else target.from_user.id
+        logger.warning(f"کاربر {user_id} بات را بلاک کرده — ارسال منو لغو شد")
 
 def register_user_handlers(dp):
 
