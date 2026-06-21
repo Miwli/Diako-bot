@@ -1,1 +1,2 @@
 shared-data/*.db
+shared_lib/__pycache__/
