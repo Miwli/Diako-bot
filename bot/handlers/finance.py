@@ -2,7 +2,7 @@ from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import SetCardInfo
 from keyboards import admin_finance_menu, card_settings_keyboard, cancel_keyboard
-from database import get_setting, set_setting
+from shared_lib.db import get_setting, set_setting
 
 def register_finance_handlers(dp):
 

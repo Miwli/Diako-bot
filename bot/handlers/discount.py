@@ -9,7 +9,7 @@ from keyboards import (
     discount_type_keyboard, discount_expiry_keyboard,
     proforma_keyboard,
 )
-from database import (
+from shared_lib.db import (
     get_discount_codes, get_discount_code_by_id,
     create_discount_code, toggle_discount_code, delete_discount_code,
     validate_discount_code, get_plan, get_user_wallet_stats,

@@ -8,7 +8,7 @@ from keyboards import (
     rebecca_services_keyboard, servers_table_keyboard,
     server_settings_keyboard, confirm_delete_server_keyboard
 )
-from database import (
+from shared_lib.db import (
     add_server, get_servers, get_server,
     delete_server, toggle_server_status, update_server_services,
     update_server_url, update_server_token

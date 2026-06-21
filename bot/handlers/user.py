@@ -10,7 +10,7 @@ from keyboards import (
     wallet_keyboard, admin_topup_keyboard,
     free_test_servers_keyboard, free_test_confirm_keyboard
 )
-from database import (
+from shared_lib.db import (
     get_servers, get_plans, get_plan, get_plan_with_server, get_setting, set_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user, get_user_wallet_stats, get_transactions,
@@ -222,7 +222,7 @@ def register_user_handlers(dp):
         if not ok:
             await callback.answer(f"❌ {reason}", show_alert=True)
             return
-        from database import get_server
+        from shared_lib.db import get_server
         server = await get_server(server_id)
         if not server or not server["free_test_enabled"]:
             await callback.answer("این سرور تست رایگان ندارد.", show_alert=True)
@@ -258,7 +258,7 @@ def register_user_handlers(dp):
             await callback.answer(f"❌ {reason}", show_alert=True)
             return
 
-        from database import get_server
+        from shared_lib.db import get_server
         server = await get_server(server_id)
         if not server or not server["free_test_enabled"] or not server["is_active"]:
             await callback.answer("این سرور در دسترس نیست.", show_alert=True)
@@ -721,7 +721,7 @@ def register_user_handlers(dp):
             await update_order_status(order_id, "approved")
             await update_order_vpn_info(order_id, vpn_username, subscription_url)
             if discount_code:
-                from database import update_order_discount, use_discount_code
+                from shared_lib.db import update_order_discount, use_discount_code
                 await update_order_discount(order_id, discount_code, discount_amount)
                 if discount_code_id:
                     await use_discount_code(discount_code_id, u.id)
@@ -816,7 +816,7 @@ def register_user_handlers(dp):
             if final_price > 0:
                 await add_balance_and_transaction(u.id, -final_price, "purchase", f"خرید پلن {plan['name']}")
             if discount_code:
-                from database import update_order_discount, use_discount_code
+                from shared_lib.db import update_order_discount, use_discount_code
                 await update_order_discount(order_id, discount_code, discount_amount)
                 if discount_code_id:
                     await use_discount_code(discount_code_id, u.id)
@@ -880,7 +880,7 @@ def register_user_handlers(dp):
         discount_amount = data.get("discount_amount", 0)
         discount_code_id= data.get("discount_code_id")
         if discount_code and discount_amount:
-            from database import update_order_discount, use_discount_code
+            from shared_lib.db import update_order_discount, use_discount_code
             await update_order_discount(order_id, discount_code, discount_amount)
             if discount_code_id:
                 await use_discount_code(discount_code_id, message.from_user.id)

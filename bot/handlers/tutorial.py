@@ -9,7 +9,7 @@ from keyboards import (
     user_tutorials_keyboard, user_faqs_keyboard,
     back_to_tutorials_keyboard, back_to_faqs_keyboard,
 )
-from database import (
+from shared_lib.db import (
     get_tutorials, get_tutorial, create_tutorial, update_tutorial,
     toggle_tutorial, delete_tutorial, move_tutorial,
     get_faqs, get_faq, create_faq, update_faq, toggle_faq, delete_faq,

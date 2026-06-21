@@ -3,7 +3,7 @@ import jdatetime
 from aiogram import types, F
 from aiogram.exceptions import TelegramBadRequest
 from keyboards import admin_stats_keyboard
-from database import get_admin_stats
+from shared_lib.db import get_admin_stats
 
 _TZ_IR = timezone(timedelta(hours=3, minutes=30))
 

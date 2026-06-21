@@ -10,7 +10,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard, admin_general_menu, admin_banner_settings_menu, admin_banner_and_text_menu, admin_text_settings_menu, admin_free_test_menu, admin_free_test_global_menu, admin_free_test_server_menu
 from states import AdminAction, GeneralSettings, FreeTestSettings
 from aiogram.filters import Command
-from database import (
+from shared_lib.db import (
     get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
     get_top_up_request, update_top_up_status, approve_top_up_atomic,
     add_balance, add_balance_and_transaction, get_or_create_user,
@@ -51,7 +51,7 @@ async def _apply_referral_rewards(bot, buyer_id: int, price: int):
 
         if cfg["referral_free_test_enabled"] == "1":
             try:
-                from database import decrement_free_test_uses
+                from shared_lib.db import decrement_free_test_uses
                 await decrement_free_test_uses(referrer_id)
             except Exception as e:
                 logger.error(f"خطا در اعطای تست رایگان به {referrer_id}: {e}")
@@ -102,7 +102,7 @@ def register_admin_handlers(dp):
 
         await get_or_create_user(u.id, u.first_name, u.username)
 
-        from database import get_user as _get_user
+        from shared_lib.db import get_user as _get_user
         _u = await _get_user(u.id)
         if _u and _u["is_banned"] and not is_admin(u.id):
             await message.answer("⛔️ دسترسی شما به ربات محدود شده است.")
@@ -111,7 +111,7 @@ def register_admin_handlers(dp):
         args = message.text.split(maxsplit=1)
         if len(args) > 1 and args[1].startswith("ref_"):
             ref_code = args[1][4:]
-            from database import (
+            from shared_lib.db import (
                 get_user_by_referral_code, set_referral_by,
                 create_referral, get_user, get_setting
             )

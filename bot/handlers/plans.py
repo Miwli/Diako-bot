@@ -6,7 +6,7 @@ from keyboards import (
     plans_table_keyboard, plan_settings_keyboard,
     confirm_delete_plan_keyboard
 )
-from database import (
+from shared_lib.db import (
     add_plan, get_servers, get_plans, get_plan,
     delete_plan, toggle_plan_status, get_setting, set_setting, update_plan_field
 )

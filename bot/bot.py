@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from database import init_db
+from shared_lib.db import init_db
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers

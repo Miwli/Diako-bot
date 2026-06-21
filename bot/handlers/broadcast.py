@@ -6,7 +6,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, MessageEntity
 from states import Broadcast
 from keyboards import admin_broadcast_menu, admin_broadcast_confirm_keyboard
-from database import get_all_user_ids, get_active_service_user_ids
+from shared_lib.db import get_all_user_ids, get_active_service_user_ids
 
 _TARGET_LABELS = {
     "all":    "همه کاربران",

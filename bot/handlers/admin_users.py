@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from states import AdminUserManagement
 from keyboards import admin_users_menu, admin_user_list_keyboard, admin_user_profile_keyboard
-from database import (
+from shared_lib.db import (
     get_user, get_users_paginated, get_users_count, search_users,
     ban_user, unban_user, admin_adjust_balance,
     get_user_wallet_stats, get_transactions, get_free_test_uses,

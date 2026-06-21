@@ -8,7 +8,7 @@ from keyboards import (
     support_menu_keyboard, ticket_keyboard,
     my_tickets_keyboard, admin_support_settings_keyboard
 )
-from database import (
+from shared_lib.db import (
     get_setting, set_setting,
     create_ticket, get_ticket, get_ticket_by_topic,
     get_user_open_ticket, get_user_tickets,

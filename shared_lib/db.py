@@ -34,7 +34,7 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS plans (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                server_id INTEGER NOT NULL,
+                server_id INTEGER,
                 name      TEXT NOT NULL,
                 price     INTEGER NOT NULL,
                 duration  INTEGER NOT NULL,
@@ -43,6 +43,28 @@ async def init_db():
                 FOREIGN KEY (server_id) REFERENCES servers(id)
             )
         """)
+        # migration: تبدیل server_id از NOT NULL به nullable
+        cursor = await db.execute("PRAGMA table_info(plans)")
+        columns = await cursor.fetchall()
+        for col in columns:
+            if col[1] == "server_id" and col[3] == 1:
+                await db.execute("""
+                    CREATE TABLE plans_new (
+                        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                        server_id INTEGER,
+                        name      TEXT NOT NULL,
+                        price     INTEGER NOT NULL,
+                        duration  INTEGER NOT NULL,
+                        traffic   INTEGER NOT NULL,
+                        is_active INTEGER DEFAULT 1,
+                        FOREIGN KEY (server_id) REFERENCES servers(id)
+                    )
+                """)
+                await db.execute("INSERT INTO plans_new SELECT * FROM plans")
+                await db.execute("DROP TABLE plans")
+                await db.execute("ALTER TABLE plans_new RENAME TO plans")
+                await db.commit()
+                break
         await db.execute("""
             CREATE TABLE IF NOT EXISTS settings (
                 key   TEXT PRIMARY KEY,
@@ -292,8 +314,9 @@ async def get_server(server_id: int):
         return await cursor.fetchone()
 
 async def delete_server(server_id: int):
-    """حذف سرور"""
+    """حذف سرور و یتیم کردن پلن‌هاش"""
     async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE plans SET server_id = NULL WHERE server_id = ?", (server_id,))
         await db.execute("DELETE FROM servers WHERE id = ?", (server_id,))
         await db.commit()
 

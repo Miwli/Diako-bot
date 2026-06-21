@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from states import ReferralSettings
 from keyboards import admin_referral_menu, admin_referral_sub_keyboard, user_referral_keyboard
-from database import (
+from shared_lib.db import (
     get_setting, set_setting,
     get_user, get_user_by_referral_code,
     get_referral_stats,
