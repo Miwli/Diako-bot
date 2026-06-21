@@ -6,7 +6,7 @@ from aiogram import types, F
 from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_order_keyboard, subscription_approved_keyboard, admin_topup_keyboard, admin_general_menu, admin_banner_settings_menu, admin_banner_and_text_menu, admin_text_settings_menu, admin_free_test_menu, admin_free_test_global_menu, admin_free_test_server_menu
 from states import AdminAction, GeneralSettings, FreeTestSettings
 from aiogram.filters import Command
@@ -574,17 +574,21 @@ def register_admin_handlers(dp):
             reply_markup=after_order_keyboard()
         )
         qr_file = _make_qr(subscription_url)
-        await callback.bot.send_photo(
-            chat_id=order["user_id"],
-            photo=qr_file,
-            caption=(
-                f"✅ <b>سفارش شما تایید شد!</b>\n\n"
-                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
-                f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
-            ),
-            reply_markup=subscription_approved_keyboard(subscription_url),
-            parse_mode="HTML"
-        )
+        try:
+            await callback.bot.send_photo(
+                chat_id=order["user_id"],
+                photo=qr_file,
+                caption=(
+                    f"✅ <b>سفارش شما تایید شد!</b>\n\n"
+                    f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
+                    f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
+                ),
+                reply_markup=subscription_approved_keyboard(subscription_url),
+                parse_mode="HTML"
+            )
+        except TelegramForbiddenError:
+            from bot import logger
+            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه سفارش ارسال نشد")
         await callback.answer("سفارش تایید شد.")
 
     @dp.callback_query(F.data.startswith("order_reject_") & ~F.data.startswith("order_reject_reason_"))
@@ -604,10 +608,14 @@ def register_admin_handlers(dp):
             parse_mode="HTML",
             reply_markup=after_order_keyboard()
         )
-        await callback.bot.send_message(
-            chat_id=order["user_id"],
-            text="❌ متأسفانه سفارش شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
-        )
+        try:
+            await callback.bot.send_message(
+                chat_id=order["user_id"],
+                text="❌ متأسفانه سفارش شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
+            )
+        except TelegramForbiddenError:
+            from bot import logger
+            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
         await callback.answer("سفارش رد شد.")
 
     @dp.callback_query(F.data.startswith("order_reject_reason_"))
@@ -643,11 +651,15 @@ def register_admin_handlers(dp):
             callback.message.caption + f"\n\n✅ <b>تایید شد</b>",
             parse_mode="HTML"
         )
-        await callback.bot.send_message(
-            chat_id=req["user_id"],
-            text=f"✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{req['amount']:,} تومان</b> به کیف پول شما اضافه شد.",
-            parse_mode="HTML"
-        )
+        try:
+            await callback.bot.send_message(
+                chat_id=req["user_id"],
+                text=f"✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{req['amount']:,} تومان</b> به کیف پول شما اضافه شد.",
+                parse_mode="HTML"
+            )
+        except TelegramForbiddenError:
+            from bot import logger
+            logger.warning(f"کاربر {req['user_id']} بات را بلاک کرده — اطلاعیه شارژ ارسال نشد")
         await callback.answer("شارژ تایید شد.")
 
     @dp.callback_query(F.data.startswith("topup_reject_"))
@@ -665,10 +677,14 @@ def register_admin_handlers(dp):
             callback.message.caption + "\n\n❌ <b>رد شد</b>",
             parse_mode="HTML"
         )
-        await callback.bot.send_message(
-            chat_id=req["user_id"],
-            text="❌ متأسفانه درخواست شارژ حساب شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
-        )
+        try:
+            await callback.bot.send_message(
+                chat_id=req["user_id"],
+                text="❌ متأسفانه درخواست شارژ حساب شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
+            )
+        except TelegramForbiddenError:
+            from bot import logger
+            logger.warning(f"کاربر {req['user_id']} بات را بلاک کرده — اطلاعیه رد شارژ ارسال نشد")
         await callback.answer("درخواست رد شد.")
 
     @dp.message(AdminAction.waiting_for_rejection_reason)
@@ -686,11 +702,15 @@ def register_admin_handlers(dp):
         await update_order_status(order_id, "rejected", rejection_reason=reason)
         await state.clear()
 
-        await message.bot.send_message(
-            chat_id=order["user_id"],
-            text="❌ متأسفانه سفارش شما تایید نشد."
-        )
-        if message.text != "/skip":
-            await message.copy_to(chat_id=order["user_id"])
+        try:
+            await message.bot.send_message(
+                chat_id=order["user_id"],
+                text="❌ متأسفانه سفارش شما تایید نشد."
+            )
+            if message.text != "/skip":
+                await message.copy_to(chat_id=order["user_id"])
+        except TelegramForbiddenError:
+            from bot import logger
+            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
 
         await message.answer("✅ سفارش رد شد و کاربر مطلع شد.", reply_markup=after_order_keyboard())
