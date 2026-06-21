@@ -35,6 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -59,7 +60,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -107,7 +108,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fa'
 
 TIME_ZONE = 'UTC'
 
@@ -120,3 +121,50 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+UNFOLD = {
+    "SITE_TITLE": "دیاکو",
+    "SITE_HEADER": "پنل مدیریت دیاکو",
+    "SITE_SYMBOL": "vpn_lock",
+    "SCRIPTS": [
+        lambda _: "/static/js/dark-mode.js",
+    ],
+    "COLORS": {
+        "base": {
+            "50":  "oklch(98% .006 245)",
+            "100": "oklch(94% .012 245)",
+            "200": "oklch(88% .018 248)",
+            "300": "oklch(79% .028 252)",
+            "400": "oklch(65% .042 255)",
+            "500": "oklch(51% .052 258)",
+            "600": "oklch(40% .055 260)",
+            "700": "oklch(30% .052 263)",
+            "800": "oklch(22% .048 265)",
+            "900": "oklch(15% .042 267)",
+            "950": "oklch(10% .035 268)",
+        },
+        "primary": {
+            "50":  "oklch(97% .018 199)",
+            "100": "oklch(93% .04 198)",
+            "200": "oklch(87% .08 200)",
+            "300": "oklch(80% .13 200)",
+            "400": "oklch(73% .18 199)",
+            "500": "oklch(65% .22 200)",
+            "600": "oklch(57% .20 200)",
+            "700": "oklch(48% .17 200)",
+            "800": "oklch(39% .14 200)",
+            "900": "oklch(30% .11 200)",
+            "950": "oklch(20% .07 200)",
+        },
+        "font": {
+            "subtle-light":    "var(--color-base-500)",
+            "subtle-dark":     "var(--color-base-400)",
+            "default-light":   "var(--color-base-600)",
+            "default-dark":    "var(--color-base-300)",
+            "important-light": "var(--color-base-900)",
+            "important-dark":  "var(--color-base-100)",
+        },
+    },
+}
