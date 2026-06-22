@@ -227,6 +227,7 @@ async def init_db():
             )
         """)
         await db.commit()
+    await init_texts_cache()
 
 # ─── توابع تیکت ──────────────────────────────
 
@@ -516,6 +517,156 @@ async def set_setting(key: str, value: str):
             (key, value)
         )
         await db.commit()
+
+# ─── متن‌های ربات (کش حافظه) ─────────────────
+
+_DEFAULT_TEXTS: dict[str, str] = {
+    # ─── استارت ────────────────────────────────────────────────────────
+    "start_welcome_default":      "سلام {name} 👋 خوش اومدی",
+    "start_banned":               "⛔️ دسترسی شما به ربات محدود شده است.",
+    # ─── تست رایگان ────────────────────────────────────────────────────
+    "free_test_max_uses":         "❌ شما قبلاً از تست رایگان استفاده کرده‌اید.",
+    "free_test_unavailable":      "در حال حاضر تست رایگان در دسترس نیست.",
+    "free_test_server_unavailable": "این سرور در دسترس نیست.",
+    "free_test_no_service_config": "سرویسی برای این سرور تنظیم نشده. با پشتیبانی تماس بگیرید.",
+    "free_test_creating":         "⏳ در حال ساخت سرویس تست...",
+    "free_test_error_no_service": "❌ خطا در ساخت سرویس. با پشتیبانی تماس بگیرید.",
+    "free_test_error_api":        "❌ خطا در اتصال به پنل:\n{error}\n\nدوباره امتحان کنید.",
+    "free_test_success":          "✅ <b>سرویس تست رایگان آماده‌ست!</b>\n\n🖥 سرور: {server}\n\n🔗 لینک اشتراک:\n<code>{url}</code>\n\nلینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید.",
+    # ─── خرید VPN ──────────────────────────────────────────────────────
+    "buy_no_servers":             "⚠️ در حال حاضر سرویسی برای فروش وجود ندارد.\nلطفاً بعداً مراجعه کنید.",
+    "buy_select_server":          "🖥 لطفاً یک سرور انتخاب کنید:",
+    "buy_no_plans":               "⚠️ این سرور در حال حاضر پلن فعالی ندارد.\nلطفاً بعداً مراجعه کنید.",
+    "buy_select_plan":            "📦 یک پلن انتخاب کنید:",
+    # ─── پرداخت ────────────────────────────────────────────────────────
+    "payment_card_unavailable":   "در حال حاضر امکان پرداخت وجود ندارد. لطفاً بعداً مراجعه کنید.",
+    "payment_not_photo":          "📸 لطفاً تصویر رسید را ارسال کنید.",
+    "payment_submitted":          "✅ رسید شما دریافت شد.\n⏳ پس از بررسی توسط پشتیبانی، نتیجه به شما اعلام خواهد شد.",
+    "payment_cancelled":          "❌ پرداخت لغو شد.",
+    "wallet_no_balance":          "موجودی کافی نیست.",
+    "wallet_error_api":           "خطا در اتصال به پنل: {error}",
+    "wallet_error_order":         "خطا در ثبت سفارش. مبلغ به حسابتان برگشت داده شد.",
+    "wallet_no_transactions":     "هنوز تراکنشی ثبت نشده.",
+    "wallet_purchase_success":    "✅ <b>خرید با کیف پول انجام شد!</b>\n\n🔗 لینک اشتراک:\n<code>{url}</code>\n\nلینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید.",
+    "discount_free_success":      "✅ <b>سرویس با کد تخفیف ۱۰۰٪ فعال شد!</b>\n\n🔗 لینک اشتراک:\n<code>{url}</code>\n\nلینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید.",
+    # ─── نتیجه سفارش (پیام از ادمین به کاربر) ─────────────────────────
+    "order_approved":             "✅ <b>سفارش شما تایید شد!</b>\n\n🔗 لینک اشتراک:\n<code>{url}</code>\n\nلینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید.",
+    "order_rejected":             "❌ متأسفانه سفارش شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید.",
+    "order_rejected_with_reason": "❌ متأسفانه سفارش شما تایید نشد.",
+    # ─── شارژ حساب ─────────────────────────────────────────────────────
+    "topup_prompt":               "💳 <b>شارژ حساب</b>\n\nمبلغ مورد نظر را به <b>تومان</b> وارد کنید:\nمثلاً: <code>50000</code>",
+    "topup_invalid_amount":       "❌ مبلغ معتبر نیست.\nحداقل شارژ <b>۱۰,۰۰۰ تومان</b> است.",
+    "topup_not_photo":            "لطفاً تصویر رسید پرداخت را ارسال کنید.",
+    "topup_submitted":            "✅ درخواست شارژ شما ثبت شد.\nپس از تایید ادمین، موجودی به حسابتان اضافه می‌شود.",
+    "topup_approved":             "✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{amount}</b> تومان به کیف پول شما اضافه شد.",
+    "topup_rejected":             "❌ متأسفانه درخواست شارژ حساب شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید.",
+    # ─── کد تخفیف ──────────────────────────────────────────────────────
+    "discount_prompt":            "🎟 کد تخفیف خود را وارد کنید:",
+    "discount_invalid":           "❌ این کد تخفیف معتبر نیست، منقضی شده یا قبلاً استفاده کرده‌اید.",
+    "discount_plan_not_found":    "❌ پلن یافت نشد.",
+    # ─── سرویس‌های من ───────────────────────────────────────────────────
+    "services_empty":             "📋 <b>سرویس‌های من</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\nهنوز هیچ سرویسی نداری.",
+    "services_header":            "📋 <b>سرویس‌های من</b>",
+    "service_not_found":          "سرویس یافت نشد.",
+    # ─── وضعیت سرویس ────────────────────────────────────────────────────
+    "status_active":              "✅ فعال",
+    "status_expired":             "❌ منقضی شده",
+    "status_limited":             "❌ ترافیک تمام شده",
+    "status_disabled":            "⚠️ غیرفعال",
+    "status_unknown":             "❓ نامشخص",
+    "service_no_live":            "⚠️ اطلاعات زنده در دسترس نیست",
+    "service_traffic_unlimited":  "📊 ترافیک : نامحدود",
+    "service_expire_unlimited":   "نامحدود",
+    # ─── عملیات سرویس ───────────────────────────────────────────────────
+    "renew_free_test_error":      "سرویس تست رایگان قابل تمدید نیست.",
+    "renew_no_server":            "سرور این سرویس در دسترس نیست.",
+    "renew_no_plans":             "این سرور در حال حاضر پلن فعالی ندارد.",
+    "renew_prompt":               "🔄 <b>تمدید سرویس</b>\n\nیک پلن انتخاب کنید:",
+    "delete_confirm":             "⚠️ مطمئنی می‌خوای سرویس <code>{name}</code> رو حذف کنی؟\n\nاین عمل قابل بازگشت نیست.",
+    "delete_error":               "❌ خطا در حذف سرویس: {error}",
+    "delete_done_empty":          "🗑 سرویس حذف شد.\n\n📋 <b>سرویس‌های من</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\nهنوز هیچ سرویسی نداری.",
+    "delete_done_has_more":       "🗑 سرویس حذف شد.\n\n📋 <b>سرویس‌های من</b>",
+    "sublink_unavailable":        "لینک در دسترس نیست.",
+    "sublink_sent":               "🔗 لینک اشتراک:\n\n<code>{url}</code>",
+    # ─── پشتیبانی ───────────────────────────────────────────────────────
+    "support_menu":               "🎧 پشتیبانی\n\nبرای ارتباط با تیم پشتیبانی یک تیکت ارسال کنید.\nپاسخ پشتیبانی مستقیماً اینجا نمایش داده می‌شود.",
+    "support_unavailable":        "پشتیبانی در حال حاضر در دسترس نیست.",
+    "support_has_open_ticket":    "شما یک تیکت باز (#{id}) دارید.\nاز بخش «تیکت‌های من» ادامه دهید.",
+    "support_new_ticket_prompt":  "📨 تیکت جدید\n\nپیام خود را بنویسید\n(متن، عکس، فایل — همه قبوله)",
+    "support_error_creating":     "❌ خطا در ایجاد تیکت. لطفاً دوباره امتحان کنید.\n{error}",
+    "support_ticket_closed":      "❌ تیکت شما بسته شده است.",
+    "support_error_send":         "❌ خطا در ارسال پیام. دوباره امتحان کنید.",
+    "support_closed_by_support":  "❌ تیکت #{id} توسط پشتیبانی بسته شد.\n\nدر صورت نیاز می‌توانید تیکت جدید باز کنید.",
+    "support_close_self":         "✅ تیکت #{id} بسته شد.",
+    "support_tickets_empty":      "📋 تیکت‌های من\n\nهیچ تیکتی ندارید.",
+    "support_tickets_list":       "📋 تیکت‌های من\n\n🟢 باز  |  🔴 بسته",
+    "support_view_open":          "🎫 تیکت #{id}\nوضعیت: 🟢 باز\n\nپیام بعدی شما به پشتیبانی ارسال می‌شود.",
+    "support_view_closed":        "🎫 تیکت #{id}\nوضعیت: 🔴 بسته",
+    # ─── آموزش‌ها ────────────────────────────────────────────────────────
+    "tutorial_empty":             "📚 آموزش و راهنما\n\nهنوز آموزشی اضافه نشده.",
+    "tutorial_has_list":          "📚 آموزش و راهنما\n\nیکی از موضوعات زیر را انتخاب کنید:",
+    "tutorial_unavailable":       "این آموزش در دسترس نیست.",
+    # ─── سوالات متداول ──────────────────────────────────────────────────
+    "faq_empty":                  "❓ سوالات متداول\n\nهنوز سوالی اضافه نشده.",
+    "faq_has_list":               "❓ سوالات متداول\n\nسوال مورد نظر را انتخاب کنید:",
+    "faq_unavailable":            "این سوال در دسترس نیست.",
+    # ─── دعوت دوستان ────────────────────────────────────────────────────
+    "referral_error":             "خطا در دریافت اطلاعات.",
+    "referral_disabled":          "سیستم دعوت دوستان در حال حاضر غیرفعال است.",
+    "referral_commission_notify": "💰 <b>پورسانت دریافت کردی!</b>\nدوستت خرید کرد و <b>{amount}</b> تومان به کیف پولت اضافه شد.",
+}
+
+_texts_cache: dict[str, str] = {}
+
+
+def get_text(key: str, **fmt) -> str:
+    """گرفتن متن از کش — سریع و بدون await"""
+    text = _texts_cache.get(key) or _DEFAULT_TEXTS.get(key, "")
+    if fmt:
+        try:
+            return text.format_map(fmt)
+        except (KeyError, ValueError):
+            return text
+    return text
+
+
+async def set_text(key: str, value: str) -> None:
+    """ویرایش یک متن — در DB ذخیره و کش آپدیت می‌شه"""
+    _texts_cache[key] = value
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO bot_texts (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value)
+        )
+        await db.commit()
+
+
+async def get_all_texts() -> list:
+    """همه متن‌ها با مقدار فعلیشان (برای پنل ادمین)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT key, value FROM bot_texts ORDER BY key")
+        return await cur.fetchall()
+
+
+async def init_texts_cache() -> None:
+    """جدول bot_texts رو می‌سازه، مقادیر پیش‌فرض رو seed می‌کنه، کش رو بارگذاری می‌کنه"""
+    global _texts_cache
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "CREATE TABLE IF NOT EXISTS bot_texts (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+        )
+        for key, text in _DEFAULT_TEXTS.items():
+            await db.execute(
+                "INSERT OR IGNORE INTO bot_texts (key, value) VALUES (?, ?)",
+                (key, text)
+            )
+        await db.commit()
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT key, value FROM bot_texts")
+        rows = await cur.fetchall()
+        _texts_cache = {row["key"]: row["value"] for row in rows}
 
 # ─── توابع سفارش‌ها ────────────────────────────
 

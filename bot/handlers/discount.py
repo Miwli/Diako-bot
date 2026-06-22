@@ -13,6 +13,7 @@ from shared_lib.db import (
     get_discount_codes, get_discount_code_by_id,
     create_discount_code, toggle_discount_code, delete_discount_code,
     validate_discount_code, get_plan, get_user_wallet_stats,
+    get_text,
 )
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -211,7 +212,7 @@ def register_discount_handlers(dp):
         await state.set_state(ApplyDiscount.waiting_for_code)
         await state.update_data(plan_id=plan_id)
         await callback.message.edit_text(
-            "🎟 کد تخفیف خود را وارد کنید:",
+            get_text("discount_prompt"),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 انصراف", callback_data=f"user_plan_{plan_id}")]
             ])
@@ -228,7 +229,7 @@ def register_discount_handlers(dp):
         code = await validate_discount_code(code_text, user_id=message.from_user.id)
         if not code:
             await message.answer(
-                "❌ این کد تخفیف معتبر نیست، منقضی شده یا قبلاً استفاده کرده‌اید.",
+                get_text("discount_invalid"),
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🔙 بازگشت", callback_data=f"user_plan_{plan_id}")]
                 ])
@@ -237,7 +238,7 @@ def register_discount_handlers(dp):
 
         plan = await get_plan(plan_id)
         if not plan:
-            await message.answer("❌ پلن یافت نشد.")
+            await message.answer(get_text("discount_plan_not_found"))
             return
 
         original  = plan["price"]

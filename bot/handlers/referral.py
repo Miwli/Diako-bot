@@ -7,6 +7,7 @@ from shared_lib.db import (
     get_setting, set_setting,
     get_user, get_user_by_referral_code,
     get_referral_stats,
+    get_text,
 )
 
 # ─── helpers ─────────────────────────────────
@@ -234,12 +235,12 @@ def register_referral_handlers(dp):
         u = callback.from_user
         user = await get_user(u.id)
         if not user or not user["referral_code"]:
-            await callback.answer("خطا در دریافت اطلاعات.", show_alert=True)
+            await callback.answer(get_text("referral_error"), show_alert=True)
             return
 
         cfg = await _get_referral_cfg()
         if not _bool(cfg, "referral_enabled"):
-            await callback.answer("سیستم دعوت دوستان در حال حاضر غیرفعال است.", show_alert=True)
+            await callback.answer(get_text("referral_disabled"), show_alert=True)
             return
 
         bot_info = await callback.bot.get_me()

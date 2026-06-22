@@ -13,6 +13,7 @@ from shared_lib.db import (
     get_tutorials, get_tutorial, create_tutorial, update_tutorial,
     toggle_tutorial, delete_tutorial, move_tutorial,
     get_faqs, get_faq, create_faq, update_faq, toggle_faq, delete_faq,
+    get_text,
 )
 
 _CANCEL_TUTORIALS = InlineKeyboardMarkup(inline_keyboard=[
@@ -357,17 +358,13 @@ def register_tutorial_handlers(dp):
         if not tutorials:
             await _edit_or_replace(
                 callback,
-                "📚 <b>آموزش و راهنما</b>\n\nهنوز آموزشی اضافه نشده.",
+                get_text("tutorial_empty"),
                 InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🔙 بازگشت", callback_data="back_to_start")]
                 ])
             )
         else:
-            await _edit_or_replace(
-                callback,
-                "📚 <b>آموزش و راهنما</b>\n\nیکی از موضوعات زیر را انتخاب کنید:",
-                user_tutorials_keyboard(tutorials)
-            )
+            await _edit_or_replace(callback, get_text("tutorial_has_list"), user_tutorials_keyboard(tutorials))
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("tutorial_view_"))
@@ -375,7 +372,7 @@ def register_tutorial_handlers(dp):
         tid = int(callback.data.removeprefix("tutorial_view_"))
         t = await get_tutorial(tid)
         if not t or not t["is_active"]:
-            await callback.answer("این آموزش در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("tutorial_unavailable"), show_alert=True)
             return
         kb = back_to_tutorials_keyboard()
         entities = _load_entities(t["caption_entities"])
@@ -405,17 +402,9 @@ def register_tutorial_handlers(dp):
         from handlers.user import _edit_or_replace
         faqs = await get_faqs(active_only=True)
         if not faqs:
-            await _edit_or_replace(
-                callback,
-                "❓ <b>سوالات متداول</b>\n\nهنوز سوالی اضافه نشده.",
-                back_to_tutorials_keyboard()
-            )
+            await _edit_or_replace(callback, get_text("faq_empty"), back_to_tutorials_keyboard())
         else:
-            await _edit_or_replace(
-                callback,
-                "❓ <b>سوالات متداول</b>\n\nسوال مورد نظر را انتخاب کنید:",
-                user_faqs_keyboard(faqs)
-            )
+            await _edit_or_replace(callback, get_text("faq_has_list"), user_faqs_keyboard(faqs))
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("faq_view_"))
@@ -423,7 +412,7 @@ def register_tutorial_handlers(dp):
         fid = int(callback.data.removeprefix("faq_view_"))
         f = await get_faq(fid)
         if not f or not f["is_active"]:
-            await callback.answer("این سوال در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("faq_unavailable"), show_alert=True)
             return
         entities = _load_entities(f["answer_entities"])
         kb = back_to_faqs_keyboard()

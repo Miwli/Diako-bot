@@ -19,6 +19,7 @@ from shared_lib.db import (
     reset_free_test_uses,
     get_referral_by_referred, mark_first_purchase_rewarded,
     add_referral_commission, get_user,
+    get_text,
 )
 from rebecca_api import RebeccaAPI
 
@@ -74,8 +75,7 @@ async def _apply_referral_rewards(bot, buyer_id: int, price: int):
                 try:
                     await bot.send_message(
                         referrer_id,
-                        f"💰 <b>پورسانت دریافت کردی!</b>\n"
-                        f"دوستت خرید کرد و <b>{commission:,} تومان</b> به کیف پولت اضافه شد.",
+                        get_text("referral_commission_notify", amount=f"{commission:,}"),
                         parse_mode="HTML"
                     )
                 except Exception:
@@ -105,7 +105,7 @@ def register_admin_handlers(dp):
         from shared_lib.db import get_user as _get_user
         _u = await _get_user(u.id)
         if _u and _u["is_banned"] and not is_admin(u.id):
-            await message.answer("⛔️ دسترسی شما به ربات محدود شده است.")
+            await message.answer(get_text("start_banned"))
             return
 
         args = message.text.split(maxsplit=1)
@@ -578,11 +578,7 @@ def register_admin_handlers(dp):
             await callback.bot.send_photo(
                 chat_id=order["user_id"],
                 photo=qr_file,
-                caption=(
-                    f"✅ <b>سفارش شما تایید شد!</b>\n\n"
-                    f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
-                    f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
-                ),
+                caption=get_text("order_approved", url=subscription_url),
                 reply_markup=subscription_approved_keyboard(subscription_url),
                 parse_mode="HTML"
             )
@@ -611,7 +607,7 @@ def register_admin_handlers(dp):
         try:
             await callback.bot.send_message(
                 chat_id=order["user_id"],
-                text="❌ متأسفانه سفارش شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
+                text=get_text("order_rejected"),
             )
         except TelegramForbiddenError:
             from bot import logger
@@ -654,7 +650,7 @@ def register_admin_handlers(dp):
         try:
             await callback.bot.send_message(
                 chat_id=req["user_id"],
-                text=f"✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{req['amount']:,} تومان</b> به کیف پول شما اضافه شد.",
+                text=get_text("topup_approved", amount=f"{req['amount']:,}"),
                 parse_mode="HTML"
             )
         except TelegramForbiddenError:
@@ -680,7 +676,7 @@ def register_admin_handlers(dp):
         try:
             await callback.bot.send_message(
                 chat_id=req["user_id"],
-                text="❌ متأسفانه درخواست شارژ حساب شما تایید نشد.\nدر صورت نیاز با پشتیبانی تماس بگیرید."
+                text=get_text("topup_rejected"),
             )
         except TelegramForbiddenError:
             from bot import logger
@@ -705,7 +701,7 @@ def register_admin_handlers(dp):
         try:
             await message.bot.send_message(
                 chat_id=order["user_id"],
-                text="❌ متأسفانه سفارش شما تایید نشد."
+                text=get_text("order_rejected_with_reason"),
             )
             if message.text != "/skip":
                 await message.copy_to(chat_id=order["user_id"])

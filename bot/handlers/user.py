@@ -17,7 +17,8 @@ from shared_lib.db import (
     add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
     create_top_up_request, get_top_up_request, update_top_up_status,
     get_free_test_servers, create_free_test_order,
-    get_free_test_uses, increment_free_test_uses
+    get_free_test_uses, increment_free_test_uses,
+    get_text,
 )
 from rebecca_api import RebeccaAPI
 
@@ -50,12 +51,12 @@ def _fmt_gb(b: int) -> str:
 
 def _service_text(order, live=None) -> str:
     STATUS_MAP = {
-        "active":   "✅ فعال",
-        "expired":  "❌ منقضی شده",
-        "limited":  "❌ ترافیک تمام شده",
-        "disabled": "⚠️ غیرفعال",
+        "active":   get_text("status_active"),
+        "expired":  get_text("status_expired"),
+        "limited":  get_text("status_limited"),
+        "disabled": get_text("status_disabled"),
     }
-    status = STATUS_MAP.get(live.get("status", ""), "❓ نامشخص") if live else "⚠️ اطلاعات زنده در دسترس نیست"
+    status = STATUS_MAP.get(live.get("status", ""), get_text("status_unknown")) if live else get_text("service_no_live")
 
     parts = [
         f"📡 وضعیت : {status}",
@@ -78,10 +79,10 @@ def _service_text(order, live=None) -> str:
                 f"📈 باقی‌مانده : {_fmt_gb(remaining)}",
             ]
         else:
-            parts.append("📊 ترافیک : نامحدود")
+            parts.append(get_text("service_traffic_unlimited"))
         parts.append("━━━━━━━━━━━━━━━━━━━━━━━━")
         expire = live.get("expire")
-        parts.append(f"📅 انقضا : {_to_jalali(expire) if expire else 'نامحدود'}")
+        parts.append(f"📅 انقضا : {_to_jalali(expire) if expire else get_text('service_expire_unlimited')}")
 
     parts.append(f"🗓 خرید : {_to_jalali(order['created_at'])}")
     return "\n".join(parts)
@@ -139,7 +140,7 @@ async def _send_main_menu(target, user: types.User):
     if custom_caption:
         caption, entities = _apply_name(custom_caption, entities or [], name)
     else:
-        caption = f"سلام {name} 👋 خوش اومدی"
+        caption = get_text("start_welcome_default", name=name)
     banner = await get_setting("banner_file_id")
 
     send_kwargs = {"reply_markup": menu, "protect_content": True} if banner else {"reply_markup": menu}
@@ -189,7 +190,7 @@ def register_user_handlers(dp):
         max_uses = int(await get_setting("free_test_max_uses") or "1")
         uses = await get_free_test_uses(user_id)
         if max_uses != 0 and uses >= max_uses:
-            return False, f"شما قبلاً از تست رایگان استفاده کرده‌اید.\n({'بار' if max_uses == 1 else f'{max_uses} بار'} مجاز)"
+            return False, get_text("free_test_max_uses")
         return True, None
 
     @dp.callback_query(F.data == "free_test")
@@ -202,7 +203,7 @@ def register_user_handlers(dp):
 
         servers = await get_free_test_servers()
         if not servers:
-            await callback.answer("در حال حاضر تست رایگان در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("free_test_unavailable"), show_alert=True)
             return
 
         if len(servers) == 1:
@@ -225,7 +226,7 @@ def register_user_handlers(dp):
         from shared_lib.db import get_server
         server = await get_server(server_id)
         if not server or not server["free_test_enabled"]:
-            await callback.answer("این سرور تست رایگان ندارد.", show_alert=True)
+            await callback.answer(get_text("free_test_server_unavailable"), show_alert=True)
             return
         await _show_free_test_confirm(callback, server)
         await callback.answer()
@@ -261,16 +262,16 @@ def register_user_handlers(dp):
         from shared_lib.db import get_server
         server = await get_server(server_id)
         if not server or not server["free_test_enabled"] or not server["is_active"]:
-            await callback.answer("این سرور در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("free_test_server_unavailable"), show_alert=True)
             return
 
         service_ids = json.loads(server["service_ids"] or "[]")
         if not service_ids:
-            await callback.answer("سرویسی برای این سرور تنظیم نشده. با پشتیبانی تماس بگیرید.", show_alert=True)
+            await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
             return
 
         await callback.answer()
-        await callback.message.edit_text("⏳ در حال ساخت سرویس تست...")
+        await callback.message.edit_text(get_text("free_test_creating"))
 
         try:
             api = RebeccaAPI(server["panel_url"], server["panel_token"])
@@ -280,7 +281,7 @@ def register_user_handlers(dp):
             service_id = next((sid for sid in service_ids if sid in live_ids), None)
             if service_id is None:
                 await callback.message.edit_text(
-                    "❌ خطا در ساخت سرویس. با پشتیبانی تماس بگیرید.",
+                    get_text("free_test_error_no_service"),
                     reply_markup=free_test_confirm_keyboard(server_id)
                 )
                 return
@@ -297,7 +298,7 @@ def register_user_handlers(dp):
             from bot import logger
             logger.error(f"خطا در ساخت تست رایگان برای سرور #{server_id}: {e}")
             await callback.message.edit_text(
-                f"❌ خطا در اتصال به پنل:\n<code>{e}</code>\n\nدوباره امتحان کنید.",
+                get_text("free_test_error_api", error=str(e)),
                 reply_markup=free_test_confirm_keyboard(server_id),
                 parse_mode="HTML"
             )
@@ -313,12 +314,7 @@ def register_user_handlers(dp):
         await callback.message.delete()
         await callback.message.answer_photo(
             photo=qr_file,
-            caption=(
-                f"✅ <b>سرویس تست رایگان آماده‌ست!</b>\n\n"
-                f"🖥 سرور: {server['name']}\n\n"
-                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
-                "لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
-            ),
+            caption=get_text("free_test_success", server=server['name'], url=subscription_url),
             reply_markup=subscription_approved_keyboard(subscription_url),
             parse_mode="HTML"
         )
@@ -356,13 +352,7 @@ def register_user_handlers(dp):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔙 بازگشت", callback_data="wallet")],
         ])
-        await _edit_or_replace(
-            callback,
-            "💳 <b>شارژ حساب</b>\n\n"
-            "مبلغ مورد نظر را به <b>تومان</b> وارد کنید:\n"
-            "مثلاً: <code>50000</code>",
-            kb
-        )
+        await _edit_or_replace(callback, get_text("topup_prompt"), kb)
         await state.set_state(TopUp.waiting_for_amount)
         await callback.answer()
 
@@ -370,10 +360,7 @@ def register_user_handlers(dp):
     async def top_up_amount(message: types.Message, state: FSMContext):
         raw = message.text.strip().replace(",", "").replace("،", "")
         if not raw.isdigit() or int(raw) < 10000:
-            await message.answer(
-                "❌ مبلغ معتبر نیست.\nحداقل شارژ <b>۱۰,۰۰۰ تومان</b> است.",
-                parse_mode="HTML"
-            )
+            await message.answer(get_text("topup_invalid_amount"), parse_mode="HTML")
             return
         amount = int(raw)
         await state.update_data(amount=amount)
@@ -392,7 +379,7 @@ def register_user_handlers(dp):
     @dp.message(TopUp.waiting_for_receipt)
     async def top_up_receipt(message: types.Message, state: FSMContext):
         if not message.photo:
-            await message.answer("لطفاً تصویر رسید پرداخت را ارسال کنید.")
+            await message.answer(get_text("topup_not_photo"))
             return
         data = await state.get_data()
         amount = data["amount"]
@@ -419,10 +406,7 @@ def register_user_handlers(dp):
                 reply_markup=admin_topup_keyboard(request_id),
                 parse_mode="HTML"
             )
-        await message.answer(
-            "✅ درخواست شارژ شما ثبت شد.\nپس از تایید ادمین، موجودی به حسابتان اضافه می‌شود.",
-            reply_markup=wallet_keyboard()
-        )
+        await message.answer(get_text("topup_submitted"), reply_markup=wallet_keyboard())
 
     # ─── کیف پول ──────────────────────────────────
 
@@ -448,7 +432,7 @@ def register_user_handlers(dp):
     async def wallet_history(callback: types.CallbackQuery):
         txs = await get_transactions(callback.from_user.id)
         if not txs:
-            await callback.answer("هنوز تراکنشی ثبت نشده.", show_alert=True)
+            await callback.answer(get_text("wallet_no_transactions"), show_alert=True)
             return
         lines = ["📜 <b>تاریخچه تراکنش‌ها</b>\n" + "━" * 24]
         for tx in txs:
@@ -467,10 +451,7 @@ def register_user_handlers(dp):
     async def buy_vpn(callback: types.CallbackQuery):
         servers = await get_servers(only_active=True)
         if not servers:
-            await callback.message.edit_text(
-                "⚠️ در حال حاضر سرویسی برای فروش وجود ندارد.\nلطفاً بعداً مراجعه کنید.",
-                reply_markup=user_main_menu()
-            )
+            await callback.message.edit_text(get_text("buy_no_servers"), reply_markup=user_main_menu())
             await callback.answer()
             return
 
@@ -478,7 +459,7 @@ def register_user_handlers(dp):
             await show_plans(callback, servers[0]["id"], multiple_servers=False)
         else:
             await callback.message.edit_text(
-                "🖥 لطفاً یک سرور انتخاب کنید:",
+                get_text("buy_select_server"),
                 reply_markup=user_servers_keyboard(servers)
             )
         await callback.answer()
@@ -498,19 +479,9 @@ def register_user_handlers(dp):
     async def my_services(callback: types.CallbackQuery):
         orders = await get_user_services(callback.from_user.id)
         if not orders:
-            await _edit_or_replace(
-                callback,
-                "📋 <b>سرویس‌های من</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "هنوز هیچ سرویسی نداری.",
-                user_services_keyboard([])
-            )
+            await _edit_or_replace(callback, get_text("services_empty"), user_services_keyboard([]))
         else:
-            await _edit_or_replace(
-                callback,
-                "📋 <b>سرویس‌های من</b>",
-                user_services_keyboard(orders)
-            )
+            await _edit_or_replace(callback, get_text("services_header"), user_services_keyboard(orders))
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("my_service_"))
@@ -518,7 +489,7 @@ def register_user_handlers(dp):
         order_id = int(callback.data.replace("my_service_", ""))
         order = await get_user_service(order_id, callback.from_user.id)
         if not order:
-            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            await callback.answer(get_text("service_not_found"), show_alert=True)
             return
 
         await callback.answer()
@@ -541,23 +512,23 @@ def register_user_handlers(dp):
         order_id = int(callback.data.replace("renew_service_", ""))
         order = await get_user_service(order_id, callback.from_user.id)
         if not order:
-            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            await callback.answer(get_text("service_not_found"), show_alert=True)
             return
         if order["order_type"] == "free_test":
-            await callback.answer("سرویس تست رایگان قابل تمدید نیست.", show_alert=True)
+            await callback.answer(get_text("renew_free_test_error"), show_alert=True)
             return
         plan = await get_plan(order["plan_id"])
         if not plan:
-            await callback.answer("سرور این سرویس در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("renew_no_server"), show_alert=True)
             return
         plans = await get_plans(plan["server_id"], only_active=True)
         if not plans:
-            await callback.answer("این سرور در حال حاضر پلن فعالی ندارد.", show_alert=True)
+            await callback.answer(get_text("renew_no_plans"), show_alert=True)
             return
         show_price = (await get_setting("show_plan_price")) == "1"
         await _edit_or_replace(
             callback,
-            "🔄 <b>تمدید سرویس</b>\n\nیک پلن انتخاب کنید:",
+            get_text("renew_prompt"),
             user_plans_keyboard(plans, plan["server_id"], multiple_servers=False, show_price=show_price)
         )
         await callback.answer()
@@ -567,12 +538,11 @@ def register_user_handlers(dp):
         order_id = int(callback.data.replace("delete_service_", ""))
         order = await get_user_service(order_id, callback.from_user.id)
         if not order:
-            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            await callback.answer(get_text("service_not_found"), show_alert=True)
             return
         await _edit_or_replace(
             callback,
-            f"⚠️ مطمئنی می‌خوای سرویس <code>{order['vpn_username']}</code> رو حذف کنی؟\n\n"
-            "این عمل قابل بازگشت نیست.",
+            get_text("delete_confirm", name=order['vpn_username']),
             confirm_delete_service_keyboard(order_id)
         )
         await callback.answer()
@@ -582,7 +552,7 @@ def register_user_handlers(dp):
         order_id = int(callback.data.replace("confirmed_delete_service_", ""))
         order = await get_user_service(order_id, callback.from_user.id)
         if not order:
-            await callback.answer("سرویس یافت نشد.", show_alert=True)
+            await callback.answer(get_text("service_not_found"), show_alert=True)
             return
         await callback.answer()
         try:
@@ -591,35 +561,24 @@ def register_user_handlers(dp):
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در حذف سرویس {order['vpn_username']}: {e}")
-            await callback.message.answer(f"❌ خطا در حذف سرویس: {e}")
+            await callback.message.answer(get_text("delete_error", error=str(e)))
             return
         await update_order_status(order_id, "deleted")
         orders = await get_user_services(callback.from_user.id)
         if orders:
-            await _edit_or_replace(
-                callback,
-                "🗑 سرویس حذف شد.\n\n📋 <b>سرویس‌های من</b>",
-                user_services_keyboard(orders)
-            )
+            await _edit_or_replace(callback, get_text("delete_done_has_more"), user_services_keyboard(orders))
         else:
-            await _edit_or_replace(
-                callback,
-                "🗑 سرویس حذف شد.\n\n"
-                "📋 <b>سرویس‌های من</b>\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "هنوز هیچ سرویسی نداری.",
-                user_services_keyboard([])
-            )
+            await _edit_or_replace(callback, get_text("delete_done_empty"), user_services_keyboard([]))
 
     @dp.callback_query(F.data.startswith("sub_link_"))
     async def send_sub_link(callback: types.CallbackQuery):
         order_id = int(callback.data.replace("sub_link_", ""))
         order = await get_user_service(order_id, callback.from_user.id)
         if not order or not order["subscription_url"]:
-            await callback.answer("لینک در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("sublink_unavailable"), show_alert=True)
             return
         await callback.message.answer(
-            f"🔗 لینک اشتراک:\n\n<code>{order['subscription_url']}</code>",
+            get_text("sublink_sent", url=order['subscription_url']),
             parse_mode="HTML"
         )
         await callback.answer()
@@ -627,14 +586,11 @@ def register_user_handlers(dp):
     async def show_plans(callback: types.CallbackQuery, server_id: int, multiple_servers: bool = False):
         plans = await get_plans(server_id, only_active=True)
         if not plans:
-            await callback.message.edit_text(
-                "⚠️ این سرور در حال حاضر پلن فعالی ندارد.\nلطفاً بعداً مراجعه کنید.",
-                reply_markup=user_main_menu()
-            )
+            await callback.message.edit_text(get_text("buy_no_plans"), reply_markup=user_main_menu())
             return
         show_price = (await get_setting("show_plan_price")) == "1"
         await callback.message.edit_text(
-            "📦 یک پلن انتخاب کنید:",
+            get_text("buy_select_plan"),
             reply_markup=user_plans_keyboard(plans, server_id, multiple_servers, show_price)
         )
 
@@ -677,10 +633,7 @@ def register_user_handlers(dp):
         card_owner = await get_setting("card_owner")
 
         if card_active != "1" or not card_number:
-            await callback.answer(
-                "در حال حاضر امکان پرداخت وجود ندارد. لطفاً بعداً مراجعه کنید.",
-                show_alert=True
-            )
+            await callback.answer(get_text("payment_card_unavailable"), show_alert=True)
             return
 
         plan     = await get_plan_with_server(plan_id)
@@ -696,7 +649,7 @@ def register_user_handlers(dp):
             import json as _json
             service_ids = _json.loads(plan["service_ids"] or "[]")
             if not service_ids:
-                await callback.answer("سرویسی برای این پلن تنظیم نشده!", show_alert=True)
+                await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
                 return
             u = callback.from_user
             await get_or_create_user(u.id, u.first_name, u.username)
@@ -715,7 +668,7 @@ def register_user_handlers(dp):
             except Exception as e:
                 from bot import logger
                 logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {e}")
-                await callback.answer(f"خطا در اتصال به پنل: {e}", show_alert=True)
+                await callback.answer(get_text("wallet_error_api", error=str(e)), show_alert=True)
                 return
             order_id = await create_order(u.id, u.username or u.first_name, plan_id, "discount_free")
             await update_order_status(order_id, "approved")
@@ -731,11 +684,7 @@ def register_user_handlers(dp):
             await callback.message.delete()
             await callback.message.answer_photo(
                 photo=qr,
-                caption=(
-                    f"✅ <b>سرویس با کد تخفیف ۱۰۰٪ فعال شد!</b>\n\n"
-                    f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
-                    f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
-                ),
+                caption=get_text("discount_free_success", url=subscription_url),
                 reply_markup=subscription_approved_keyboard(subscription_url),
                 parse_mode="HTML"
             )
@@ -782,13 +731,13 @@ def register_user_handlers(dp):
         import json
         service_ids = json.loads(plan["service_ids"] or "[]")
         if not service_ids:
-            await callback.answer("سرویسی برای این پلن تنظیم نشده!", show_alert=True)
+            await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
             return
 
         if final_price > 0:
             deducted = await deduct_balance_if_sufficient(u.id, final_price)
             if not deducted:
-                await callback.answer("موجودی کافی نیست.", show_alert=True)
+                await callback.answer(get_text("wallet_no_balance"), show_alert=True)
                 return
 
         try:
@@ -806,7 +755,7 @@ def register_user_handlers(dp):
             logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {e}")
             if final_price > 0:
                 await add_balance(u.id, final_price)
-            await callback.answer(f"خطا در اتصال به پنل: {e}", show_alert=True)
+            await callback.answer(get_text("wallet_error_api", error=str(e)), show_alert=True)
             return
 
         try:
@@ -829,7 +778,7 @@ def register_user_handlers(dp):
                 pass
             if final_price > 0:
                 await add_balance(u.id, final_price)
-            await callback.answer("خطا در ثبت سفارش. مبلغ به حسابتان برگشت داده شد.", show_alert=True)
+            await callback.answer(get_text("wallet_error_order"), show_alert=True)
             return
 
         await state.clear()
@@ -838,11 +787,7 @@ def register_user_handlers(dp):
         await callback.message.delete()
         await callback.message.answer_photo(
             photo=qr_file,
-            caption=(
-                f"✅ <b>خرید با کیف پول انجام شد!</b>\n\n"
-                f"🔗 لینک اشتراک:\n<code>{subscription_url}</code>\n\n"
-                f"لینک را در اپلیکیشن VPN وارد کنید یا QR Code را اسکن کنید."
-            ),
+            caption=get_text("wallet_purchase_success", url=subscription_url),
             reply_markup=subscription_approved_keyboard(subscription_url),
             parse_mode="HTML"
         )
@@ -851,10 +796,7 @@ def register_user_handlers(dp):
     @dp.callback_query(F.data == "cancel_payment")
     async def cancel_payment(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await callback.message.edit_text(
-            "❌ پرداخت لغو شد.",
-            reply_markup=user_main_menu()
-        )
+        await callback.message.edit_text(get_text("payment_cancelled"), reply_markup=user_main_menu())
         await callback.answer()
 
     @dp.message(BuyVPN.waiting_for_receipt, F.photo)
@@ -887,10 +829,7 @@ def register_user_handlers(dp):
 
         await state.clear()
 
-        await message.answer(
-            "✅ رسید شما دریافت شد.\n"
-            "⏳ پس از بررسی توسط پشتیبانی، نتیجه به شما اعلام خواهد شد."
-        )
+        await message.answer(get_text("payment_submitted"))
 
         final_price   = plan["price"] - discount_amount
         discount_line = f"🎟 کد تخفیف: <code>{discount_code}</code> ({discount_amount:,} تومان)\n" if discount_code else ""
@@ -918,4 +857,4 @@ def register_user_handlers(dp):
 
     @dp.message(BuyVPN.waiting_for_receipt)
     async def receipt_not_photo(message: types.Message):
-        await message.answer("📸 لطفاً تصویر رسید را ارسال کنید.")
+        await message.answer(get_text("payment_not_photo"))

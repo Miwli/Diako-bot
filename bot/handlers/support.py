@@ -12,7 +12,8 @@ from shared_lib.db import (
     get_setting, set_setting,
     create_ticket, get_ticket, get_ticket_by_topic,
     get_user_open_ticket, get_user_tickets,
-    set_ticket_topic, close_ticket as db_close_ticket
+    set_ticket_topic, close_ticket as db_close_ticket,
+    get_text,
 )
 
 def register_support_handlers(dp):
@@ -23,36 +24,24 @@ def register_support_handlers(dp):
     async def support_menu(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
         from handlers.user import _edit_or_replace
-        await _edit_or_replace(
-            callback,
-            "🎧 <b>پشتیبانی</b>\n\n"
-            "برای ارتباط با تیم پشتیبانی یک تیکت ارسال کنید.\n"
-            "پاسخ پشتیبانی مستقیماً اینجا نمایش داده می‌شود.",
-            support_menu_keyboard()
-        )
+        await _edit_or_replace(callback, get_text("support_menu"), support_menu_keyboard())
         await callback.answer()
 
     @dp.callback_query(F.data == "new_ticket")
     async def new_ticket_start(callback: types.CallbackQuery, state: FSMContext):
         support_group_id = await get_setting("support_group_id")
         if not support_group_id:
-            await callback.answer("پشتیبانی در حال حاضر در دسترس نیست.", show_alert=True)
+            await callback.answer(get_text("support_unavailable"), show_alert=True)
             return
 
         open_ticket = await get_user_open_ticket(callback.from_user.id)
         if open_ticket:
-            await callback.answer(
-                f"شما یک تیکت باز (#{open_ticket['id']}) دارید.\n"
-                "از بخش «تیکت‌های من» ادامه دهید.",
-                show_alert=True
-            )
+            await callback.answer(get_text("support_has_open_ticket", id=open_ticket['id']), show_alert=True)
             return
 
         await state.set_state(Support.waiting_for_first_message)
         await callback.message.edit_text(
-            "📨 <b>تیکت جدید</b>\n\n"
-            "پیام خود را بنویسید\n"
-            "<i>(متن، عکس، فایل — همه قبوله)</i>",
+            get_text("support_new_ticket_prompt"),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 لغو", callback_data="support")]
             ]),
@@ -64,7 +53,7 @@ def register_support_handlers(dp):
     async def create_ticket_handler(message: types.Message, state: FSMContext):
         support_group_id = await get_setting("support_group_id")
         if not support_group_id:
-            await message.answer("پشتیبانی در حال حاضر در دسترس نیست.")
+            await message.answer(get_text("support_unavailable"))
             await state.clear()
             return
 
@@ -101,8 +90,7 @@ def register_support_handlers(dp):
             logger.error(f"خطا در ساخت تیکت #{ticket_id}: {e}")
             await db_close_ticket(ticket_id)
             await message.answer(
-                "❌ خطا در ایجاد تیکت. لطفاً دوباره امتحان کنید.\n"
-                f"<code>{e}</code>",
+                get_text("support_error_creating", error=str(e)),
                 parse_mode="HTML"
             )
             await state.clear()
@@ -127,10 +115,7 @@ def register_support_handlers(dp):
         ticket = await get_ticket(ticket_id)
         if not ticket or ticket["status"] != "open":
             await state.clear()
-            await message.answer(
-                "❌ تیکت شما بسته شده است.",
-                reply_markup=support_menu_keyboard()
-            )
+            await message.answer(get_text("support_ticket_closed"), reply_markup=support_menu_keyboard())
             return
 
         try:
@@ -141,7 +126,7 @@ def register_support_handlers(dp):
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ارسال پیام به تیکت #{ticket_id}: {e}")
-            await message.answer("❌ خطا در ارسال پیام. دوباره امتحان کنید.")
+            await message.answer(get_text("support_error_send"))
 
     # ─── تیکت‌های من ──────────────────────────────
 
@@ -150,17 +135,9 @@ def register_support_handlers(dp):
         from handlers.user import _edit_or_replace
         tickets = await get_user_tickets(callback.from_user.id)
         if not tickets:
-            await _edit_or_replace(
-                callback,
-                "📋 <b>تیکت‌های من</b>\n\nهیچ تیکتی ندارید.",
-                support_menu_keyboard()
-            )
+            await _edit_or_replace(callback, get_text("support_tickets_empty"), support_menu_keyboard())
         else:
-            await _edit_or_replace(
-                callback,
-                "📋 <b>تیکت‌های من</b>\n\n🟢 باز  |  🔴 بسته",
-                my_tickets_keyboard(tickets)
-            )
+            await _edit_or_replace(callback, get_text("support_tickets_list"), my_tickets_keyboard(tickets))
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("view_ticket_"))
@@ -172,19 +149,15 @@ def register_support_handlers(dp):
             await callback.answer("تیکت یافت نشد.", show_alert=True)
             return
 
-        status = "🟢 باز" if ticket["status"] == "open" else "🔴 بسته"
-        text = f"🎫 <b>تیکت #{ticket_id}</b>\nوضعیت: {status}"
-
         if ticket["status"] == "open":
             await state.set_state(Support.in_conversation)
             await state.update_data(ticket_id=ticket_id)
-            text += "\n\nپیام بعدی شما به پشتیبانی ارسال می‌شود."
-            await _edit_or_replace(callback, text, ticket_keyboard(ticket_id))
+            await _edit_or_replace(callback, get_text("support_view_open", id=ticket_id), ticket_keyboard(ticket_id))
         else:
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 بازگشت", callback_data="my_tickets")]
             ])
-            await _edit_or_replace(callback, text, kb)
+            await _edit_or_replace(callback, get_text("support_view_closed", id=ticket_id), kb)
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("close_ticket_"))
@@ -205,7 +178,7 @@ def register_support_handlers(dp):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔙 بازگشت", callback_data="support")]
         ])
-        await _edit_or_replace(callback, f"✅ تیکت #{ticket_id} بسته شد.", kb)
+        await _edit_or_replace(callback, get_text("support_close_self", id=ticket_id), kb)
         await callback.answer()
 
     # ─── گروه: دستورات و پیام‌های ادمین ──────────────
@@ -231,8 +204,7 @@ def register_support_handlers(dp):
         try:
             await message.bot.send_message(
                 ticket["user_id"],
-                f"❌ <b>تیکت #{ticket['id']} توسط پشتیبانی بسته شد.</b>\n\n"
-                "در صورت نیاز می‌توانید تیکت جدید باز کنید.",
+                get_text("support_closed_by_support", id=ticket['id']),
                 parse_mode="HTML",
                 reply_markup=support_menu_keyboard()
             )
