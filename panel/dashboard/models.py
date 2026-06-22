@@ -17,6 +17,8 @@ class DiscountCodeUses(models.Model):
     class Meta:
         managed = False
         db_table = 'discount_code_uses'
+        verbose_name = 'استفاده از کد تخفیف'
+        verbose_name_plural = 'استفاده از کدهای تخفیف'
 
 
 class DiscountCodes(models.Model):
@@ -32,6 +34,8 @@ class DiscountCodes(models.Model):
     class Meta:
         managed = False
         db_table = 'discount_codes'
+        verbose_name = 'کد تخفیف'
+        verbose_name_plural = 'کدهای تخفیف'
 
 
 class Faqs(models.Model):
@@ -45,6 +49,8 @@ class Faqs(models.Model):
     class Meta:
         managed = False
         db_table = 'faqs'
+        verbose_name = 'سوال متداول'
+        verbose_name_plural = 'سوالات متداول'
 
 
 class Orders(models.Model):
@@ -65,6 +71,8 @@ class Orders(models.Model):
     class Meta:
         managed = False
         db_table = 'orders'
+        verbose_name = 'سفارش'
+        verbose_name_plural = 'سفارش‌ها'
 
 
 class Plans(models.Model):
@@ -78,6 +86,8 @@ class Plans(models.Model):
     class Meta:
         managed = False
         db_table = 'plans'
+        verbose_name = 'پلن'
+        verbose_name_plural = 'پلن‌ها'
 
 
 class Referrals(models.Model):
@@ -90,6 +100,8 @@ class Referrals(models.Model):
     class Meta:
         managed = False
         db_table = 'referrals'
+        verbose_name = 'دعوت'
+        verbose_name_plural = 'دعوت دوستان'
 
 
 class Servers(models.Model):
@@ -107,6 +119,8 @@ class Servers(models.Model):
     class Meta:
         managed = False
         db_table = 'servers'
+        verbose_name = 'سرور'
+        verbose_name_plural = 'سرورها'
 
 
 class Settings(models.Model):
@@ -116,6 +130,8 @@ class Settings(models.Model):
     class Meta:
         managed = False
         db_table = 'settings'
+        verbose_name = 'تنظیم'
+        verbose_name_plural = 'تنظیمات'
 
 
 class Tickets(models.Model):
@@ -128,6 +144,8 @@ class Tickets(models.Model):
     class Meta:
         managed = False
         db_table = 'tickets'
+        verbose_name = 'تیکت'
+        verbose_name_plural = 'تیکت‌ها'
 
 
 class TopUpRequests(models.Model):
@@ -141,6 +159,8 @@ class TopUpRequests(models.Model):
     class Meta:
         managed = False
         db_table = 'top_up_requests'
+        verbose_name = 'شارژ حساب'
+        verbose_name_plural = 'شارژ حساب'
 
 
 class Transactions(models.Model):
@@ -153,6 +173,8 @@ class Transactions(models.Model):
     class Meta:
         managed = False
         db_table = 'transactions'
+        verbose_name = 'تراکنش'
+        verbose_name_plural = 'تراکنش‌ها'
 
 
 class Tutorials(models.Model):
@@ -168,6 +190,8 @@ class Tutorials(models.Model):
     class Meta:
         managed = False
         db_table = 'tutorials'
+        verbose_name = 'آموزش'
+        verbose_name_plural = 'آموزش‌ها'
 
 
 class Users(models.Model):
@@ -184,3 +208,5 @@ class Users(models.Model):
     class Meta:
         managed = False
         db_table = 'users'
+        verbose_name = 'کاربر'
+        verbose_name_plural = 'کاربران'
