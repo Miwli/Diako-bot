@@ -3,6 +3,8 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data", "bot.db")
 
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
 
 async def init_db():
     """ساخت جداول دیتابیس"""
