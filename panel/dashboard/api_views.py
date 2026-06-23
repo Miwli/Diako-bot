@@ -5,7 +5,10 @@ from django.db import connection
 from django.views.decorators.http import require_http_methods
 from datetime import datetime, timedelta
 from asgiref.sync import async_to_sync
-from shared_lib.db import get_all_keyboard_buttons, get_keyboard_actions, save_keyboard_layout
+from shared_lib.db import (
+    get_all_keyboard_buttons, get_keyboard_actions, save_keyboard_layout,
+    get_servers_as_buttons, save_server_order,
+)
 from .models import Orders
 
 
@@ -63,7 +66,9 @@ def chart_data(request):
 
 @login_required
 def keyboard_data(request, keyboard_name):
-    if request.GET.get('all') == '1':
+    if keyboard_name == 'buy_vpn':
+        buttons = async_to_sync(get_servers_as_buttons)()
+    elif request.GET.get('all') == '1':
         buttons = async_to_sync(get_all_keyboard_buttons)(keyboard_name)
     else:
         from shared_lib.db import get_keyboard_buttons
@@ -78,7 +83,10 @@ def save_keyboard(request):
         data = json.loads(request.body)
         buttons = data.get('buttons', [])
         keyboard_name = data.get('keyboard_name', 'user_main')
-        async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
+        if keyboard_name == 'buy_vpn':
+            async_to_sync(save_server_order)(buttons)
+        else:
+            async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)

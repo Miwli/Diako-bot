@@ -750,6 +750,9 @@
         <button class="ke-tab" data-kb="support" onclick="switchKeyboard('support')">
           <i class="ti ti-headset"></i> پشتیبانی
         </button>
+        <button class="ke-tab" data-kb="buy_vpn" onclick="switchKeyboard('buy_vpn')">
+          <i class="ti ti-server"></i> سرورها
+        </button>
       </div>
 
       <!-- نوار آمار -->
@@ -877,12 +880,17 @@ const KB_LABELS = {
   user_main: 'منوی اصلی کاربر',
   wallet:    'کیف پول',
   support:   'پشتیبانی',
+  buy_vpn:   'سرورهای خرید اشتراک',
 };
 const KB_BUBBLES = {
   user_main: 'سلام! چه کاری می‌تونم برات انجام بدم؟ 👋',
   wallet:    '💎 کیف پول شما:',
   support:   '🎧 پشتیبانی دیاکو:',
+  buy_vpn:   '🔐 پلن مورد نظر را انتخاب کنید:',
 };
+
+// کیبوردهایی که دکمه‌هاشون از دیتابیس‌شان میان (نه keyboard_buttons)
+const DYNAMIC_KEYBOARDS = new Set(['buy_vpn']);
 
 // ── state ──────────────────────────────────────
 let boardRows = [];
@@ -1068,6 +1076,24 @@ function renderBoard() {
 
   updateStats();
   renderPreview();
+
+  // دکمه‌ی ردیف جدید و راهنما برای کیبورد داینامیک
+  const addRowBtn = document.querySelector('.ke-add-row');
+  let dynBanner = document.getElementById('ke-dyn-banner');
+  if (DYNAMIC_KEYBOARDS.has(currentKeyboard)) {
+    if (addRowBtn) addRowBtn.style.display = 'none';
+    if (!dynBanner) {
+      dynBanner = document.createElement('p');
+      dynBanner.id        = 'ke-dyn-banner';
+      dynBanner.className = 'ke-hint';
+      dynBanner.style.cssText = 'margin-top:10px;color:var(--accent);direction:rtl;';
+      dynBanner.textContent = '⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.';
+      document.getElementById('board').after(dynBanner);
+    }
+  } else {
+    if (addRowBtn) addRowBtn.style.display = '';
+    if (dynBanner) dynBanner.remove();
+  }
 }
 
 function initRowSortable(rowEl) {
@@ -1102,14 +1128,15 @@ function makeBtnEl(btn) {
   el.className = 'ke-btn' + (btn.is_active ? '' : ' inactive');
   el._d = { ...btn };
 
-  const active = btn.is_active !== 0;
+  const active  = btn.is_active !== 0;
+  const dynamic = !!btn.is_dynamic;
   el.innerHTML =
     `<span class="ke-btn-lbl">${esc(btn.label)}</span>` +
     `<div class="ke-btn-ctl">` +
       `<button class="ke-btn-eye" title="${active ? 'غیرفعال‌کردن' : 'فعال‌کردن'}" onclick="toggleActive(this)">` +
         (active ? '👁' : '🚫') +
       `</button>` +
-      `<button class="ke-btn-x" title="حذف" onclick="removeBtn(this)">✕</button>` +
+      (!dynamic ? `<button class="ke-btn-x" title="حذف" onclick="removeBtn(this)">✕</button>` : '') +
     `</div>`;
 
   el.addEventListener('contextmenu', e => showCtx(e, el));
@@ -1198,11 +1225,13 @@ async function switchKeyboard(name) {
     const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
     const data = await res.json();
     if (!data.buttons || data.buttons.length === 0) {
-      notify('این دکمه زیر‌کیبورد ندارد', 'error');
-      document.querySelectorAll('.ke-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.kb === prevKb);
-      });
-      return;
+      if (!DYNAMIC_KEYBOARDS.has(name)) {
+        notify('این دکمه زیر‌کیبورد ندارد', 'error');
+        document.querySelectorAll('.ke-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.kb === prevKb);
+        });
+        return;
+      }
     }
     currentKeyboard = name;
     boardRows = buildRows(data.buttons);
@@ -1313,8 +1342,13 @@ let _ctxTarget = null;
 
 function handleCtxAction(action, btnEl) {
   if (!btnEl) return;
+  const isDynamic = !!btnEl._d?.is_dynamic;
   if (action === 'edit')   { openEditPanel(btnEl); }
-  if (action === 'delete') { const x = btnEl.querySelector('.ke-btn-x');   if (x) removeBtn(x); }
+  if (action === 'delete') {
+    if (isDynamic) { notify('سرورها رو از پنل ادمین حذف کن', 'error'); return; }
+    const x = btnEl.querySelector('.ke-btn-x');
+    if (x) removeBtn(x);
+  }
   if (action === 'toggle') { const e = btnEl.querySelector('.ke-btn-eye'); if (e) toggleActive(e); }
   if (action === 'open')   { switchKeyboard(btnEl._d.callback_data); }
 }

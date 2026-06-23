@@ -26,6 +26,7 @@ async def init_db():
             "free_test_enabled":  "INTEGER DEFAULT 0",
             "free_test_duration": "INTEGER DEFAULT 1",
             "free_test_traffic":  "INTEGER DEFAULT 1",
+            "order_index":        "INTEGER DEFAULT 0",
         }
         for col, col_type in server_migrations.items():
             try:
@@ -1470,6 +1471,49 @@ async def save_keyboard_layout(keyboard_name: str, buttons: list[dict]):
                      b["row_index"], b["col_index"], b.get("is_active", 1))
                     for b in buttons
                 ]
+            )
+        await db.commit()
+
+
+async def get_servers_as_buttons() -> list[dict]:
+    """سرورها را به فرمت دکمه‌ی کیبورد برمی‌گرداند — برای کیبورد داینامیک buy_vpn"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT id, name, is_active FROM servers ORDER BY order_index, id"
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id":            r["id"],
+                "keyboard_name": "buy_vpn",
+                "label":         r["name"],
+                "callback_data": f"server_{r['id']}",
+                "row_index":     i,
+                "col_index":     0,
+                "is_active":     r["is_active"],
+                "is_dynamic":    True,
+            }
+            for i, r in enumerate(rows)
+        ]
+
+
+async def save_server_order(buttons: list[dict]):
+    """ترتیب و وضعیت سرورها را از ادیتور کیبورد ذخیره می‌کند"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        for btn in buttons:
+            cb = btn.get("callback_data", "")
+            if not cb.startswith("server_"):
+                continue
+            server_id_str = cb[len("server_"):]
+            if not server_id_str.isdigit():
+                continue
+            server_id = int(server_id_str)
+            order_idx = btn.get("row_index", 0) * 10 + btn.get("col_index", 0)
+            is_active  = 1 if btn.get("is_active", 1) else 0
+            await db.execute(
+                "UPDATE servers SET order_index = ?, is_active = ? WHERE id = ?",
+                (order_idx, is_active, server_id),
             )
         await db.commit()
 
