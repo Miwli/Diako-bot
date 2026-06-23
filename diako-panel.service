@@ -1,0 +1,14 @@
+[Unit]
+Description=Diako Admin Panel
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/diako/panel
+ExecStart=/opt/diako/panel/venv/bin/gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
