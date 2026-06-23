@@ -33,6 +33,7 @@ def logout_view(request):
 def dashboard_view(request):
     stats = async_to_sync(get_admin_stats)()
     servers = list(Servers.objects.all())
+    online_count = sum(1 for s in servers if s.is_active)
     recent_orders = list(
         Orders.objects.select_related('plan')
         .exclude(order_type='free_test')
@@ -41,6 +42,7 @@ def dashboard_view(request):
     return render(request, 'diako/dashboard.html', {
         'stats': stats,
         'servers': servers,
+        'online_count': online_count,
         'recent_orders': recent_orders,
         'admin_username': request.user.username,
     })

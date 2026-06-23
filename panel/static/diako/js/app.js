@@ -13,6 +13,24 @@ function toggleTheme() {
   const next = current === 'cool' ? 'warm' : 'cool';
   localStorage.setItem(THEME_KEY, next);
   applyTheme(next);
+  updateChartTheme(next);
+}
+
+function updateChartTheme(theme) {
+  if (!window.revenueChart) return;
+  const rgb = theme === 'warm' ? '249,115,22' : '0,196,190';
+  const color = `rgb(${rgb})`;
+  const canvas = document.getElementById('revenue-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0, `rgba(${rgb},0.28)`);
+  grad.addColorStop(1, `rgba(${rgb},0)`);
+  const ds = window.revenueChart.data.datasets[0];
+  ds.borderColor = color;
+  ds.backgroundColor = grad;
+  ds.pointBackgroundColor = color;
+  window.revenueChart.update();
 }
 
 /* ─── Language ─── */
@@ -51,6 +69,17 @@ function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
   document.querySelector('.sidebar-overlay').classList.remove('open');
 }
+
+/* ─── Avatar Dropdown ─── */
+function toggleAvatarMenu(e) {
+  e.stopPropagation();
+  document.getElementById('avatar-menu').classList.toggle('open');
+}
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('avatar-menu');
+  if (menu) menu.classList.remove('open');
+});
 
 /* ─── Notification System ─── */
 let seenOrderIds = new Set();

@@ -11,4 +11,5 @@ urlpatterns = [
     path('diako/logout/', v.logout_view, name='diako_logout'),
     path('diako/dashboard/', v.dashboard_view, name='diako_dashboard'),
     path('diako/api/pending-orders/', api_views.pending_orders, name='diako_pending_orders'),
+    path('diako/api/chart-data/', api_views.chart_data, name='diako_chart_data'),
 ]

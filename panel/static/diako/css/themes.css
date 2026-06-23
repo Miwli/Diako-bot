@@ -13,6 +13,8 @@
   --text-muted: rgba(232,244,248,0.48);
   --green: #34D399;
   --red: #F87171;
+  --warn: #A78BFA;
+  --warn-dim: rgba(167,139,250,0.14);
 }
 
 [data-theme="warm"] {
@@ -30,6 +32,8 @@
   --text-muted: rgba(248,240,232,0.48);
   --green: #4ADE80;
   --red: #F87171;
+  --warn: #F59E0B;
+  --warn-dim: rgba(245,158,11,0.14);
 }
 
 *, *::before, *::after {
@@ -46,6 +50,8 @@ body {
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  line-height: 1.4;
+  overflow-x: hidden;
   transition: background 0.3s ease, color 0.2s ease;
 }
 
