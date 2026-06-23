@@ -1,4 +1,7 @@
 import json
+import os
+import pathlib
+import urllib.request
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db import connection
@@ -10,6 +13,21 @@ from shared_lib.db import (
     get_servers_as_buttons, save_server_order,
 )
 from .models import Orders
+
+
+def _get_bot_token():
+    token = os.environ.get('BOT_TOKEN', '')
+    if not token:
+        env_path = pathlib.Path(__file__).parent.parent.parent / 'bot' / '.env'
+        try:
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line.startswith('BOT_TOKEN='):
+                    token = line[len('BOT_TOKEN='):].strip()
+                    break
+        except Exception:
+            pass
+    return token
 
 
 @login_required
@@ -74,6 +92,65 @@ def keyboard_data(request, keyboard_name):
         from shared_lib.db import get_keyboard_buttons
         buttons = async_to_sync(get_keyboard_buttons)(keyboard_name)
     return JsonResponse({'buttons': buttons})
+
+
+@login_required
+def bot_info(request):
+    token = _get_bot_token()
+    if not token:
+        return JsonResponse({'ok': False, 'error': 'BOT_TOKEN پیکربندی نشده'})
+    try:
+        with urllib.request.urlopen(
+            f'https://api.telegram.org/bot{token}/getMe', timeout=6
+        ) as r:
+            me = json.loads(r.read())
+        if not me.get('ok'):
+            return JsonResponse({'ok': False, 'error': 'خطای Telegram API'})
+        bot = me['result']
+        avatar_url = None
+        try:
+            with urllib.request.urlopen(
+                f'https://api.telegram.org/bot{token}/getUserProfilePhotos?user_id={bot["id"]}&limit=1',
+                timeout=5,
+            ) as r:
+                photos_resp = json.loads(r.read())
+            photos = photos_resp.get('result', {}).get('photos', [])
+            if photos:
+                file_id = photos[0][-1]['file_id']
+                with urllib.request.urlopen(
+                    f'https://api.telegram.org/bot{token}/getFile?file_id={file_id}',
+                    timeout=5,
+                ) as r:
+                    file_resp = json.loads(r.read())
+                file_path = file_resp.get('result', {}).get('file_path', '')
+                if file_path:
+                    avatar_url = f'https://api.telegram.org/file/bot{token}/{file_path}'
+        except Exception:
+            pass
+        return JsonResponse({
+            'ok': True,
+            'name': bot.get('first_name', 'Bot'),
+            'username': bot.get('username', ''),
+            'avatar_url': avatar_url,
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_text(request):
+    try:
+        data = json.loads(request.body)
+        key = data.get('key', '').strip()
+        value = data.get('value', '')
+        if not key:
+            return JsonResponse({'ok': False, 'error': 'key الزامی است'})
+        from shared_lib.db import set_text
+        async_to_sync(set_text)(key, value)
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 
 
 @login_required

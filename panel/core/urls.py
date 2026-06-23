@@ -4,6 +4,7 @@ from django.views.generic import RedirectView
 from dashboard import views as v
 from dashboard import api_views
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('diako/', RedirectView.as_view(url='/diako/login/', permanent=False)),
@@ -15,4 +16,6 @@ urlpatterns = [
     path('diako/api/chart-data/', api_views.chart_data, name='diako_chart_data'),
     path('diako/api/save-keyboard/', api_views.save_keyboard, name='diako_save_keyboard'),
     path('diako/api/keyboard/<str:keyboard_name>/', api_views.keyboard_data, name='diako_keyboard_data'),
+    path('diako/api/bot-info/', api_views.bot_info, name='diako_bot_info'),
+    path('diako/api/update-text/', api_views.update_text, name='diako_update_text'),
 ]

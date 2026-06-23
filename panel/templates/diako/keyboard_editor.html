@@ -5,271 +5,101 @@
 
 {% block extra_head %}
 <style>
-/* ── Layout ─────────────────────────────────── */
-.ke-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  direction: ltr;
-}
-.ke-main  { flex: 1; min-width: 0; }
-.ke-aside { width: 240px; flex-shrink: 0; }
+/* ── Fix page to viewport height for editor layout ── */
+.dash-body    { height: 100vh; min-height: unset; overflow: hidden; }
+.dash-container { flex: 1; min-height: 0; overflow: hidden; padding: 0 !important; }
 
-/* ── Card ────────────────────────────────────── */
-.ke-card {
+/* ── Three-Column Layout ─────────────────────────── */
+.ke-3col {
+  display: flex;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ke-col-left {
+  width: 180px;
+  flex-shrink: 0;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-}
-
-.ke-card-header {
+  padding: 14px;
+  overflow-y: auto;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.ke-card-title {
-  font-size: 11px;
+.ke-col-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.ke-col-right {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ke-col-title {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: .06em;
+  letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 12px;
-}
-.ke-card-header .ke-card-title { margin-bottom: 0; }
-
-.ke-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.6;
-  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
-/* ── نوار آمار ───────────────────────────────── */
+/* ── Stats Bar ───────────────────────────────────── */
 .ke-stats-bar {
   display: flex;
   align-items: center;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
-  padding: 18px 28px;
-  margin-bottom: 20px;
+  padding: 14px 24px;
+  flex-shrink: 0;
 }
 .ke-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 .ke-stat-val {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text);
   line-height: 1;
-  transition: color .2s;
   font-variant-numeric: tabular-nums;
+  transition: color .2s;
 }
 .ke-stat-val.clr-accent { color: var(--accent); }
 .ke-stat-val.clr-green  { color: var(--green); }
 .ke-stat-val.clr-muted  { color: var(--text-muted); }
-.ke-stat-lbl {
-  font-size: 11px;
-  color: var(--text-muted);
-  letter-spacing: .04em;
-}
-.ke-stat-sep {
-  width: 1px;
-  height: 36px;
-  background: var(--card-border);
-  flex-shrink: 0;
-}
+.ke-stat-lbl { font-size: 11px; color: var(--text-muted); letter-spacing: .04em; }
+.ke-stat-sep { width: 1px; height: 30px; background: var(--card-border); flex-shrink: 0; }
 
-/* ── ردیف‌ها ──────────────────────────────── */
-.ke-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-}
-
-.ke-row-wrap { width: 100%; max-width: 360px; }
-
-.ke-row-header {
+/* ── Save button in topbar ───────────────────────── */
+.ke-save-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 3px;
-}
-.ke-row-num { font-size: 11px; color: var(--text-muted); }
-.ke-row-del {
-  background: none;
-  border: none;
-  color: var(--red);
-  cursor: pointer;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  opacity: .6;
-  font-family: inherit;
-  transition: opacity .12s;
-}
-.ke-row-del:hover { opacity: 1; }
-
-.ke-row {
-  display: flex;
-  flex-wrap: nowrap;
   gap: 5px;
-  padding: 5px;
-  border: 2px dashed var(--card-border);
-  border-radius: 10px;
-  min-height: 38px;
-  transition: border-color .15s, background .15s;
-  position: relative;
-}
-.ke-row.drag-over {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-}
-.ke-row-empty {
-  width: 100%;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 6px 0;
-  pointer-events: none;
-  align-self: center;
-}
-
-/* ── دکمه (تلگرام‌مانند) ────────────────────── */
-.ke-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 8px;
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 7px;
-  cursor: grab;
-  user-select: none;
-  font-size: 12px;
-  color: var(--text);
-  transition: background .15s, border-color .15s;
-  overflow: visible;
-}
-.ke-btn:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: var(--accent);
-}
-.ke-btn.dragging { opacity: .3; cursor: grabbing; }
-.ke-btn.inactive { opacity: .32; }
-
-.ke-btn-lbl {
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  pointer-events: none;
-}
-
-/* کنترل‌ها — floating tooltip بالای دکمه روی hover */
-.ke-btn-ctl {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  align-items: center;
-  gap: 2px;
-  background: var(--bg-base);
-  border: 1px solid var(--card-border);
-  border-radius: 20px;
-  padding: 3px 8px;
-  white-space: nowrap;
-  z-index: 20;
-  box-shadow: 0 4px 14px rgba(0,0,0,.35);
-}
-.ke-btn:hover .ke-btn-ctl { display: flex; }
-
-.ke-btn-eye, .ke-btn-x {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 5px;
-  line-height: 1;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-family: inherit;
-  border-radius: 4px;
-  transition: color .12s, background .12s;
-}
-.ke-btn-eye:hover { color: var(--accent); }
-.ke-btn-x:hover   { color: var(--red); }
-
-/* ── ردیف جدید ────────────────────────────── */
-.ke-add-row {
-  display: block;
-  width: 100%;
-  max-width: 360px;
-  margin: 10px auto 0;
-  padding: 7px;
-  background: none;
-  border: 2px dashed var(--card-border);
-  border-radius: 10px;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  transition: border-color .15s, color .15s;
-}
-.ke-add-row:hover { border-color: var(--accent); color: var(--accent); }
-
-/* ── سرچ کاتالوگ ───────────────────────────── */
-.ke-cat-search {
-  width: 100%;
-  padding: 7px 10px;
-  margin-bottom: 10px;
-  background: var(--bg-base);
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color .15s;
-}
-.ke-cat-search:focus { border-color: var(--accent); }
-.ke-cat-search::placeholder { color: var(--text-muted); }
-
-/* ── کاتالوگ ───────────────────────────────── */
-.ke-cat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  cursor: grab;
-  font-size: 13px;
-  color: var(--text);
-  user-select: none;
-  transition: background .12s;
-}
-.ke-cat-item:hover { background: var(--accent-dim); }
-.ke-cat-item.dragging { opacity: .35; }
-
-/* ── دکمه ذخیره ────────────────────────────── */
-.ke-save {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   height: 32px;
   padding: 0 14px;
   background: var(--accent);
@@ -281,237 +111,404 @@
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: opacity .15s;
 }
-.ke-save:hover { opacity: .85; }
+.ke-save-btn:hover { opacity: .85; }
 
-/* ── پیش‌نمایش تلگرام ──────────────────────── */
-.ke-tg-frame {
-  background: #17212b;
-  border-radius: 12px;
-  padding: 14px 16px 16px;
-  margin-top: 4px;
-  min-height: 60px;
-}
-.ke-tg-bubble {
-  background: #2b5278;
-  color: #e8f4fd;
-  font-size: 13px;
-  padding: 9px 13px;
-  border-radius: 14px 14px 14px 3px;
-  margin-bottom: 10px;
-  display: inline-block;
-  max-width: 90%;
-  line-height: 1.5;
-  direction: rtl;
-}
-.ke-tg-kb { display: flex; flex-direction: column; gap: 5px; }
-.ke-tg-row { display: flex; gap: 5px; }
-.ke-tg-nav {
+/* ── Left column: Menu items ─────────────────────── */
+.ke-menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  direction: rtl;
-}
-.ke-tg-back {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #4fc3f7;
+  padding: 8px 10px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: background .12s;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.ke-tg-back:hover { background: rgba(255,255,255,0.14); }
-.ke-tg-crumb {
-  font-size: 11px;
-  color: rgba(255,255,255,0.28);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ke-tg-key {
-  flex: 1 1 0;
-  background: rgba(255,255,255,0.07);
-  color: #e8f4fd;
-  text-align: center;
-  padding: 9px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  border: 1px solid rgba(255,255,255,0.04);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background .12s, opacity .2s;
-  direction: rtl;
-  cursor: pointer;
-}
-.ke-tg-key:hover { background: rgba(255,255,255,0.14); }
-.ke-tg-key.ke-inactive {
-  opacity: 0.25;
-  text-decoration: line-through;
-  cursor: default;
-}
-.ke-tg-key.ke-inactive:hover { background: rgba(255,255,255,0.07); }
-.ke-tg-empty {
-  color: rgba(255,255,255,0.2);
-  font-size: 12px;
-  text-align: center;
-  padding: 12px;
-  font-style: italic;
-}
-.ke-tg-placeholder {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.45);
-  direction: rtl;
-  line-height: 1.7;
-}
-
-/* ── راهنما ─────────────────────────────────── */
-.ke-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--card-border);
   font-size: 12px;
   color: var(--text-muted);
-  line-height: 1.6;
+  border: 1px solid transparent;
+  transition: all .15s;
+  direction: rtl;
+  user-select: none;
+}
+.ke-menu-item:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(0,0,0,0);
+}
+.ke-menu-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.ke-menu-item i { font-size: 15px; flex-shrink: 0; }
+
+/* ── Telegram Simulator ──────────────────────────── */
+.ke-sim {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ke-sim-header {
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--card-border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   direction: rtl;
 }
-.ke-tip:last-child { border-bottom: none; padding-bottom: 0; }
-.ke-tip-icon { flex-shrink: 0; margin-top: 1px; font-size: 15px; }
 
-/* ── دکمه‌ی انتخاب‌شده ──────────────────────── */
-.ke-btn.selected {
-  border-color: var(--accent);
+.ke-sim-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   background: var(--accent-dim);
-  box-shadow: 0 0 0 2px rgba(0,196,190,0.18);
+  border: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--accent);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.ke-sim-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.ke-sim-info { flex: 1; min-width: 0; }
+.ke-sim-name { font-weight: 600; font-size: 14px; color: var(--text); }
+.ke-sim-online {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--green);
+  margin-top: 1px;
+}
+.ke-sim-online::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
 }
 
-/* ── پنل ویرایش دکمه ────────────────────────── */
-.ke-edit-panel {
-  max-width: 360px;
-  margin: 14px auto 0;
-  padding: 14px;
-  background: rgba(0,196,190,0.06);
+/* ── Chat body ───────────────────────────────────── */
+.ke-sim-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+}
+
+/* ── Bubble ─────────────────────────────────────── */
+.ke-bubble-area {
+  padding: 14px 12px 10px;
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ke-bubble {
+  display: inline-block;
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--text);
+  padding: 9px 13px;
+  border-radius: 14px 14px 14px 4px;
+  font-size: 13px;
+  max-width: 86%;
+  line-height: 1.55;
+  cursor: pointer;
+  position: relative;
+  word-break: break-word;
+  white-space: pre-wrap;
+  transition: background .15s, border-color .15s;
+}
+.ke-bubble:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.ke-bubble-hint {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 5px;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+.ke-bubble:hover .ke-bubble-hint { opacity: 1; }
+
+/* Edit mode for bubble */
+.ke-bubble-editor {
+  background: rgba(255,255,255,.06);
   border: 1px solid var(--accent);
   border-radius: 12px;
-  animation: ke-slide-in .15s ease;
+  padding: 12px;
+  max-width: 86%;
+  direction: rtl;
 }
-@keyframes ke-slide-in {
-  from { opacity: 0; transform: translateY(-5px); }
-  to   { opacity: 1; transform: translateY(0); }
+.ke-bubble-editor textarea {
+  width: 100%;
+  min-height: 65px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  color: #e8f4fd;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  resize: vertical;
+  direction: rtl;
+  transition: border-color .15s;
+  box-sizing: border-box;
 }
-.ke-edit-hdr {
+.ke-bubble-editor textarea:focus { border-color: var(--accent); }
+.ke-bubble-edit-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+.ke-bubble-edit-btns button {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all .15s;
+}
+.ke-bubble-edit-btns .btn-primary {
+  background: var(--accent);
+  color: #610909;
+  border-color: var(--accent);
+}
+.ke-bubble-edit-btns button:hover { opacity: .8; }
+
+/* ── Keyboard area ───────────────────────────────── */
+.ke-sim-kb-wrap {
+  background: var(--card-bg);
+  border-top: 1px solid var(--card-border);
+  padding: 6px 290px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ke-sim-board { display: flex; flex-direction: column; gap: 0; }
+
+/* Row wrapper */
+.ke-row-wrap { width: 100%; }
+
+.ke-row-hdr {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  padding: 4px 3px 2px;
 }
-.ke-edit-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.ke-edit-close {
+.ke-row-num { font-size: 10px; color: rgba(255,255,255,.25); }
+.ke-row-del {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: rgba(248,113,113,.55);
   cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  padding: 0 2px;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
   font-family: inherit;
   transition: color .12s;
 }
-.ke-edit-close:hover { color: var(--red); }
-.ke-edit-lbl {
-  display: block;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 5px;
-  direction: rtl;
+.ke-row-del:hover { color: #F87171; }
+
+.ke-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 2px;
+  border: 1.5px dashed transparent;
+  border-radius: 7px;
+  min-height: 32px;
+  margin-bottom: 4px;
+  transition: border-color .15s, background .15s;
 }
-.ke-edit-input {
+.ke-row.drag-over {
+  border-color: rgba(255,255,255,.3);
+  background: rgba(255,255,255,.03);
+}
+.ke-row-empty {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255,255,255,.2);
+  padding: 8px 0;
+  pointer-events: none;
+  align-self: center;
+}
+
+/* ── Keyboard button (Telegram style) ────────────── */
+.ke-kb-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 6px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+  direction: rtl;
+  text-align: center;
+  transition: background .12s, border-color .12s, opacity .15s;
+  overflow: hidden;
+  position: relative;
+}
+.ke-kb-btn:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.3); }
+.ke-kb-btn.inactive { opacity: .28; text-decoration: line-through; }
+.ke-kb-btn.sortable-ghost { opacity: .18; background: rgba(255,255,255,.08) !important; border-style: dashed !important; }
+.ke-kb-btn.sortable-chosen { box-shadow: 0 4px 18px rgba(0,0,0,.35); cursor: grabbing; }
+
+.ke-kb-btn-lbl {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* inline-edit input inside button */
+.ke-inline-edit {
+  width: calc(100% - 4px);
+  background: rgba(0,0,0,.5);
+  border: 1px solid var(--accent);
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+  font-family: inherit;
+  outline: none;
+}
+
+/* Add-row button inside dark kb area */
+.ke-sim-add-row {
+  display: block;
   width: 100%;
-  padding: 8px 12px;
+  margin-top: 4px;
+  padding: 7px;
+  background: none;
+  border: 1.5px dashed rgba(255,255,255,.14);
+  border-radius: 8px;
+  color: rgba(255,255,255,.3);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all .15s;
+  text-align: center;
+}
+.ke-sim-add-row:hover { border-color: rgba(255,255,255,.38); color: rgba(255,255,255,.65); }
+
+.ke-dyn-banner {
+  font-size: 11px;
+  color: var(--accent);
+  direction: rtl;
+  text-align: center;
+  padding: 5px 8px;
+  opacity: .85;
+  margin-top: 4px;
+}
+
+/* ── Right column: Catalog ───────────────────────── */
+.ke-cat-tabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ke-cat-tab {
+  flex: 1;
+  padding: 5px 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.ke-cat-tab:hover { background: var(--accent-dim); color: var(--accent); }
+.ke-cat-tab.active { background: var(--accent); color: #fff; }
+
+.ke-cat-search {
+  width: 100%;
+  padding: 7px 10px;
   background: var(--bg-base);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   color: var(--text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   box-sizing: border-box;
-  direction: rtl;
   transition: border-color .15s;
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
-.ke-edit-input:focus { border-color: var(--accent); }
-.ke-edit-meta {
+.ke-cat-search:focus { border-color: var(--accent); }
+.ke-cat-search::placeholder { color: var(--text-muted); }
+
+.ke-cat-items { flex: 1; overflow-y: auto; }
+
+.ke-cat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: grab;
+  font-size: 12px;
+  color: var(--text);
+  user-select: none;
+  transition: background .12s;
   direction: rtl;
 }
-.ke-edit-meta-lbl {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.ke-edit-cb {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: monospace;
-  background: rgba(255,255,255,0.05);
-  padding: 2px 8px;
-  border-radius: 6px;
-  direction: ltr;
-}
-.ke-edit-apply {
-  width: 100%;
-  padding: 8px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  transition: opacity .15s;
-}
-.ke-edit-apply:hover { opacity: .85; }
+.ke-cat-item:hover { background: var(--accent-dim); }
+.ke-cat-item.dragging { opacity: .35; }
 
-/* ── SortableJS ────────────────────────────── */
-.ke-sortable-ghost {
-  opacity: 0.25;
-  background: var(--accent-dim) !important;
-  border: 2px dashed var(--accent) !important;
-  border-radius: 9px;
-}
-.ke-sortable-chosen {
-  opacity: 0.85;
-  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+.ke-cat-badge {
+  font-size: 9px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-right: auto;
+  flex-shrink: 0;
 }
 
-/* ── Radial Context Menu ────────────────────── */
+/* ── Radial Context Menu ────────────────────────── */
 .ke-radial {
   position: fixed;
   width: 0;
@@ -533,57 +530,45 @@
   transform: scale(0);
   transition: opacity 100ms ease, transform 160ms ease;
 }
-.ke-radial.open .ke-radial-dot {
-  opacity: 0.7;
-  transform: scale(1);
-}
+.ke-radial.open .ke-radial-dot { opacity: .7; transform: scale(1); }
 
 .ke-radial-line {
   position: absolute;
-  width: 62px;
+  width: 64px;
   height: 1.5px;
   left: 0;
-  top: -0.75px;
+  top: -.75px;
   background: linear-gradient(to right, var(--accent), transparent);
   opacity: 0;
   transform-origin: left center;
   transform: rotate(-45deg) scaleX(0);
-  transition: transform 180ms ease, opacity 120ms ease;
+  transition: transform 180ms ease 20ms, opacity 120ms ease 20ms;
 }
-.ke-radial.open .ke-radial-line {
-  opacity: 0.5;
-  transform: rotate(-45deg) scaleX(1);
-}
+.ke-radial.open .ke-radial-line { opacity: .45; transform: rotate(-45deg) scaleX(1); }
 
 .ke-radial-center {
   position: absolute;
-  width: 34px;
-  height: 34px;
-  left: 27px;
-  top: -61px;
+  width: 32px;
+  height: 32px;
+  left: 29px;
+  top: -59px;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transform: scale(0);
   opacity: 0;
-  transition: transform 260ms cubic-bezier(0.22,1,0.36,1) 120ms,
-              opacity    180ms ease 120ms;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 0 var(--accent);
+  transition: transform 250ms cubic-bezier(.22,1,.36,1) 130ms,
+              opacity    180ms ease 130ms;
+  box-shadow: 0 4px 18px rgba(0,0,0,.28);
   pointer-events: auto;
 }
-.ke-radial.open .ke-radial-center {
-  transform: scale(1);
-  opacity: 1;
-}
-.ke-radial-center:hover {
-  transform: scale(1.08);
-  filter: brightness(1.1);
-}
+.ke-radial.open .ke-radial-center { transform: scale(1); opacity: 1; }
+.ke-radial-center:hover { transform: scale(1.08); filter: brightness(1.1); }
 
 .ke-radial-action {
   position: absolute;
@@ -601,16 +586,13 @@
   color: var(--text-muted);
   transform: scale(0);
   opacity: 0;
-  transition: transform 240ms cubic-bezier(0.22,1,0.36,1),
+  transition: transform 240ms cubic-bezier(.22,1,.36,1),
               opacity    180ms ease,
-              background 150ms, color 150ms, border-color 150ms;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+              background .15s, color .15s, border-color .15s;
+  box-shadow: 0 2px 12px rgba(0,0,0,.22);
   pointer-events: auto;
 }
-.ke-radial-action.visible {
-  transform: scale(1);
-  opacity: 1;
-}
+.ke-radial-action.visible { transform: scale(1); opacity: 1; }
 .ke-radial-action:hover {
   background: var(--accent-dim);
   border-color: var(--accent);
@@ -618,58 +600,259 @@
   transform: scale(1.14);
 }
 .ke-radial-action[data-action="delete"]:hover {
-  background: rgba(248,113,113,0.12);
+  background: rgba(248,113,113,.12);
   border-color: var(--red);
   color: var(--red);
 }
 
-@media (max-width: 720px) {
-  .ke-layout { flex-direction: column; }
-  .ke-aside  { width: 100%; }
+/* ── Help Modal ─────────────────────────────────── */
+.ke-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
 }
+.ke-modal-overlay.open { opacity: 1; pointer-events: auto; }
 
-/* ── تب‌بار انتخاب کیبورد ─────────────────────── */
-.ke-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-  background: var(--card-bg);
+.ke-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -52%) scale(.96);
+  background: var(--bg-base);
   border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 6px;
+  border-radius: 20px;
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 901;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s, transform .22s;
   direction: rtl;
 }
-.ke-tab {
-  flex: 1;
-  padding: 8px 12px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 10px;
+.ke-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+.ke-modal-close {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: background .15s, color .15s, border-color .15s;
-  white-space: nowrap;
+  font-size: 14px;
+  transition: all .15s;
 }
-.ke-tab:hover {
-  background: var(--accent-dim);
-  color: var(--accent);
-  border-color: var(--accent);
+.ke-modal-close:hover { background: var(--accent-dim); color: var(--accent); }
+.ke-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
 }
-.ke-tab.active {
+.ke-modal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 5px;
+}
+.ke-modal-tab {
+  flex: 1;
+  padding: 7px 6px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all .15s;
+}
+.ke-modal-tab.active { background: var(--accent); color: #fff; }
+.ke-modal-tab:not(.active):hover { background: var(--accent-dim); color: var(--accent); }
+
+.ke-help-pnl { display: none; }
+.ke-help-pnl.active { display: block; }
+.ke-help-pnl p, .ke-help-pnl li {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 8px;
+}
+.ke-help-pnl ul { padding-right: 18px; }
+.ke-help-pnl li { margin-bottom: 6px; }
+.ke-help-pnl strong { color: var(--text); }
+
+/* ── Mobile catalog button ───────────────────────── */
+.ke-mobile-cat-btn { display: none; }
+
+/* ── Bottom Sheet (Mobile) ───────────────────────── */
+.ke-bs-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s;
+}
+.ke-bs-overlay.open { opacity: 1; pointer-events: auto; }
+
+.ke-bs {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border-top: 1px solid var(--card-border);
+  border-radius: 20px 20px 0 0;
+  z-index: 801;
+  padding: 10px 16px 24px;
+  transform: translateY(100%);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  max-height: 65vh;
+  display: flex;
+  flex-direction: column;
+}
+.ke-bs.open { transform: translateY(0); }
+
+.ke-bs-handle {
+  width: 38px;
+  height: 4px;
+  background: var(--card-border);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+}
+.ke-bs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.ke-bs-tab-bar { display: flex; gap: 4px; }
+.ke-bs-tab {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: all .15s;
+}
+.ke-bs-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ke-bs-confirm {
+  padding: 7px 16px;
   background: var(--accent);
   color: #fff;
-  border-color: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity .15s;
 }
-.ke-tab-loading {
-  opacity: .5;
-  pointer-events: none;
+.ke-bs-confirm:hover { opacity: .85; }
+
+.ke-bs-items { flex: 1; overflow-y: auto; }
+.ke-bs-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  direction: rtl;
+  transition: background .12s;
+}
+.ke-bs-item:hover { background: var(--accent-dim); }
+.ke-bs-item.selected {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+/* ── Staging Area (Mobile) ───────────────────────── */
+.ke-staging {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 14px;
+  direction: rtl;
+}
+.ke-staging-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.ke-staging-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.ke-staging-chip {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+/* ── Responsive (mobile) ─────────────────────────── */
+@media (max-width: 768px) {
+  .ke-3col {
+    flex-direction: column;
+    height: auto;
+  }
+  .ke-col-left, .ke-col-right { display: none; }
+  .ke-col-center { overflow: visible; }
+  .ke-sim { min-height: 60vh; }
+  .ke-mobile-cat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    transition: opacity .15s;
+  }
+  .ke-mobile-cat-btn:hover { opacity: .87; }
 }
 </style>
 {% endblock %}
@@ -683,28 +866,28 @@
     <div class="sidebar-logo">د</div>
     <div class="sidebar-divider"></div>
     <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
+      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد">
         <i class="ti ti-layout-dashboard"></i>
       </a>
-      <a href="/admin/dashboard/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
+      <a href="/admin/dashboard/orders/" class="nav-item" data-tooltip="سفارش‌ها">
         <i class="ti ti-package"></i>
       </a>
-      <a href="/admin/dashboard/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
+      <a href="/admin/dashboard/users/" class="nav-item" data-tooltip="کاربران">
         <i class="ti ti-users"></i>
       </a>
-      <a href="/admin/dashboard/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
+      <a href="/admin/dashboard/servers/" class="nav-item" data-tooltip="سرورها">
         <i class="ti ti-server"></i>
       </a>
-      <a href="/admin/dashboard/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
+      <a href="/admin/dashboard/plans/" class="nav-item" data-tooltip="پلن‌ها">
         <i class="ti ti-list"></i>
       </a>
-      <a href="/admin/dashboard/transactions/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
+      <a href="/admin/dashboard/transactions/" class="nav-item" data-tooltip="مالی">
         <i class="ti ti-wallet"></i>
       </a>
-      <a href="/diako/keyboard-editor/" class="nav-item active" data-fa="کیبورد" data-en="Keyboard" data-tooltip="ادیتور کیبورد">
+      <a href="/diako/keyboard-editor/" class="nav-item active" data-tooltip="ادیتور کیبورد">
         <i class="ti ti-keyboard"></i>
       </a>
-      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
+      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات">
         <i class="ti ti-settings"></i>
       </a>
     </nav>
@@ -715,9 +898,16 @@
     <div class="dash-topbar">
       <div class="topbar-left">
         <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title" data-fa="ادیتور کیبورد" data-en="Keyboard Editor">ادیتور کیبورد</h1>
+        <h1 class="page-title">ادیتور کیبورد</h1>
       </div>
       <div class="topbar-right">
+        <button class="ctrl-btn" title="راهنما" onclick="openHelp()">
+          <i class="ti ti-help"></i>
+        </button>
+        <button class="ke-save-btn" onclick="saveLayout()">
+          <i class="ti ti-device-floppy"></i>
+          <span>ذخیره</span>
+        </button>
         <button class="ctrl-btn" onclick="toggleTheme()">
           <i id="theme-icon" class="ti ti-sun"></i>
         </button>
@@ -730,7 +920,7 @@
             <div class="avatar-menu-name">{{ admin_username }}</div>
             <a href="/diako/logout/" class="avatar-menu-item">
               <i class="ti ti-logout"></i>
-              <span data-fa="خروج" data-en="Logout">خروج</span>
+              <span>خروج</span>
             </a>
           </div>
         </div>
@@ -739,133 +929,178 @@
 
     <div class="dash-container">
 
-      <!-- تب‌بار انتخاب کیبورد -->
-      <div class="ke-tabs">
-        <button class="ke-tab active" data-kb="user_main" onclick="switchKeyboard('user_main')">
-          <i class="ti ti-home"></i> منوی اصلی
-        </button>
-        <button class="ke-tab" data-kb="wallet" onclick="switchKeyboard('wallet')">
-          <i class="ti ti-wallet"></i> کیف پول
-        </button>
-        <button class="ke-tab" data-kb="support" onclick="switchKeyboard('support')">
-          <i class="ti ti-headset"></i> پشتیبانی
-        </button>
-        <button class="ke-tab" data-kb="buy_vpn" onclick="switchKeyboard('buy_vpn')">
-          <i class="ti ti-server"></i> سرورها
-        </button>
-      </div>
-
       <!-- نوار آمار -->
       <div class="ke-stats-bar">
         <div class="ke-stat">
           <span class="ke-stat-val clr-accent" id="s-rows">0</span>
-          <span class="ke-stat-lbl" data-fa="ردیف" data-en="Rows">ردیف</span>
+          <span class="ke-stat-lbl">ردیف</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val" id="s-btns">0</span>
-          <span class="ke-stat-lbl" data-fa="دکمه" data-en="Buttons">دکمه</span>
+          <span class="ke-stat-lbl">دکمه</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val clr-green" id="s-active">0</span>
-          <span class="ke-stat-lbl" data-fa="فعال" data-en="Active">فعال</span>
+          <span class="ke-stat-lbl">فعال</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val clr-muted" id="s-inactive">0</span>
-          <span class="ke-stat-lbl" data-fa="غیرفعال" data-en="Inactive">غیرفعال</span>
+          <span class="ke-stat-lbl">غیرفعال</span>
         </div>
       </div>
 
-      <div class="ke-layout">
+      <!-- سه‌ستون -->
+      <div class="ke-3col">
 
-        <!-- گرید ادیتور -->
-        <div class="ke-main">
-          <div class="ke-card">
-            <div class="ke-card-header">
-              <div class="ke-card-title" id="ke-board-title">منوی اصلی کاربر</div>
-              <button class="ke-save" onclick="saveLayout()">
-                <i class="ti ti-device-floppy"></i>
-                <span data-fa="ذخیره" data-en="Save">ذخیره</span>
-              </button>
-            </div>
-            <p class="ke-hint">دکمه‌ها رو بکش و در ردیف‌ها جابجا کن. از کاتالوگ کنار، دکمه جدید اضافه کن. بعد از ذخیره بات منوی جدید رو نشون می‌ده.</p>
-            <div class="ke-rows" id="board"></div>
-            <button class="ke-add-row" onclick="addRow()">
-              <i class="ti ti-plus"></i> ردیف جدید
-            </button>
+        <!-- ستون چپ: تب‌های منو -->
+        <div class="ke-col-left">
+          <div class="ke-col-title">منوها</div>
+          <div id="menu-list"></div>
+        </div>
 
-            <!-- پنل ویرایش دکمه -->
-            <div class="ke-edit-panel" id="ke-edit-panel" style="display:none">
-              <div class="ke-edit-hdr">
-                <span class="ke-edit-title" data-fa="ویرایش دکمه" data-en="Edit Button">ویرایش دکمه</span>
-                <button class="ke-edit-close" onclick="closeEditPanel()">✕</button>
+        <!-- ستون وسط: شبیه‌ساز تلگرام -->
+        <div class="ke-col-center">
+          <div class="ke-sim">
+
+            <!-- هدر چت -->
+            <div class="ke-sim-header">
+              <div class="ke-sim-avatar" id="sim-avatar">د</div>
+              <div class="ke-sim-info">
+                <div class="ke-sim-name" id="sim-name">دیاکو</div>
+                <div class="ke-sim-online">آنلاین</div>
               </div>
-              <label class="ke-edit-lbl" data-fa="متن دکمه" data-en="Button Label">متن دکمه</label>
-              <input class="ke-edit-input" id="edit-label" type="text" placeholder="متن دکمه را وارد کنید...">
-              <div class="ke-edit-meta">
-                <span class="ke-edit-meta-lbl">اکشن:</span>
-                <span class="ke-edit-cb" id="edit-callback"></span>
-              </div>
-              <button class="ke-edit-apply" onclick="applyEdit()" data-fa="اعمال تغییر" data-en="Apply">اعمال تغییر</button>
             </div>
-          </div>
 
-          <!-- پیش‌نمایش زنده -->
-          <div class="ke-card">
-            <div class="ke-card-title" data-fa="پیش‌نمایش زنده" data-en="Live Preview">پیش‌نمایش زنده</div>
-            <div class="ke-tg-frame">
-              <div class="ke-tg-nav" id="preview-nav" style="display:none">
-                <button class="ke-tg-back" onclick="previewBack()">
-                  <i class="ti ti-chevron-right" style="font-size:11px"></i>
-                  بازگشت
+            <!-- بدنه‌ی چت -->
+            <div class="ke-sim-body" id="sim-body">
+
+              <!-- حباب پیام -->
+              <div class="ke-bubble-area">
+                <div class="ke-bubble" id="ke-bubble" onclick="startBubbleEdit()">
+                  <span id="ke-bubble-text">در حال بارگذاری...</span>
+                  <span class="ke-bubble-hint">✎ کلیک برای ویرایش متن</span>
+                </div>
+                <div class="ke-bubble-editor" id="ke-bubble-editor" style="display:none">
+                  <textarea id="ke-bubble-ta" placeholder="متن پیام ربات را وارد کنید..."></textarea>
+                  <div class="ke-bubble-edit-btns">
+                    <button class="btn-primary" onclick="saveBubbleEdit()">
+                      <i class="ti ti-check"></i> ذخیره
+                    </button>
+                    <button onclick="cancelBubbleEdit()">انصراف</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- کیبورد -->
+              <div class="ke-sim-kb-wrap">
+                <div class="ke-sim-board" id="board"></div>
+                <button class="ke-sim-add-row" id="add-row-btn" onclick="addRow()">
+                  <i class="ti ti-plus"></i> ردیف جدید
                 </button>
-                <span class="ke-tg-crumb" id="preview-crumb"></span>
+                <div class="ke-dyn-banner" id="ke-dyn-banner" style="display:none">
+                  ⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.
+                </div>
               </div>
-              <div class="ke-tg-bubble" id="preview-bubble">پلن خود را انتخاب کنید 👇</div>
-              <div class="ke-tg-kb" id="preview-kb">
-                <div class="ke-tg-empty">هنوز دکمه‌ای اضافه نشده</div>
-              </div>
-            </div>
+
+            </div><!-- /sim-body -->
+          </div><!-- /ke-sim -->
+        </div><!-- /col-center -->
+
+        <!-- ستون راست: کاتالوگ -->
+        <div class="ke-col-right">
+          <div class="ke-col-title">کاتالوگ دکمه‌ها</div>
+          <div class="ke-cat-tabs">
+            <button class="ke-cat-tab active" data-tab="all"    onclick="setCatTab('all')">همه</button>
+            <button class="ke-cat-tab"         data-tab="admin"  onclick="setCatTab('admin')">ادمین</button>
+            <button class="ke-cat-tab"         data-tab="member" onclick="setCatTab('member')">ممبر</button>
           </div>
+          <input class="ke-cat-search" id="cat-search" type="search"
+                 placeholder="جستجو..." oninput="filterCatalog(this.value)">
+          <div class="ke-cat-items" id="catalog"></div>
         </div>
 
-        <!-- کاتالوگ -->
-        <div class="ke-aside">
-          <div class="ke-card">
-            <div class="ke-card-title" data-fa="کاتالوگ دکمه‌ها" data-en="Button Catalog">کاتالوگ دکمه‌ها</div>
-            <p class="ke-hint">از اینجا بکش و روی یه ردیف رها کن.</p>
-            <input id="cat-search" class="ke-cat-search" type="search"
-              placeholder="جستجو..." oninput="filterCatalog(this.value)">
-            <div id="catalog"></div>
-          </div>
+      </div><!-- /ke-3col -->
 
-          <!-- راهنما -->
-          <div class="ke-card">
-            <div class="ke-card-title" data-fa="راهنما" data-en="Tips">راهنما</div>
-            <div class="ke-tip">
-              <span class="ke-tip-icon"><i class="ti ti-drag-drop" style="color:var(--accent)"></i></span>
-              <span>دکمه‌ها رو بین ردیف‌ها بکش و رها کن.</span>
-            </div>
-            <div class="ke-tip">
-              <span class="ke-tip-icon"><i class="ti ti-hand-stop" style="color:var(--accent)"></i></span>
-              <span>روی دکمه نگه‌دار تا کنترل‌های فعال/غیرفعال و حذف ظاهر بشه.</span>
-            </div>
-            <div class="ke-tip">
-              <span class="ke-tip-icon"><i class="ti ti-plus" style="color:var(--accent)"></i></span>
-              <span>با «ردیف جدید» ردیف اضافه کن و از کاتالوگ بکش داخلش.</span>
-            </div>
-            <div class="ke-tip">
-              <span class="ke-tip-icon"><i class="ti ti-device-floppy" style="color:var(--green)"></i></span>
-              <span>بعد از هر تغییر، حتماً ذخیره کن تا بات آپدیت بشه.</span>
-            </div>
-          </div>
-        </div>
+      <!-- دکمه کاتالوگ موبایل -->
+      <button class="ke-mobile-cat-btn" onclick="openBottomSheet()">
+        <i class="ti ti-layout-grid"></i> کاتالوگ دکمه‌ها
+      </button>
 
+      <!-- استیجینگ موبایل -->
+      <div class="ke-staging" id="staging" style="display:none">
+        <div class="ke-staging-title">دکمه‌های انتخاب‌شده</div>
+        <div class="ke-staging-items" id="staging-items"></div>
       </div>
+
+    </div><!-- /dash-container -->
+  </div><!-- /dash-body -->
+</div><!-- /dash-wrap -->
+
+<!-- مودال راهنما -->
+<div class="ke-modal-overlay" id="help-overlay" onclick="closeHelp()"></div>
+<div class="ke-modal" id="help-modal">
+  <button class="ke-modal-close" onclick="closeHelp()"><i class="ti ti-x"></i></button>
+  <h2 class="ke-modal-title">راهنمای ادیتور کیبورد</h2>
+  <div class="ke-modal-tabs">
+    <button class="ke-modal-tab active" onclick="setHelpTab(0)">شروع کار</button>
+    <button class="ke-modal-tab"        onclick="setHelpTab(1)">کار با کلیدها</button>
+    <button class="ke-modal-tab"        onclick="setHelpTab(2)">موبایل</button>
+  </div>
+  <div id="help-panels">
+    <div class="ke-help-pnl active" id="help-0">
+      <p>این صفحه به شما امکان می‌دهد چینش دکمه‌های ربات تلگرام را به صورت بصری ویرایش کنید — دقیقاً همان‌طور که کاربر می‌بیند.</p>
+      <ul>
+        <li>از <strong>ستون چپ</strong> منوی مورد نظر را انتخاب کنید (منوی اصلی، کیف پول، ...)</li>
+        <li>شبیه‌ساز تلگرام در وسط نمایش می‌دهد که کاربر چه می‌بیند</li>
+        <li>از <strong>ستون راست (کاتالوگ)</strong> دکمه‌های جدید را بکشید و در ردیف‌ها رها کنید</li>
+        <li>روی <strong>متن پیام ربات</strong> (حباب آبی) کلیک کنید تا آن را ویرایش کنید</li>
+        <li>پس از تمام تغییرات، حتماً <strong>ذخیره</strong> را بزنید تا بات آپدیت شود</li>
+      </ul>
+    </div>
+    <div class="ke-help-pnl" id="help-1" style="display:none">
+      <ul>
+        <li><strong>Drag & Drop:</strong> دکمه‌ها را بین ردیف‌ها بکشید و رها کنید. از کاتالوگ هم می‌توانید مستقیم به ردیف‌ها بکشید.</li>
+        <li><strong>چپ‌کلیک:</strong> اگر دکمه زیرمنو داشته باشد (مثل «کیف پول»)، به آن منو منتقل می‌شوید.</li>
+        <li><strong>راست‌کلیک:</strong> منوی اکشن انیمیشن‌دار باز می‌شود:
+          <br>— ✎ ویرایش متن دکمه (به صورت inline)
+          <br>— 🗑 حذف دکمه از ردیف
+          <br>— 👁 فعال / غیرفعال کردن دکمه
+        </li>
+        <li><strong>ردیف جدید:</strong> دکمه «+ ردیف جدید» را در پایین کیبورد بزنید.</li>
+        <li><strong>حذف ردیف:</strong> از سربرگ هر ردیف، آیکون حذف را بزنید.</li>
+        <li><strong>ویرایش متن پیام:</strong> روی حباب پیام ربات کلیک کنید، متن را ویرایش کرده و ذخیره کنید.</li>
+      </ul>
+    </div>
+    <div class="ke-help-pnl" id="help-2" style="display:none">
+      <ul>
+        <li>در صفحه‌ی موبایل، سه ستون به یک ستون تبدیل می‌شوند.</li>
+        <li>دکمه‌ی <strong>«کاتالوگ دکمه‌ها»</strong> در پایین صفحه ظاهر می‌شود.</li>
+        <li>با کلیک روی آن، یک منوی کشویی از پایین باز می‌شود.</li>
+        <li>روی دکمه‌های مورد نظر کلیک کنید تا انتخاب شوند (با رنگ مشخص می‌شوند).</li>
+        <li>بعد از انتخاب، «تایید» را بزنید — دکمه‌ها به ناحیه‌ی <strong>انتخاب‌شده‌ها</strong> اضافه می‌شوند.</li>
+        <li>از آن ناحیه، دکمه‌ها را به ردیف‌های کیبورد بکشید.</li>
+      </ul>
     </div>
   </div>
+</div>
+
+<!-- باتم‌شیت موبایل -->
+<div class="ke-bs-overlay" id="bs-overlay" onclick="closeBottomSheet()"></div>
+<div class="ke-bs" id="ke-bs">
+  <div class="ke-bs-handle"></div>
+  <div class="ke-bs-header">
+    <div class="ke-bs-tab-bar">
+      <button class="ke-bs-tab active" onclick="setBsTab('member')">ممبر</button>
+      <button class="ke-bs-tab"        onclick="setBsTab('admin')">ادمین</button>
+    </div>
+    <button class="ke-bs-confirm" id="bs-confirm" style="display:none" onclick="confirmBsSelection()">
+      تایید (<span id="bs-count">0</span>)
+    </button>
+  </div>
+  <div class="ke-bs-items" id="bs-items"></div>
 </div>
 
 {% endblock %}
@@ -873,29 +1108,35 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
+// ── داده‌های اولیه از جنگو ─────────────────────────
 const INITIAL_BUTTONS = {{ buttons_json|safe }};
 const CATALOG         = {{ actions_json|safe }};
+const BOT_TEXTS       = {{ bot_texts_json|safe }};
 
-const KB_LABELS = {
-  user_main: 'منوی اصلی کاربر',
-  wallet:    'کیف پول',
-  support:   'پشتیبانی',
-  buy_vpn:   'سرورهای خرید اشتراک',
-};
-const KB_BUBBLES = {
-  user_main: 'سلام! چه کاری می‌تونم برات انجام بدم؟ 👋',
-  wallet:    '💎 کیف پول شما:',
-  support:   '🎧 پشتیبانی دیاکو:',
-  buy_vpn:   '🔐 پلن مورد نظر را انتخاب کنید:',
+// ── متادیتای هر منو ────────────────────────────────
+const KB_META = {
+  user_main: { label: 'منوی اصلی کاربر', icon: 'ti-home',    text_key: 'start_welcome_default', fallback: 'سلام 👋 خوش اومدی' },
+  wallet:    { label: 'کیف پول',          icon: 'ti-wallet',  text_key: 'wallet_menu',           fallback: '💎 کیف پول شما:' },
+  support:   { label: 'پشتیبانی',         icon: 'ti-headset', text_key: 'support_menu',          fallback: '🎧 پشتیبانی دیاکو:' },
+  buy_vpn:   { label: 'سرورها',           icon: 'ti-server',  text_key: 'buy_select_server',     fallback: '🔐 سرور مورد نظر را انتخاب کنید:' },
 };
 
-// کیبوردهایی که دکمه‌هاشون از دیتابیس‌شان میان (نه keyboard_buttons)
-const DYNAMIC_KEYBOARDS = new Set(['buy_vpn']);
+const DYNAMIC_KEYBOARDS  = new Set(['buy_vpn']);
+const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
-// ── state ──────────────────────────────────────
+// طبقه‌بندی کاتالوگ (برای تب‌های ممبر/ادمین)
+const ADMIN_CBS  = new Set([]);
+const MEMBER_CBS = new Set(CATALOG.map(a => a.callback_data));
+
+// ── state ──────────────────────────────────────────
 let boardRows = [];
 let currentKeyboard = 'user_main';
+const _sortables = [];
+let _catTab = 'all';
+let _bsTab  = 'member';
+let _bsSelected = new Set();
 
+// ── helpers ────────────────────────────────────────
 function buildRows(flat) {
   const map = {};
   for (const b of flat) {
@@ -908,15 +1149,125 @@ function buildRows(flat) {
   return keys.map(k => map[k]);
 }
 
-boardRows = buildRows(INITIAL_BUTTONS);
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-// ── SortableJS instances ────────────────────────
-const _sortables = [];
+function getCsrf() {
+  for (const c of document.cookie.split(';')) {
+    const [k, v] = c.trim().split('=');
+    if (k === 'csrftoken') return decodeURIComponent(v || '');
+  }
+  return '';
+}
 
-// ── empty row placeholder ───────────────────────
+function notify(msg, type = 'success') {
+  const stack = document.getElementById('notif-stack');
+  if (!stack) return;
+  const n = document.createElement('div');
+  n.className = `notif notif-${type}`;
+  n.textContent = msg;
+  stack.appendChild(n);
+  setTimeout(() => n.remove(), 3500);
+}
+
+// ── آمار ───────────────────────────────────────────
+function updateStats() {
+  let total = 0, active = 0, inactive = 0;
+  boardRows.forEach(row => row.forEach(btn => {
+    total++;
+    if (btn.is_active) active++;
+    else inactive++;
+  }));
+  document.getElementById('s-rows').textContent    = boardRows.length;
+  document.getElementById('s-btns').textContent    = total;
+  document.getElementById('s-active').textContent  = active;
+  document.getElementById('s-inactive').textContent = inactive;
+}
+
+// ── حباب پیام ──────────────────────────────────────
+function getBubbleText(kbName) {
+  const meta = KB_META[kbName];
+  if (!meta) return '';
+  return BOT_TEXTS[meta.text_key] ?? meta.fallback;
+}
+
+function updateBubble() {
+  const el = document.getElementById('ke-bubble-text');
+  if (el) el.textContent = getBubbleText(currentKeyboard);
+}
+
+function startBubbleEdit() {
+  const bubble = document.getElementById('ke-bubble');
+  const editor = document.getElementById('ke-bubble-editor');
+  const ta     = document.getElementById('ke-bubble-ta');
+  if (!bubble || !editor || !ta) return;
+  ta.value = getBubbleText(currentKeyboard);
+  bubble.style.display = 'none';
+  editor.style.display = 'block';
+  ta.focus();
+  ta.select();
+}
+
+function cancelBubbleEdit() {
+  document.getElementById('ke-bubble').style.display = '';
+  document.getElementById('ke-bubble-editor').style.display = 'none';
+}
+
+async function saveBubbleEdit() {
+  const ta    = document.getElementById('ke-bubble-ta');
+  const value = ta.value;
+  const key   = KB_META[currentKeyboard]?.text_key;
+  if (!key) { cancelBubbleEdit(); return; }
+  try {
+    const res = await fetch('/diako/api/update-text/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body:    JSON.stringify({ key, value }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      BOT_TEXTS[key] = value;
+      updateBubble();
+      notify('متن پیام ذخیره شد ✅');
+    } else {
+      notify('خطا: ' + (data.error || '?'), 'error');
+    }
+  } catch {
+    notify('خطا در ارتباط با سرور ❌', 'error');
+  }
+  cancelBubbleEdit();
+}
+
+// ── ساختن المان دکمه ───────────────────────────────
+function makeKbBtnEl(btn) {
+  const el = document.createElement('div');
+  el.className = 'ke-kb-btn' + (btn.is_active ? '' : ' inactive');
+  el._d = { ...btn };
+
+  const lbl = document.createElement('span');
+  lbl.className = 'ke-kb-btn-lbl';
+  lbl.textContent = btn.label;
+  el.appendChild(lbl);
+
+  el.addEventListener('click', () => {
+    const cb = el._d?.callback_data;
+    if (cb && AVAILABLE_KEYBOARDS.includes(cb) && cb !== currentKeyboard) {
+      switchKeyboard(cb);
+    }
+  });
+  el.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    showCtx(e, el);
+  });
+  return el;
+}
+
+// ── خالی بودن ردیف‌ها ─────────────────────────────
 function refreshEmptyRows() {
   document.querySelectorAll('.ke-row').forEach(r => {
-    const hasBtns  = r.querySelector('.ke-btn');
+    const hasBtns  = r.querySelector('.ke-kb-btn');
     const hasEmpty = r.querySelector('.ke-row-empty');
     if (!hasBtns && !hasEmpty) {
       const ph = document.createElement('span');
@@ -929,115 +1280,7 @@ function refreshEmptyRows() {
   });
 }
 
-// ── آمار ───────────────────────────────────────
-function updateStats() {
-  let total = 0, active = 0, inactive = 0;
-  boardRows.forEach(row => {
-    row.forEach(btn => {
-      total++;
-      if (btn.is_active) active++;
-      else inactive++;
-    });
-  });
-  document.getElementById('s-rows').textContent    = boardRows.length;
-  document.getElementById('s-btns').textContent    = total;
-  document.getElementById('s-active').textContent  = active;
-  document.getElementById('s-inactive').textContent = inactive;
-}
-
-// ── پیش‌نمایش زنده ─────────────────────────────
-const PREVIEW_FALLBACK = {
-  buy_vpn:     { bubble: '🔐 پلن مورد نظر را انتخاب کنید:', note: 'پلن‌های VPN به صورت داینامیک از دیتابیس بارگذاری می‌شن.' },
-  wallet:      { bubble: '💎 کیف پول شما:',                  note: 'موجودی: ۰ تومان\nبرای شارژ، واریز کنید.' },
-  free_test:   { bubble: '🎁 تست رایگان:',                   note: 'سرویس آزمایشی ۲۴ ساعته برای شما فعال می‌شه.' },
-  my_services: { bubble: '📡 سرویس‌های من:',                 note: 'لیست اشتراک‌های فعال شما از Rebecca بارگذاری می‌شه.' },
-  support:     { bubble: '🎧 پشتیبانی:',                     note: 'پیام خود را تایپ کنید، پشتیبانی پاسخ می‌ده.' },
-  profile:     { bubble: '👤 پروفایل:',                      note: 'اطلاعات حساب کاربری و تاریخچه‌ی خرید.' },
-  tutorial:    { bubble: '📚 آموزش و راهنما:',               note: 'راهنماهای نصب و استفاده از VPN نمایش داده می‌شه.' },
-  referral:    { bubble: '💰 دعوت دوستان:',                  note: 'لینک اختصاصی شما برای دعوت دوستان ساخته می‌شه.' },
-  language:    { bubble: '🌐 انتخاب زبان:',                  note: '🇮🇷 فارسی\n🇬🇧 English' },
-};
-
-let _previewStack = [];
-
-function renderPreview() {
-  _previewStack = [];
-  document.getElementById('preview-nav').style.display = 'none';
-  document.getElementById('preview-bubble').textContent = KB_BUBBLES[currentKeyboard] || 'منوی دیاکو 👇';
-  _drawPreviewRows(boardRows);
-}
-
-function _drawPreviewRows(rows) {
-  const kb = document.getElementById('preview-kb');
-  kb.style.opacity = '1';
-  kb.innerHTML = '';
-  const hasAny = rows && rows.some(r => r.length > 0);
-  if (!hasAny) {
-    kb.innerHTML = '<div class="ke-tg-empty">هنوز دکمه‌ای اضافه نشده</div>';
-    return;
-  }
-  rows.forEach(row => {
-    if (row.length === 0) return;
-    const rowEl = document.createElement('div');
-    rowEl.className = 'ke-tg-row';
-    row.forEach(btn => {
-      const keyEl = document.createElement('div');
-      keyEl.className = 'ke-tg-key' + (btn.is_active ? '' : ' ke-inactive');
-      keyEl.textContent = btn.label;
-      if (btn.is_active) keyEl.addEventListener('click', () => previewNavigate(btn));
-      rowEl.appendChild(keyEl);
-    });
-    kb.appendChild(rowEl);
-  });
-}
-
-async function previewNavigate(btn) {
-  const kb = document.getElementById('preview-kb');
-  const bubbleEl = document.getElementById('preview-bubble');
-  const nav = document.getElementById('preview-nav');
-  const crumbEl = document.getElementById('preview-crumb');
-
-  _previewStack.push({ label: btn.label });
-
-  // Loading
-  kb.style.transition = 'opacity .12s';
-  kb.style.opacity = '0.3';
-
-  try {
-    const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(btn.callback_data)}/`);
-    const data = await res.json();
-
-    if (data.buttons && data.buttons.length > 0) {
-      // زیرمنو پیدا شد — نمایش بده
-      const subRows = buildRows(data.buttons);
-      bubbleEl.textContent = btn.label;
-      nav.style.display = 'flex';
-      crumbEl.textContent = 'منوی اصلی › ' + _previewStack.map(s => s.label).join(' › ');
-      _drawPreviewRows(subRows);
-    } else {
-      // زیرمنو ندارد — نمایش placeholder
-      const fb = PREVIEW_FALLBACK[btn.callback_data] || { bubble: btn.label, note: 'این بخش در بات اجرا می‌شه.' };
-      bubbleEl.textContent = fb.bubble;
-      nav.style.display = 'flex';
-      crumbEl.textContent = 'منوی اصلی › ' + _previewStack.map(s => s.label).join(' › ');
-      kb.style.opacity = '1';
-      kb.innerHTML = `<div class="ke-tg-placeholder">${esc(fb.note).replace(/\n/g, '<br>')}</div>`;
-    }
-  } catch {
-    _previewStack.pop();
-    kb.style.opacity = '1';
-    kb.innerHTML = '<div class="ke-tg-empty">خطا در بارگذاری ❌</div>';
-  }
-}
-
-function previewBack() {
-  _previewStack = [];
-  document.getElementById('preview-nav').style.display = 'none';
-  document.getElementById('preview-bubble').textContent = KB_BUBBLES[currentKeyboard] || 'منوی دیاکو 👇';
-  _drawPreviewRows(boardRows);
-}
-
-// ── render ─────────────────────────────────────
+// ── رندر بورد ──────────────────────────────────────
 function renderBoard() {
   _sortables.forEach(s => s.destroy());
   _sortables.length = 0;
@@ -1049,11 +1292,11 @@ function renderBoard() {
     wrap.className = 'ke-row-wrap';
 
     const hdr = document.createElement('div');
-    hdr.className = 'ke-row-header';
+    hdr.className = 'ke-row-hdr';
     hdr.innerHTML =
       `<span class="ke-row-num">ردیف ${ri + 1}</span>` +
-      `<button class="ke-row-del" onclick="deleteRow(${ri})">` +
-      `<i class="ti ti-trash"></i> حذف</button>`;
+      `<button class="ke-row-del" onclick="deleteRow(${ri})" title="حذف ردیف">` +
+      `<i class="ti ti-trash"></i></button>`;
 
     const rowEl = document.createElement('div');
     rowEl.className = 'ke-row';
@@ -1065,7 +1308,7 @@ function renderBoard() {
       ph.textContent = 'خالی — از کاتالوگ اینجا رها کن';
       rowEl.appendChild(ph);
     } else {
-      row.forEach(btn => rowEl.appendChild(makeBtnEl(btn)));
+      row.forEach(btn => rowEl.appendChild(makeKbBtnEl(btn)));
     }
 
     _sortables.push(initRowSortable(rowEl));
@@ -1075,44 +1318,34 @@ function renderBoard() {
   });
 
   updateStats();
-  renderPreview();
+  updateBubble();
 
-  // دکمه‌ی ردیف جدید و راهنما برای کیبورد داینامیک
-  const addRowBtn = document.querySelector('.ke-add-row');
-  let dynBanner = document.getElementById('ke-dyn-banner');
+  // کیبورد داینامیک
+  const addRowBtn = document.getElementById('add-row-btn');
+  const dynBanner = document.getElementById('ke-dyn-banner');
   if (DYNAMIC_KEYBOARDS.has(currentKeyboard)) {
     if (addRowBtn) addRowBtn.style.display = 'none';
-    if (!dynBanner) {
-      dynBanner = document.createElement('p');
-      dynBanner.id        = 'ke-dyn-banner';
-      dynBanner.className = 'ke-hint';
-      dynBanner.style.cssText = 'margin-top:10px;color:var(--accent);direction:rtl;';
-      dynBanner.textContent = '⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.';
-      document.getElementById('board').after(dynBanner);
-    }
+    if (dynBanner) dynBanner.style.display = 'block';
   } else {
     if (addRowBtn) addRowBtn.style.display = '';
-    if (dynBanner) dynBanner.remove();
+    if (dynBanner) dynBanner.style.display = 'none';
   }
 }
 
 function initRowSortable(rowEl) {
   return Sortable.create(rowEl, {
-    group:        'keyboard',
-    animation:    150,
-    draggable:    '.ke-btn',
-    ghostClass:   'ke-sortable-ghost',
-    chosenClass:  'ke-sortable-chosen',
-    onEnd() {
-      refreshEmptyRows();
-      syncState();
-    },
+    group:       'keyboard',
+    animation:   150,
+    draggable:   '.ke-kb-btn',
+    ghostClass:  'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd() { refreshEmptyRows(); syncState(); },
     onAdd(evt) {
       const item = evt.item;
       if (item.classList.contains('ke-cat-item')) {
         const action = CATALOG.find(a => a.callback_data === item.dataset.callback);
         if (action) {
-          item.replaceWith(makeBtnEl({ label: action.label, callback_data: action.callback_data, is_active: 1 }));
+          item.replaceWith(makeKbBtnEl({ label: action.label, callback_data: action.callback_data, is_active: 1 }));
         } else {
           item.remove();
         }
@@ -1123,52 +1356,22 @@ function initRowSortable(rowEl) {
   });
 }
 
-function makeBtnEl(btn) {
-  const el = document.createElement('div');
-  el.className = 'ke-btn' + (btn.is_active ? '' : ' inactive');
-  el._d = { ...btn };
-
-  const active  = btn.is_active !== 0;
-  const dynamic = !!btn.is_dynamic;
-  el.innerHTML =
-    `<span class="ke-btn-lbl">${esc(btn.label)}</span>` +
-    `<div class="ke-btn-ctl">` +
-      `<button class="ke-btn-eye" title="${active ? 'غیرفعال‌کردن' : 'فعال‌کردن'}" onclick="toggleActive(this)">` +
-        (active ? '👁' : '🚫') +
-      `</button>` +
-      (!dynamic ? `<button class="ke-btn-x" title="حذف" onclick="removeBtn(this)">✕</button>` : '') +
-    `</div>`;
-
-  el.addEventListener('contextmenu', e => showCtx(e, el));
-  return el;
-}
-
 function syncState() {
   boardRows = [...document.querySelectorAll('.ke-row')].map(rowEl =>
-    [...rowEl.querySelectorAll('.ke-btn')].map(btnEl => ({
+    [...rowEl.querySelectorAll('.ke-kb-btn')].map(btnEl => ({
       ...(btnEl._d || {}),
       is_active: btnEl.classList.contains('inactive') ? 0 : 1,
     }))
   );
   updateStats();
-  renderPreview();
 }
 
-// ── actions ────────────────────────────────────
-function toggleActive(btn) {
-  const card = btn.closest('.ke-btn');
-  const nowActive = card.classList.contains('inactive');
-  card.classList.toggle('inactive', !nowActive);
-  btn.textContent = nowActive ? '👁' : '🚫';
-  btn.title       = nowActive ? 'غیرفعال‌کردن' : 'فعال‌کردن';
+// ── اکشن‌های ردیف ─────────────────────────────────
+function addRow() {
   syncState();
-}
-
-function removeBtn(btn) {
-  const card = btn.closest('.ke-btn');
-  card.remove();
-  refreshEmptyRows();
-  syncState();
+  boardRows.push([]);
+  renderBoard();
+  document.getElementById('board').lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function deleteRow(ri) {
@@ -1177,78 +1380,74 @@ function deleteRow(ri) {
   renderBoard();
 }
 
-function addRow() {
-  syncState();
-  boardRows.push([]);
-  renderBoard();
-  document.getElementById('board').lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+// ── ویرایش inline ──────────────────────────────────
+function startInlineEdit(btnEl) {
+  const lbl = btnEl.querySelector('.ke-kb-btn-lbl');
+  if (!lbl) return;
+  const original = lbl.textContent;
+
+  const inp = document.createElement('input');
+  inp.type      = 'text';
+  inp.value     = original;
+  inp.className = 'ke-inline-edit';
+
+  lbl.replaceWith(inp);
+  inp.focus();
+  inp.select();
+
+  let done = false;
+  function finish(save) {
+    if (done) return;
+    done = true;
+    const newLabel = inp.value.trim() || original;
+    const newLbl = document.createElement('span');
+    newLbl.className = 'ke-kb-btn-lbl';
+    newLbl.textContent = save ? newLabel : original;
+    inp.replaceWith(newLbl);
+    if (save && newLabel !== original) {
+      btnEl._d.label = newLabel;
+      syncState();
+    }
+  }
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
 }
 
-// ── catalog ────────────────────────────────────
-function filterCatalog(q) {
-  const term = q.trim().toLowerCase();
-  document.querySelectorAll('#catalog .ke-cat-item').forEach(el => {
-    const label = el.textContent.toLowerCase();
-    el.style.display = (!term || label.includes(term)) ? '' : 'none';
-  });
-}
-
-function renderCatalog() {
-  const cat = document.getElementById('catalog');
-  CATALOG.forEach(action => {
-    const item = document.createElement('div');
-    item.className = 'ke-cat-item';
-    item.dataset.callback = action.callback_data;
-    item.innerHTML = `<span>${esc(action.label)}</span>`;
-    cat.appendChild(item);
-  });
-
-  Sortable.create(cat, {
-    group:      { name: 'keyboard', pull: 'clone', put: false },
-    sort:       false,
-    animation:  150,
-    ghostClass: 'ke-sortable-ghost',
-    draggable:  '.ke-cat-item',
-  });
-}
-
-// ── switch keyboard ────────────────────────────
+// ── switch keyboard ────────────────────────────────
 async function switchKeyboard(name) {
   if (name === currentKeyboard) return;
   const prevKb = currentKeyboard;
 
-  document.querySelectorAll('.ke-tab').forEach(t => t.classList.remove('active'));
-  const matchTab = document.querySelector(`.ke-tab[data-kb="${name}"]`);
-  if (matchTab) matchTab.classList.add('active', 'ke-tab-loading');
+  document.querySelectorAll('.ke-menu-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.kb === name);
+  });
 
   try {
     const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
     const data = await res.json();
-    if (!data.buttons || data.buttons.length === 0) {
-      if (!DYNAMIC_KEYBOARDS.has(name)) {
-        notify('این دکمه زیر‌کیبورد ندارد', 'error');
-        document.querySelectorAll('.ke-tab').forEach(t => {
-          t.classList.toggle('active', t.dataset.kb === prevKb);
-        });
-        return;
-      }
+    if (!data.buttons || (data.buttons.length === 0 && !DYNAMIC_KEYBOARDS.has(name))) {
+      notify('این منو دکمه‌ای ندارد', 'error');
+      document.querySelectorAll('.ke-menu-item').forEach(t => {
+        t.classList.toggle('active', t.dataset.kb === prevKb);
+      });
+      return;
     }
     currentKeyboard = name;
     boardRows = buildRows(data.buttons);
-    document.getElementById('ke-board-title').textContent = KB_LABELS[name] || name;
-    closeEditPanel();
     renderBoard();
   } catch {
-    notify('خطا در بارگذاری کیبورد ❌', 'error');
-    document.querySelectorAll('.ke-tab').forEach(t => {
+    notify('خطا در بارگذاری منو ❌', 'error');
+    document.querySelectorAll('.ke-menu-item').forEach(t => {
       t.classList.toggle('active', t.dataset.kb === prevKb);
     });
-  } finally {
-    if (matchTab) matchTab.classList.remove('ke-tab-loading');
   }
 }
 
-// ── save ───────────────────────────────────────
+// ── save ───────────────────────────────────────────
 async function saveLayout() {
   syncState();
   const buttons = [];
@@ -1264,7 +1463,6 @@ async function saveLayout() {
       });
     });
   });
-
   try {
     const res = await fetch('/diako/api/save-keyboard/', {
       method:  'POST',
@@ -1272,109 +1470,104 @@ async function saveLayout() {
       body:    JSON.stringify({ keyboard_name: currentKeyboard, buttons }),
     });
     const data = await res.json();
-    if (data.ok) {
-      notify(`${KB_LABELS[currentKeyboard] || currentKeyboard} ذخیره شد ✅`, 'success');
-    } else {
-      notify('خطا: ' + (data.error || '?'), 'error');
-    }
+    if (data.ok) notify(`${KB_META[currentKeyboard]?.label || currentKeyboard} ذخیره شد ✅`);
+    else         notify('خطا: ' + (data.error || '?'), 'error');
   } catch {
     notify('خطا در ارتباط با سرور ❌', 'error');
   }
 }
 
-function getCsrf() {
-  for (const c of document.cookie.split(';')) {
-    const [k, v] = c.trim().split('=');
-    if (k === 'csrftoken') return decodeURIComponent(v || '');
+// ── کاتالوگ ────────────────────────────────────────
+function setCatTab(tab) {
+  _catTab = tab;
+  document.querySelectorAll('.ke-cat-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  filterCatalog(document.getElementById('cat-search')?.value || '');
+}
+
+function filterCatalog(q) {
+  const term = q.trim().toLowerCase();
+  document.querySelectorAll('#catalog .ke-cat-item').forEach(el => {
+    const cb    = el.dataset.callback || '';
+    const label = el.textContent.toLowerCase();
+    const tabOk = _catTab === 'all'
+      || (_catTab === 'admin'  && ADMIN_CBS.has(cb))
+      || (_catTab === 'member' && MEMBER_CBS.has(cb));
+    el.style.display = tabOk && (!term || label.includes(term)) ? '' : 'none';
+  });
+}
+
+function renderCatalog() {
+  const cat = document.getElementById('catalog');
+  cat.innerHTML = '';
+  CATALOG.forEach(action => {
+    const item = document.createElement('div');
+    item.className = 'ke-cat-item';
+    item.dataset.callback = action.callback_data;
+    const isDynamic = action.is_dynamic || false;
+    item.innerHTML = `<span>${esc(action.label)}</span>` +
+      (isDynamic ? '<span class="ke-cat-badge">داینامیک</span>' : '');
+    cat.appendChild(item);
+  });
+  Sortable.create(cat, {
+    group:      { name: 'keyboard', pull: 'clone', put: false },
+    sort:       false,
+    animation:  150,
+    ghostClass: 'sortable-ghost',
+    draggable:  '.ke-cat-item',
+  });
+}
+
+// ── منوی راهنما ────────────────────────────────────
+function renderMenuList() {
+  const list = document.getElementById('menu-list');
+  list.innerHTML = '';
+  AVAILABLE_KEYBOARDS.forEach(kb => {
+    const meta = KB_META[kb];
+    const item = document.createElement('div');
+    item.className = 'ke-menu-item' + (kb === 'user_main' ? ' active' : '');
+    item.dataset.kb = kb;
+    item.innerHTML = `<i class="ti ${meta.icon}"></i><span>${esc(meta.label)}</span>`;
+    item.addEventListener('click', () => switchKeyboard(kb));
+    list.appendChild(item);
+  });
+}
+
+// ── اطلاعات ربات از تلگرام ─────────────────────────
+async function fetchBotInfo() {
+  try {
+    const res  = await fetch('/diako/api/bot-info/');
+    const data = await res.json();
+    if (!data.ok) return;
+
+    const nameEl   = document.getElementById('sim-name');
+    const avatarEl = document.getElementById('sim-avatar');
+
+    if (nameEl) nameEl.textContent = data.name || 'دیاکو';
+
+    if (data.avatar_url && avatarEl) {
+      const img = document.createElement('img');
+      img.src = data.avatar_url;
+      img.onerror = () => img.remove();
+      avatarEl.innerHTML = '';
+      avatarEl.appendChild(img);
+    } else if (data.name && avatarEl) {
+      avatarEl.textContent = data.name[0].toUpperCase();
+    }
+  } catch {
+    // بدون آواتار ادامه می‌دهیم
   }
-  return '';
 }
 
-function notify(msg, type) {
-  const stack = document.getElementById('notif-stack');
-  if (!stack) return;
-  const n = document.createElement('div');
-  n.className = `notif notif-${type}`;
-  n.textContent = msg;
-  stack.appendChild(n);
-  setTimeout(() => n.remove(), 3500);
-}
-
-function esc(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// ── پنل ویرایش دکمه ───────────────────────────
-let _editTarget = null;
-
-function openEditPanel(btnEl) {
-  document.querySelectorAll('.ke-btn.selected').forEach(b => b.classList.remove('selected'));
-  _editTarget = btnEl;
-  btnEl.classList.add('selected');
-
-  document.getElementById('edit-label').value    = btnEl._d.label || '';
-  document.getElementById('edit-callback').textContent = btnEl._d.callback_data || '';
-
-  const panel = document.getElementById('ke-edit-panel');
-  panel.style.display = 'block';
-  const inp = document.getElementById('edit-label');
-  inp.focus();
-  inp.select();
-}
-
-function closeEditPanel() {
-  if (_editTarget) { _editTarget.classList.remove('selected'); _editTarget = null; }
-  document.getElementById('ke-edit-panel').style.display = 'none';
-}
-
-function applyEdit() {
-  if (!_editTarget) return;
-  const newLabel = document.getElementById('edit-label').value.trim();
-  if (!newLabel) return;
-  _editTarget._d.label = newLabel;
-  _editTarget.querySelector('.ke-btn-lbl').textContent = newLabel;
-  syncState();
-  closeEditPanel();
-}
-
-// ── Radial Context Menu ────────────────────────
+// ── Radial Context Menu ────────────────────────────
 let _ctxTarget = null;
-
-function handleCtxAction(action, btnEl) {
-  if (!btnEl) return;
-  const isDynamic = !!btnEl._d?.is_dynamic;
-  if (action === 'edit')   { openEditPanel(btnEl); }
-  if (action === 'delete') {
-    if (isDynamic) { notify('سرورها رو از پنل ادمین حذف کن', 'error'); return; }
-    const x = btnEl.querySelector('.ke-btn-x');
-    if (x) removeBtn(x);
-  }
-  if (action === 'toggle') { const e = btnEl.querySelector('.ke-btn-eye'); if (e) toggleActive(e); }
-  if (action === 'open')   { switchKeyboard(btnEl._d.callback_data); }
-}
-
-function closeCtxNow() {
-  const m = document.getElementById('ke-radial-menu');
-  if (m) m.remove();
-  _ctxTarget = null;
-}
-
-function closeCtx() {
-  const menu = document.getElementById('ke-radial-menu');
-  if (!menu) return;
-  _ctxTarget = null;
-  menu.classList.remove('open');
-  menu.querySelectorAll('.ke-radial-action').forEach(el => el.classList.remove('visible'));
-  setTimeout(() => { if (menu.parentNode) menu.parentNode.removeChild(menu); }, 200);
-}
 
 function showCtx(e, btnEl) {
   e.preventDefault();
-  e.stopPropagation();
   closeCtxNow();
   _ctxTarget = btnEl;
 
-  // مختصات نقطه شروع: جایی که کاربر کلیک کرد
   const ox = e.clientX;
   const oy = e.clientY;
 
@@ -1395,6 +1588,7 @@ function showCtx(e, btnEl) {
   menu.appendChild(line);
 
   // دایره‌ی مرکزی ×
+  // موقعیت انتهای خط 64px با زاویه ۴۵ درجه به سمت راست-بالا: (45, -45)
   const center = document.createElement('div');
   center.className = 'ke-radial-center';
   center.innerHTML = '<i class="ti ti-x"></i>';
@@ -1402,15 +1596,13 @@ function showCtx(e, btnEl) {
   center.addEventListener('click', e2 => { e2.stopPropagation(); closeCtx(); });
   menu.appendChild(center);
 
-  // دایره‌های اکشن — ۴ دکمه در موقعیت ۹، ۱۱، ۱، ۳ ساعت
-  // مرکز دایره‌ی مرکزی: (44, -44) از origin
-  const CX = 44, CY = -44, R = 56;
+  // سه دکمه‌ی اکشن
   const isActive = !btnEl.classList.contains('inactive');
+  const CX = 45, CY = -45, R = 52;
   const actions = [
-    { angle: -65, icon: 'ti-pencil',                        action: 'edit',   title: 'ویرایش متن'     },
-    { angle: -22, icon: 'ti-keyboard',                      action: 'open',   title: 'باز در ادیتور'  },
-    { angle:  22, icon: isActive ? 'ti-eye-off' : 'ti-eye', action: 'toggle', title: isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن' },
-    { angle:  65, icon: 'ti-trash',                         action: 'delete', title: 'حذف دکمه'       },
+    { angle: -55, icon: 'ti-pencil',                           action: 'edit',   title: 'ویرایش متن' },
+    { angle:   0, icon: isActive ? 'ti-eye-off' : 'ti-eye',   action: 'toggle', title: isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن' },
+    { angle:  55, icon: 'ti-trash',                            action: 'delete', title: 'حذف دکمه' },
   ];
 
   const actionEls = [];
@@ -1420,25 +1612,22 @@ function showCtx(e, btnEl) {
     const y   = CY - R * Math.cos(rad);
 
     const circle = document.createElement('div');
-    circle.className    = 'ke-radial-action';
+    circle.className     = 'ke-radial-action';
     circle.dataset.action = action;
-    circle.title        = title;
-    circle.innerHTML    = `<i class="ti ${icon}"></i>`;
-    circle.style.left   = (x - 15) + 'px';
-    circle.style.top    = (y - 15) + 'px';
-
+    circle.title         = title;
+    circle.innerHTML     = `<i class="ti ${icon}"></i>`;
+    circle.style.left    = (x - 14) + 'px';
+    circle.style.top     = (y - 14) + 'px';
     circle.addEventListener('click', e2 => {
       e2.stopPropagation();
       handleCtxAction(action, _ctxTarget);
       closeCtx();
     });
-
     menu.appendChild(circle);
-    actionEls.push({ el: circle, delay: 140 + i * 45 });
+    actionEls.push({ el: circle, delay: 150 + i * 50 });
   });
 
   document.body.appendChild(menu);
-
   requestAnimationFrame(() => {
     menu.classList.add('open');
     actionEls.forEach(({ el, delay }) => {
@@ -1447,16 +1636,181 @@ function showCtx(e, btnEl) {
   });
 }
 
-document.getElementById('edit-label').addEventListener('keydown', e => {
-  if (e.key === 'Enter')  applyEdit();
-  if (e.key === 'Escape') closeEditPanel();
-});
+function handleCtxAction(action, btnEl) {
+  if (!btnEl) return;
+  const isDynamic = !!btnEl._d?.is_dynamic;
+  if (action === 'edit') {
+    startInlineEdit(btnEl);
+  } else if (action === 'delete') {
+    if (isDynamic) { notify('سرورها رو از پنل ادمین مدیریت کن', 'error'); return; }
+    btnEl.remove();
+    refreshEmptyRows();
+    syncState();
+  } else if (action === 'toggle') {
+    btnEl.classList.toggle('inactive');
+    syncState();
+  }
+}
+
+function closeCtxNow() {
+  const m = document.getElementById('ke-radial-menu');
+  if (m) m.remove();
+  _ctxTarget = null;
+}
+
+function closeCtx() {
+  const menu = document.getElementById('ke-radial-menu');
+  if (!menu) return;
+  _ctxTarget = null;
+  menu.classList.remove('open');
+  menu.querySelectorAll('.ke-radial-action').forEach(el => el.classList.remove('visible'));
+  setTimeout(() => { if (menu.parentNode) menu.parentNode.removeChild(menu); }, 200);
+}
 
 document.addEventListener('click',       e => { if (!e.target.closest('#ke-radial-menu')) closeCtx(); });
-document.addEventListener('contextmenu', e => { if (!e.target.closest('.ke-btn'))          closeCtxNow(); });
+document.addEventListener('contextmenu', e => { if (!e.target.closest('.ke-kb-btn'))       closeCtxNow(); });
 
-// ── init ───────────────────────────────────────
-renderBoard();
+// ── مودال راهنما ───────────────────────────────────
+function openHelp() {
+  document.getElementById('help-overlay').classList.add('open');
+  document.getElementById('help-modal').classList.add('open');
+}
+
+function closeHelp() {
+  document.getElementById('help-overlay').classList.remove('open');
+  document.getElementById('help-modal').classList.remove('open');
+}
+
+function setHelpTab(i) {
+  document.querySelectorAll('.ke-modal-tab').forEach((t, idx) => {
+    t.classList.toggle('active', idx === i);
+  });
+  document.querySelectorAll('.ke-help-pnl').forEach((p, idx) => {
+    p.style.display = idx === i ? '' : 'none';
+    p.classList.toggle('active', idx === i);
+  });
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHelp(); });
+
+// ── باتم‌شیت موبایل ────────────────────────────────
+function openBottomSheet() {
+  document.getElementById('bs-overlay').classList.add('open');
+  document.getElementById('ke-bs').classList.add('open');
+  renderBsItems();
+}
+
+function closeBottomSheet() {
+  document.getElementById('bs-overlay').classList.remove('open');
+  document.getElementById('ke-bs').classList.remove('open');
+}
+
+function setBsTab(tab) {
+  _bsTab = tab;
+  document.querySelectorAll('.ke-bs-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.trim() === (tab === 'member' ? 'ممبر' : 'ادمین'));
+  });
+  renderBsItems();
+}
+
+function renderBsItems() {
+  const container = document.getElementById('bs-items');
+  container.innerHTML = '';
+  const filtered = CATALOG.filter(a =>
+    _bsTab === 'admin' ? ADMIN_CBS.has(a.callback_data) : MEMBER_CBS.has(a.callback_data)
+  );
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">دکمه‌ای در این دسته‌بندی وجود ندارد</div>';
+    return;
+  }
+  filtered.forEach(action => {
+    const item = document.createElement('div');
+    item.className = 'ke-bs-item' + (_bsSelected.has(action.callback_data) ? ' selected' : '');
+    item.dataset.callback = action.callback_data;
+    item.textContent = action.label;
+    item.addEventListener('click', () => {
+      if (_bsSelected.has(action.callback_data)) {
+        _bsSelected.delete(action.callback_data);
+        item.classList.remove('selected');
+      } else {
+        _bsSelected.add(action.callback_data);
+        item.classList.add('selected');
+      }
+      updateBsConfirm();
+    });
+    container.appendChild(item);
+  });
+}
+
+function updateBsConfirm() {
+  const btn   = document.getElementById('bs-confirm');
+  const count = document.getElementById('bs-count');
+  if (!btn || !count) return;
+  btn.style.display   = _bsSelected.size > 0 ? '' : 'none';
+  count.textContent   = _bsSelected.size;
+}
+
+function confirmBsSelection() {
+  const staging = document.getElementById('staging');
+  const items   = document.getElementById('staging-items');
+  if (!staging || !items) { closeBottomSheet(); return; }
+
+  _bsSelected.forEach(cb => {
+    const action = CATALOG.find(a => a.callback_data === cb);
+    if (!action) return;
+    const chip = document.createElement('div');
+    chip.className = 'ke-staging-chip';
+    chip.dataset.callback = cb;
+    chip.textContent = action.label;
+    items.appendChild(chip);
+  });
+
+  if (items.children.length > 0) {
+    staging.style.display = '';
+    // SortableJS برای staging chips
+    Sortable.create(items, {
+      group:     'keyboard',
+      animation: 150,
+      draggable: '.ke-staging-chip',
+      onAdd(evt) {
+        // وقتی chip از staging به ردیف رفت، chip رو تبدیل به دکمه می‌کنیم
+        const item = evt.item;
+        const action = CATALOG.find(a => a.callback_data === item.dataset.callback);
+        if (action) {
+          item.replaceWith(makeKbBtnEl({ label: action.label, callback_data: action.callback_data, is_active: 1 }));
+        } else {
+          item.remove();
+        }
+        refreshEmptyRows();
+        syncState();
+        if (items.children.length === 0) staging.style.display = 'none';
+      },
+    });
+  }
+
+  _bsSelected.clear();
+  closeBottomSheet();
+}
+
+// ── init ───────────────────────────────────────────
+boardRows = buildRows(INITIAL_BUTTONS);
+renderMenuList();
 renderCatalog();
+renderBoard();
+fetchBotInfo();
+
+// keyboard shortcut: Ctrl+S → save
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveLayout();
+  }
+});
+
+// bubble textarea: Ctrl+Enter saves
+document.getElementById('ke-bubble-ta')?.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveBubbleEdit();
+  if (e.key === 'Escape') cancelBubbleEdit();
+});
 </script>
 {% endblock %}
