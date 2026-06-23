@@ -627,6 +627,50 @@
   .ke-layout { flex-direction: column; }
   .ke-aside  { width: 100%; }
 }
+
+/* ── تب‌بار انتخاب کیبورد ─────────────────────── */
+.ke-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 6px;
+  direction: rtl;
+}
+.ke-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.ke-tab:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ke-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.ke-tab-loading {
+  opacity: .5;
+  pointer-events: none;
+}
 </style>
 {% endblock %}
 
@@ -695,6 +739,19 @@
 
     <div class="dash-container">
 
+      <!-- تب‌بار انتخاب کیبورد -->
+      <div class="ke-tabs">
+        <button class="ke-tab active" data-kb="user_main" onclick="switchKeyboard('user_main', this)">
+          <i class="ti ti-home"></i> منوی اصلی
+        </button>
+        <button class="ke-tab" data-kb="wallet" onclick="switchKeyboard('wallet', this)">
+          <i class="ti ti-wallet"></i> کیف پول
+        </button>
+        <button class="ke-tab" data-kb="support" onclick="switchKeyboard('support', this)">
+          <i class="ti ti-headset"></i> پشتیبانی
+        </button>
+      </div>
+
       <!-- نوار آمار -->
       <div class="ke-stats-bar">
         <div class="ke-stat">
@@ -724,7 +781,7 @@
         <div class="ke-main">
           <div class="ke-card">
             <div class="ke-card-header">
-              <div class="ke-card-title" data-fa="منوی اصلی کاربر" data-en="User Main Menu">منوی اصلی کاربر</div>
+              <div class="ke-card-title" id="ke-board-title">منوی اصلی کاربر</div>
               <button class="ke-save" onclick="saveLayout()">
                 <i class="ti ti-device-floppy"></i>
                 <span data-fa="ذخیره" data-en="Save">ذخیره</span>
@@ -816,8 +873,20 @@
 const INITIAL_BUTTONS = {{ buttons_json|safe }};
 const CATALOG         = {{ actions_json|safe }};
 
+const KB_LABELS = {
+  user_main: 'منوی اصلی کاربر',
+  wallet:    'کیف پول',
+  support:   'پشتیبانی',
+};
+const KB_BUBBLES = {
+  user_main: 'سلام! چه کاری می‌تونم برات انجام بدم؟ 👋',
+  wallet:    '💎 کیف پول شما:',
+  support:   '🎧 پشتیبانی دیاکو:',
+};
+
 // ── state ──────────────────────────────────────
 let boardRows = [];
+let currentKeyboard = 'user_main';
 
 function buildRows(flat) {
   const map = {};
@@ -884,10 +953,9 @@ const PREVIEW_FALLBACK = {
 let _previewStack = [];
 
 function renderPreview() {
-  // ویرایش board → پیش‌نمایش برمی‌گرده به ریشه
   _previewStack = [];
   document.getElementById('preview-nav').style.display = 'none';
-  document.getElementById('preview-bubble').textContent = 'پلن خود را انتخاب کنید 👇';
+  document.getElementById('preview-bubble').textContent = KB_BUBBLES[currentKeyboard] || 'منوی دیاکو 👇';
   _drawPreviewRows(boardRows);
 }
 
@@ -957,7 +1025,7 @@ async function previewNavigate(btn) {
 function previewBack() {
   _previewStack = [];
   document.getElementById('preview-nav').style.display = 'none';
-  document.getElementById('preview-bubble').textContent = 'پلن خود را انتخاب کنید 👇';
+  document.getElementById('preview-bubble').textContent = KB_BUBBLES[currentKeyboard] || 'منوی دیاکو 👇';
   _drawPreviewRows(boardRows);
 }
 
@@ -1125,6 +1193,31 @@ function renderCatalog() {
   });
 }
 
+// ── switch keyboard ────────────────────────────
+async function switchKeyboard(name, tabEl) {
+  if (name === currentKeyboard) return;
+
+  document.querySelectorAll('.ke-tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active', 'ke-tab-loading');
+
+  try {
+    const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
+    const data = await res.json();
+    currentKeyboard = name;
+    boardRows = buildRows(data.buttons || []);
+    document.getElementById('ke-board-title').textContent = KB_LABELS[name] || name;
+    closeEditPanel();
+    renderBoard();
+  } catch {
+    notify('خطا در بارگذاری کیبورد ❌', 'error');
+    document.querySelectorAll('.ke-tab').forEach(t => {
+      if (t.dataset.kb === currentKeyboard) t.classList.add('active');
+    });
+  } finally {
+    tabEl.classList.remove('ke-tab-loading');
+  }
+}
+
 // ── save ───────────────────────────────────────
 async function saveLayout() {
   syncState();
@@ -1132,7 +1225,7 @@ async function saveLayout() {
   boardRows.forEach((row, ri) => {
     row.forEach((btn, ci) => {
       buttons.push({
-        keyboard_name: 'user_main',
+        keyboard_name: currentKeyboard,
         label:         btn.label,
         callback_data: btn.callback_data,
         row_index:     ri,
@@ -1146,11 +1239,11 @@ async function saveLayout() {
     const res = await fetch('/diako/api/save-keyboard/', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-      body:    JSON.stringify({ buttons }),
+      body:    JSON.stringify({ keyboard_name: currentKeyboard, buttons }),
     });
     const data = await res.json();
     if (data.ok) {
-      notify('کیبورد ذخیره شد ✅', 'success');
+      notify(`${KB_LABELS[currentKeyboard] || currentKeyboard} ذخیره شد ✅`, 'success');
     } else {
       notify('خطا: ' + (data.error || '?'), 'error');
     }

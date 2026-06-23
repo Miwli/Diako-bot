@@ -1364,43 +1364,60 @@ async def update_order_discount(order_id: int, discount_code: str, discount_amou
 
 # ─── کیبورد ادیتور ───────────────────────────
 
-_DEFAULT_USER_MAIN_BUTTONS = [
-    ("user_main", "🔐 خرید اشتراک",      "buy_vpn",     0, 0),
-    ("user_main", "💎 کیف پول",           "wallet",      1, 0),
-    ("user_main", "🎁 تست رایگان",        "free_test",   1, 1),
-    ("user_main", "📡 سرویس‌های من",      "my_services", 1, 2),
-    ("user_main", "🎧 پشتیبانی",          "support",     2, 0),
-    ("user_main", "👤 پروفایل",           "profile",     2, 1),
-    ("user_main", "📚 آموزش و راهنما",    "tutorial",    2, 2),
-    ("user_main", "💰 دعوت دوستان",       "referral",    3, 0),
-    ("user_main", "🌐 تغییر زبان",        "language",    3, 1),
-]
+_DEFAULT_KEYBOARDS = {
+    "user_main": [
+        ("user_main", "🔐 خرید اشتراک",      "buy_vpn",          0, 0),
+        ("user_main", "💎 کیف پول",           "wallet",           1, 0),
+        ("user_main", "🎁 تست رایگان",        "free_test",        1, 1),
+        ("user_main", "📡 سرویس‌های من",      "my_services",      1, 2),
+        ("user_main", "🎧 پشتیبانی",          "support",          2, 0),
+        ("user_main", "👤 پروفایل",           "profile",          2, 1),
+        ("user_main", "📚 آموزش و راهنما",    "tutorial",         2, 2),
+        ("user_main", "💰 دعوت دوستان",       "referral",         3, 0),
+        ("user_main", "🌐 تغییر زبان",        "language",         3, 1),
+    ],
+    "wallet": [
+        ("wallet", "💳 شارژ حساب",            "top_up",           0, 0),
+        ("wallet", "📜 تاریخچه تراکنش‌ها",    "wallet_history",   1, 0),
+        ("wallet", "🔙 بازگشت",               "user_main",        2, 0),
+    ],
+    "support": [
+        ("support", "📨 تیکت جدید",           "new_ticket",       0, 0),
+        ("support", "📋 تیکت‌های من",         "my_tickets",       1, 0),
+        ("support", "🔙 بازگشت",              "user_main",        2, 0),
+    ],
+}
 
 _DEFAULT_KEYBOARD_ACTIONS = [
-    ("buy_vpn",     "🔐 خرید اشتراک",     "buy_vpn"),
-    ("wallet",      "💎 کیف پول",         "wallet"),
-    ("free_test",   "🎁 تست رایگان",      "free_test"),
-    ("my_services", "📡 سرویس‌های من",    "my_services"),
-    ("support",     "🎧 پشتیبانی",        "support"),
-    ("profile",     "👤 پروفایل",         "profile"),
-    ("tutorial",    "📚 آموزش و راهنما",  "tutorial"),
-    ("referral",    "💰 دعوت دوستان",     "referral"),
-    ("language",    "🌐 تغییر زبان",      "language"),
+    ("buy_vpn",         "🔐 خرید اشتراک",       "buy_vpn"),
+    ("wallet",          "💎 کیف پول",           "wallet"),
+    ("free_test",       "🎁 تست رایگان",        "free_test"),
+    ("my_services",     "📡 سرویس‌های من",      "my_services"),
+    ("support",         "🎧 پشتیبانی",          "support"),
+    ("profile",         "👤 پروفایل",           "profile"),
+    ("tutorial",        "📚 آموزش و راهنما",    "tutorial"),
+    ("referral",        "💰 دعوت دوستان",       "referral"),
+    ("language",        "🌐 تغییر زبان",        "language"),
+    ("top_up",          "💳 شارژ حساب",         "top_up"),
+    ("wallet_history",  "📜 تاریخچه تراکنش‌ها", "wallet_history"),
+    ("new_ticket",      "📨 تیکت جدید",         "new_ticket"),
+    ("my_tickets",      "📋 تیکت‌های من",       "my_tickets"),
+    ("user_main",       "🏠 منوی اصلی",         "user_main"),
 ]
 
 
 async def _seed_keyboard_buttons():
     async with aiosqlite.connect(DB_PATH) as db:
-        # فقط وقتی جدول خالیه seed می‌زنیم (ویرایش‌های ادمین حفظ می‌شن)
-        cursor = await db.execute(
-            "SELECT COUNT(*) FROM keyboard_buttons WHERE keyboard_name = 'user_main'"
-        )
-        count = (await cursor.fetchone())[0]
-        if count == 0:
-            await db.executemany(
-                "INSERT INTO keyboard_buttons (keyboard_name, label, callback_data, row_index, col_index) VALUES (?, ?, ?, ?, ?)",
-                _DEFAULT_USER_MAIN_BUTTONS
+        for kb_name, buttons in _DEFAULT_KEYBOARDS.items():
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM keyboard_buttons WHERE keyboard_name = ?", (kb_name,)
             )
+            count = (await cursor.fetchone())[0]
+            if count == 0:
+                await db.executemany(
+                    "INSERT INTO keyboard_buttons (keyboard_name, label, callback_data, row_index, col_index) VALUES (?, ?, ?, ?, ?)",
+                    buttons
+                )
         for action in _DEFAULT_KEYBOARD_ACTIONS:
             await db.execute(
                 "INSERT OR REPLACE INTO keyboard_actions (action_name, label, callback_data) VALUES (?, ?, ?)",

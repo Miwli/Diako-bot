@@ -63,8 +63,11 @@ def chart_data(request):
 
 @login_required
 def keyboard_data(request, keyboard_name):
-    from shared_lib.db import get_keyboard_buttons
-    buttons = async_to_sync(get_keyboard_buttons)(keyboard_name)
+    if request.GET.get('all') == '1':
+        buttons = async_to_sync(get_all_keyboard_buttons)(keyboard_name)
+    else:
+        from shared_lib.db import get_keyboard_buttons
+        buttons = async_to_sync(get_keyboard_buttons)(keyboard_name)
     return JsonResponse({'buttons': buttons})
 
 
@@ -74,7 +77,8 @@ def save_keyboard(request):
     try:
         data = json.loads(request.body)
         buttons = data.get('buttons', [])
-        async_to_sync(save_keyboard_layout)("user_main", buttons)
+        keyboard_name = data.get('keyboard_name', 'user_main')
+        async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
