@@ -741,13 +741,13 @@
 
       <!-- تب‌بار انتخاب کیبورد -->
       <div class="ke-tabs">
-        <button class="ke-tab active" data-kb="user_main" onclick="switchKeyboard('user_main', this)">
+        <button class="ke-tab active" data-kb="user_main" onclick="switchKeyboard('user_main')">
           <i class="ti ti-home"></i> منوی اصلی
         </button>
-        <button class="ke-tab" data-kb="wallet" onclick="switchKeyboard('wallet', this)">
+        <button class="ke-tab" data-kb="wallet" onclick="switchKeyboard('wallet')">
           <i class="ti ti-wallet"></i> کیف پول
         </button>
-        <button class="ke-tab" data-kb="support" onclick="switchKeyboard('support', this)">
+        <button class="ke-tab" data-kb="support" onclick="switchKeyboard('support')">
           <i class="ti ti-headset"></i> پشتیبانی
         </button>
       </div>
@@ -1112,14 +1112,6 @@ function makeBtnEl(btn) {
       `<button class="ke-btn-x" title="حذف" onclick="removeBtn(this)">✕</button>` +
     `</div>`;
 
-  // کلیک (بدون drag) → پنل ویرایش
-  let _wasDragged = false;
-  el.addEventListener('mousedown', () => { _wasDragged = false; });
-  el.addEventListener('mousemove', () => { _wasDragged = true; });
-  el.addEventListener('click', e => {
-    if (!_wasDragged && !e.target.closest('.ke-btn-ctl')) openEditPanel(el);
-  });
-
   el.addEventListener('contextmenu', e => showCtx(e, el));
   return el;
 }
@@ -1194,27 +1186,36 @@ function renderCatalog() {
 }
 
 // ── switch keyboard ────────────────────────────
-async function switchKeyboard(name, tabEl) {
+async function switchKeyboard(name) {
   if (name === currentKeyboard) return;
+  const prevKb = currentKeyboard;
 
   document.querySelectorAll('.ke-tab').forEach(t => t.classList.remove('active'));
-  tabEl.classList.add('active', 'ke-tab-loading');
+  const matchTab = document.querySelector(`.ke-tab[data-kb="${name}"]`);
+  if (matchTab) matchTab.classList.add('active', 'ke-tab-loading');
 
   try {
     const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
     const data = await res.json();
+    if (!data.buttons || data.buttons.length === 0) {
+      notify('این دکمه زیر‌کیبورد ندارد', 'error');
+      document.querySelectorAll('.ke-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.kb === prevKb);
+      });
+      return;
+    }
     currentKeyboard = name;
-    boardRows = buildRows(data.buttons || []);
+    boardRows = buildRows(data.buttons);
     document.getElementById('ke-board-title').textContent = KB_LABELS[name] || name;
     closeEditPanel();
     renderBoard();
   } catch {
     notify('خطا در بارگذاری کیبورد ❌', 'error');
     document.querySelectorAll('.ke-tab').forEach(t => {
-      if (t.dataset.kb === currentKeyboard) t.classList.add('active');
+      t.classList.toggle('active', t.dataset.kb === prevKb);
     });
   } finally {
-    tabEl.classList.remove('ke-tab-loading');
+    if (matchTab) matchTab.classList.remove('ke-tab-loading');
   }
 }
 
@@ -1315,6 +1316,7 @@ function handleCtxAction(action, btnEl) {
   if (action === 'edit')   { openEditPanel(btnEl); }
   if (action === 'delete') { const x = btnEl.querySelector('.ke-btn-x');   if (x) removeBtn(x); }
   if (action === 'toggle') { const e = btnEl.querySelector('.ke-btn-eye'); if (e) toggleActive(e); }
+  if (action === 'open')   { switchKeyboard(btnEl._d.callback_data); }
 }
 
 function closeCtxNow() {
@@ -1366,14 +1368,15 @@ function showCtx(e, btnEl) {
   center.addEventListener('click', e2 => { e2.stopPropagation(); closeCtx(); });
   menu.appendChild(center);
 
-  // دایره‌های اکشن در موقعیت ساعت ۱۰، ۱۲، ۲
-  // مرکز دایره‌ی مرکزی: (44, -44) از origin (خط 62px در زاویه -45°)
-  const CX = 44, CY = -44, R = 52;
+  // دایره‌های اکشن — ۴ دکمه در موقعیت ۹، ۱۱، ۱، ۳ ساعت
+  // مرکز دایره‌ی مرکزی: (44, -44) از origin
+  const CX = 44, CY = -44, R = 56;
   const isActive = !btnEl.classList.contains('inactive');
   const actions = [
-    { angle: -60, icon: 'ti-pencil',                        action: 'edit',   title: 'ویرایش متن' },
-    { angle:   0, icon: 'ti-trash',                         action: 'delete', title: 'حذف دکمه'  },
-    { angle:  60, icon: isActive ? 'ti-eye-off' : 'ti-eye', action: 'toggle', title: isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن' },
+    { angle: -65, icon: 'ti-pencil',                        action: 'edit',   title: 'ویرایش متن'     },
+    { angle: -22, icon: 'ti-keyboard',                      action: 'open',   title: 'باز در ادیتور'  },
+    { angle:  22, icon: isActive ? 'ti-eye-off' : 'ti-eye', action: 'toggle', title: isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن' },
+    { angle:  65, icon: 'ti-trash',                         action: 'delete', title: 'حذف دکمه'       },
   ];
 
   const actionEls = [];
