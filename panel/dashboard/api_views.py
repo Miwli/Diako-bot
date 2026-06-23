@@ -62,6 +62,13 @@ def chart_data(request):
 
 
 @login_required
+def keyboard_data(request, keyboard_name):
+    from shared_lib.db import get_keyboard_buttons
+    buttons = async_to_sync(get_keyboard_buttons)(keyboard_name)
+    return JsonResponse({'buttons': buttons})
+
+
+@login_required
 @require_http_methods(["POST"])
 def save_keyboard(request):
     try:
