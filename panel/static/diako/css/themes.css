@@ -1,0 +1,57 @@
+:root {
+  --bg-base: #0C1622;
+  --glow-1: rgba(0,196,190,0.26);
+  --glow-pos-1: 12% 92%;
+  --glow-2: rgba(20,80,200,0.18);
+  --glow-pos-2: 88% 10%;
+  --accent: #00C4BE;
+  --accent-2: #4FC3F7;
+  --accent-dim: rgba(0,196,190,0.13);
+  --card-bg: rgba(255,255,255,0.038);
+  --card-border: rgba(255,255,255,0.09);
+  --text: #E8F4F8;
+  --text-muted: rgba(232,244,248,0.48);
+  --green: #34D399;
+  --red: #F87171;
+}
+
+[data-theme="warm"] {
+  --bg-base: #110A05;
+  --glow-1: rgba(249,115,22,0.28);
+  --glow-pos-1: 12% 92%;
+  --glow-2: rgba(251,191,36,0.18);
+  --glow-pos-2: 88% 10%;
+  --accent: #F97316;
+  --accent-2: #FBBF24;
+  --accent-dim: rgba(249,115,22,0.13);
+  --card-bg: rgba(255,255,255,0.042);
+  --card-border: rgba(255,255,255,0.1);
+  --text: #F8F0E8;
+  --text-muted: rgba(248,240,232,0.48);
+  --green: #4ADE80;
+  --red: #F87171;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 380px 280px at var(--glow-pos-1), var(--glow-1), transparent 62%),
+    radial-gradient(ellipse 320px 380px at var(--glow-pos-2), var(--glow-2), transparent 60%),
+    var(--bg-base);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.2s ease;
+}
+
+[lang="fa"] body, body[dir="rtl"] {
+  font-family: 'Vazirmatn', sans-serif;
+}
+[lang="en"] body, body:not([dir="rtl"]) {
+  font-family: 'Inter', sans-serif;
+}

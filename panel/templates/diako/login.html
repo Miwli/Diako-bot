@@ -1,0 +1,43 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}ورود — دیاکو{% endblock %}
+
+{% block body %}
+<div class="login-wrap">
+  <div class="login-card card anim-card">
+    <div class="login-logo">
+      <div class="login-logo-circle">د</div>
+      <div class="login-title" data-fa="دیاکو" data-en="Diako">دیاکو</div>
+      <div class="login-subtitle" data-fa="پنل مدیریت" data-en="Admin Panel">پنل مدیریت</div>
+    </div>
+
+    {% if error %}
+    <div class="error-msg" data-fa="نام کاربری یا رمز عبور اشتباه است" data-en="Incorrect username or password">
+      نام کاربری یا رمز عبور اشتباه است
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" data-fa="نام کاربری" data-en="Username">نام کاربری</label>
+        <input type="text" name="username" class="form-input" autocomplete="username" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-fa="رمز عبور" data-en="Password">رمز عبور</label>
+        <input type="password" name="password" class="form-input" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary" data-fa="ورود" data-en="Login">ورود</button>
+    </form>
+  </div>
+</div>
+
+<!-- Controls (theme/lang) at bottom-left corner -->
+<div style="position:fixed;bottom:20px;left:20px;display:flex;gap:8px;z-index:200;">
+  <button class="header-btn" onclick="toggleTheme()" title="تغییر تم">
+    <i id="theme-icon" class="ti ti-sun"></i>
+  </button>
+  <button class="header-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+</div>
+{% endblock %}
