@@ -2,8 +2,20 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextBu
 
 # ─── منوی اصلی ────────────────────────────────
 
-def user_main_menu():
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+def _build_from_rows(rows: list[dict]) -> InlineKeyboardMarkup:
+    """ساخت InlineKeyboardMarkup از لیست دکمه‌های DB"""
+    grid: dict[int, list] = {}
+    for r in rows:
+        grid.setdefault(r["row_index"], []).append(
+            InlineKeyboardButton(text=r["label"], callback_data=r["callback_data"])
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[grid[k] for k in sorted(grid)])
+
+
+def user_main_menu(rows: list[dict] | None = None) -> InlineKeyboardMarkup:
+    if rows is not None:
+        return _build_from_rows(rows)
+    return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔐 خرید اشتراک",      callback_data="buy_vpn")],
         [
             InlineKeyboardButton(text="💎 کیف پول",        callback_data="wallet"),
@@ -20,10 +32,11 @@ def user_main_menu():
             InlineKeyboardButton(text="🌐 تغییر زبان",    callback_data="language"),
         ],
     ])
-    return keyboard
 
-def admin_main_menu():
-    buttons = list(user_main_menu().inline_keyboard)
+
+def admin_main_menu(rows: list[dict] | None = None) -> InlineKeyboardMarkup:
+    base = user_main_menu(rows)
+    buttons = list(base.inline_keyboard)
     buttons.append([InlineKeyboardButton(text="⚙️ پنل ادمین", callback_data="admin_panel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

@@ -1,7 +1,11 @@
+import json
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from django.views.decorators.http import require_http_methods
 from datetime import datetime, timedelta
+from asgiref.sync import async_to_sync
+from shared_lib.db import get_all_keyboard_buttons, get_keyboard_actions, save_keyboard_layout
 from .models import Orders
 
 
@@ -55,3 +59,15 @@ def chart_data(request):
         'revenue': [by_date.get(d, (0, 0))[0] for d in dates],
         'orders':  [by_date.get(d, (0, 0))[1] for d in dates],
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_keyboard(request):
+    try:
+        data = json.loads(request.body)
+        buttons = data.get('buttons', [])
+        async_to_sync(save_keyboard_layout)("user_main", buttons)
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)

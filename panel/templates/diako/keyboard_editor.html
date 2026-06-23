@@ -1,0 +1,540 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}ادیتور کیبورد — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+.ke-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.ke-main  { flex: 1; min-width: 0; }
+.ke-aside { width: 240px; flex-shrink: 0; }
+
+.ke-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.ke-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ke-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.ke-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* ── ردیف‌ها ──────────────────────────────── */
+.ke-rows { display: flex; flex-direction: column; gap: 6px; }
+
+.ke-row-wrap { }
+
+.ke-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 3px;
+}
+.ke-row-num { font-size: 11px; color: var(--text-muted); }
+.ke-row-del {
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: .6;
+  font-family: inherit;
+  transition: opacity .12s;
+}
+.ke-row-del:hover { opacity: 1; }
+
+.ke-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 2px dashed var(--card-border);
+  border-radius: 12px;
+  min-height: 50px;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.ke-row.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.ke-row-empty {
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  pointer-events: none;
+}
+
+/* ── دکمه ──────────────────────────────────── */
+.ke-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  background: var(--bg-base);
+  border: 1px solid var(--card-border);
+  border-radius: 9px;
+  cursor: grab;
+  user-select: none;
+  font-size: 13px;
+  color: var(--text);
+  transition: box-shadow .15s, opacity .15s, border-color .15s;
+}
+.ke-btn:hover { border-color: var(--accent); }
+.ke-btn.dragging { opacity: .3; cursor: grabbing; }
+.ke-btn.inactive { opacity: .4; }
+
+.ke-btn-lbl { white-space: nowrap; }
+.ke-btn-eye, .ke-btn-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: color .12s;
+  font-size: 13px;
+  font-family: inherit;
+}
+.ke-btn-eye:hover { color: var(--accent); }
+.ke-btn-x:hover   { color: var(--red); }
+
+/* ── ردیف جدید ────────────────────────────── */
+.ke-add-row {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: none;
+  border: 2px dashed var(--card-border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color .15s, color .15s;
+}
+.ke-add-row:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── کاتالوگ ───────────────────────────────── */
+.ke-cat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: grab;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+  transition: background .12s;
+}
+.ke-cat-item:hover { background: var(--accent-dim); }
+.ke-cat-item.dragging { opacity: .35; }
+
+/* ── دکمه ذخیره ────────────────────────────── */
+.ke-save {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity .15s;
+}
+.ke-save:hover { opacity: .85; }
+
+/* ── SortableJS ────────────────────────────── */
+.ke-sortable-ghost {
+  opacity: 0.25;
+  background: var(--accent-dim) !important;
+  border: 2px dashed var(--accent) !important;
+  border-radius: 9px;
+}
+.ke-sortable-chosen {
+  opacity: 0.85;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+}
+
+@media (max-width: 720px) {
+  .ke-layout { flex-direction: column; }
+  .ke-aside  { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="dash-wrap">
+
+  <div class="sidebar-overlay"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
+        <i class="ti ti-layout-dashboard"></i>
+      </a>
+      <a href="/admin/dashboard/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
+        <i class="ti ti-package"></i>
+      </a>
+      <a href="/admin/dashboard/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
+        <i class="ti ti-users"></i>
+      </a>
+      <a href="/admin/dashboard/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
+        <i class="ti ti-server"></i>
+      </a>
+      <a href="/admin/dashboard/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
+        <i class="ti ti-list"></i>
+      </a>
+      <a href="/admin/dashboard/transactions/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
+        <i class="ti ti-wallet"></i>
+      </a>
+      <a href="/diako/keyboard-editor/" class="nav-item active" data-fa="کیبورد" data-en="Keyboard" data-tooltip="ادیتور کیبورد">
+        <i class="ti ti-keyboard"></i>
+      </a>
+      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
+        <i class="ti ti-settings"></i>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title" data-fa="ادیتور کیبورد" data-en="Keyboard Editor">ادیتور کیبورد</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()">
+          <i id="theme-icon" class="ti ti-sun"></i>
+        </button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">
+            {{ admin_username|slice:":1"|upper }}
+          </button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item">
+              <i class="ti ti-logout"></i>
+              <span data-fa="خروج" data-en="Logout">خروج</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-container">
+      <div class="ke-layout">
+
+        <!-- گرید ادیتور -->
+        <div class="ke-main">
+          <div class="ke-card">
+            <div class="ke-card-header">
+              <div class="ke-card-title" data-fa="منوی اصلی کاربر" data-en="User Main Menu">منوی اصلی کاربر</div>
+              <button class="ke-save" onclick="saveLayout()">
+                <i class="ti ti-device-floppy"></i>
+                <span data-fa="ذخیره" data-en="Save">ذخیره</span>
+              </button>
+            </div>
+            <p class="ke-hint">دکمه‌ها رو بکش و در ردیف‌ها جابجا کن. از کاتالوگ کنار، دکمه جدید اضافه کن. بعد از ذخیره بات منوی جدید رو نشون می‌ده.</p>
+            <div class="ke-rows" id="board"></div>
+            <button class="ke-add-row" onclick="addRow()">
+              <i class="ti ti-plus"></i> ردیف جدید
+            </button>
+          </div>
+        </div>
+
+        <!-- کاتالوگ -->
+        <div class="ke-aside">
+          <div class="ke-card">
+            <div class="ke-card-title" data-fa="کاتالوگ دکمه‌ها" data-en="Button Catalog">کاتالوگ دکمه‌ها</div>
+            <p class="ke-hint">از اینجا بکش و روی یه ردیف رها کن.</p>
+            <div id="catalog"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+const INITIAL_BUTTONS = {{ buttons_json|safe }};
+const CATALOG         = {{ actions_json|safe }};
+
+// ── state ──────────────────────────────────────
+let boardRows = [];
+
+function buildRows(flat) {
+  const map = {};
+  for (const b of flat) {
+    const r = b.row_index;
+    if (!map[r]) map[r] = [];
+    map[r].push(b);
+  }
+  const keys = Object.keys(map).map(Number).sort((a, b) => a - b);
+  for (const k of keys) map[k].sort((a, b) => a.col_index - b.col_index);
+  return keys.map(k => map[k]);
+}
+
+boardRows = buildRows(INITIAL_BUTTONS);
+
+// ── SortableJS instances ────────────────────────
+const _sortables = [];
+
+// ── empty row text ──────────────────────────────
+function refreshEmptyRows() {
+  document.querySelectorAll('.ke-row').forEach(r => {
+    const hasBtns  = r.querySelector('.ke-btn');
+    const hasEmpty = r.querySelector('.ke-row-empty');
+    if (!hasBtns && !hasEmpty) {
+      const ph = document.createElement('span');
+      ph.className = 'ke-row-empty';
+      ph.textContent = 'خالی — از کاتالوگ اینجا رها کن';
+      r.appendChild(ph);
+    } else if (hasBtns && hasEmpty) {
+      hasEmpty.remove();
+    }
+  });
+}
+
+// ── render ─────────────────────────────────────
+function renderBoard() {
+  _sortables.forEach(s => s.destroy());
+  _sortables.length = 0;
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  boardRows.forEach((row, ri) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'ke-row-wrap';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'ke-row-header';
+    hdr.innerHTML =
+      `<span class="ke-row-num">ردیف ${ri + 1}</span>` +
+      `<button class="ke-row-del" onclick="deleteRow(${ri})">` +
+      `<i class="ti ti-trash"></i> حذف</button>`;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'ke-row';
+    rowEl.dataset.ri = ri;
+
+    if (row.length === 0) {
+      const ph = document.createElement('span');
+      ph.className = 'ke-row-empty';
+      ph.textContent = 'خالی — از کاتالوگ اینجا رها کن';
+      rowEl.appendChild(ph);
+    } else {
+      row.forEach(btn => rowEl.appendChild(makeBtnEl(btn)));
+    }
+
+    _sortables.push(initRowSortable(rowEl));
+    wrap.appendChild(hdr);
+    wrap.appendChild(rowEl);
+    board.appendChild(wrap);
+  });
+}
+
+function initRowSortable(rowEl) {
+  return Sortable.create(rowEl, {
+    group:        'keyboard',
+    animation:    150,
+    draggable:    '.ke-btn',
+    ghostClass:   'ke-sortable-ghost',
+    chosenClass:  'ke-sortable-chosen',
+    onEnd() {
+      refreshEmptyRows();
+      syncState();
+    },
+    onAdd(evt) {
+      const item = evt.item;
+      if (item.classList.contains('ke-cat-item')) {
+        const action = CATALOG.find(a => a.callback_data === item.dataset.callback);
+        if (action) {
+          item.replaceWith(makeBtnEl({ label: action.label, callback_data: action.callback_data, is_active: 1 }));
+        } else {
+          item.remove();
+        }
+      }
+      refreshEmptyRows();
+      syncState();
+    },
+  });
+}
+
+function makeBtnEl(btn) {
+  const el = document.createElement('div');
+  el.className = 'ke-btn' + (btn.is_active ? '' : ' inactive');
+  el._d = { ...btn };
+
+  el.innerHTML =
+    `<span class="ke-btn-lbl">${esc(btn.label)}</span>` +
+    `<button class="ke-btn-eye" title="${btn.is_active ? 'غیرفعال' : 'فعال'}" onclick="toggleActive(this)">` +
+    (btn.is_active ? '👁' : '🚫') + `</button>` +
+    `<button class="ke-btn-x" title="حذف" onclick="removeBtn(this)">×</button>`;
+
+  return el;
+}
+
+function syncState() {
+  boardRows = [...document.querySelectorAll('.ke-row')].map(rowEl =>
+    [...rowEl.querySelectorAll('.ke-btn')].map(btnEl => ({
+      ...(btnEl._d || {}),
+      is_active: btnEl.classList.contains('inactive') ? 0 : 1,
+    }))
+  );
+}
+
+// ── actions ────────────────────────────────────
+function toggleActive(btn) {
+  const card = btn.closest('.ke-btn');
+  const active = !card.classList.contains('inactive');
+  card.classList.toggle('inactive', active);
+  btn.textContent = active ? '🚫' : '👁';
+  btn.title       = active ? 'فعال کردن' : 'غیرفعال کردن';
+}
+
+function removeBtn(btn) {
+  btn.closest('.ke-btn').remove();
+  refreshEmptyRows();
+  syncState();
+}
+
+function deleteRow(ri) {
+  syncState();
+  boardRows.splice(ri, 1);
+  renderBoard();
+}
+
+function addRow() {
+  syncState();
+  boardRows.push([]);
+  renderBoard();
+  document.getElementById('board').lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── catalog ────────────────────────────────────
+function renderCatalog() {
+  const cat = document.getElementById('catalog');
+  CATALOG.forEach(action => {
+    const item = document.createElement('div');
+    item.className = 'ke-cat-item';
+    item.dataset.callback = action.callback_data;
+    item.innerHTML = `<span>${esc(action.label)}</span>`;
+    cat.appendChild(item);
+  });
+
+  Sortable.create(cat, {
+    group:      { name: 'keyboard', pull: 'clone', put: false },
+    sort:       false,
+    animation:  150,
+    ghostClass: 'ke-sortable-ghost',
+    draggable:  '.ke-cat-item',
+  });
+}
+
+// ── save ───────────────────────────────────────
+async function saveLayout() {
+  syncState();
+  const buttons = [];
+  boardRows.forEach((row, ri) => {
+    row.forEach((btn, ci) => {
+      buttons.push({
+        keyboard_name: 'user_main',
+        label:         btn.label,
+        callback_data: btn.callback_data,
+        row_index:     ri,
+        col_index:     ci,
+        is_active:     btn.is_active !== undefined ? btn.is_active : 1,
+      });
+    });
+  });
+
+  try {
+    const res = await fetch('/diako/api/save-keyboard/', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body:    JSON.stringify({ buttons }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      notify('کیبورد ذخیره شد ✅', 'success');
+    } else {
+      notify('خطا: ' + (data.error || '?'), 'error');
+    }
+  } catch {
+    notify('خطا در ارتباط با سرور ❌', 'error');
+  }
+}
+
+function getCsrf() {
+  for (const c of document.cookie.split(';')) {
+    const [k, v] = c.trim().split('=');
+    if (k === 'csrftoken') return decodeURIComponent(v || '');
+  }
+  return '';
+}
+
+function notify(msg, type) {
+  const stack = document.getElementById('notif-stack');
+  if (!stack) return;
+  const n = document.createElement('div');
+  n.className = `notif notif-${type}`;
+  n.textContent = msg;
+  stack.appendChild(n);
+  setTimeout(() => n.remove(), 3500);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── init ───────────────────────────────────────
+renderBoard();
+renderCatalog();
+</script>
+{% endblock %}

@@ -18,13 +18,21 @@ from shared_lib.db import (
     create_top_up_request, get_top_up_request, update_top_up_status,
     get_free_test_servers, create_free_test_order,
     get_free_test_uses, increment_free_test_uses,
-    get_text,
+    get_text, get_keyboard_buttons,
 )
 from rebecca_api import RebeccaAPI
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
+
+
+async def _get_main_menu(user_id: int):
+    """منوی اصلی رو از DB می‌خونه و برمی‌گردونه"""
+    from bot import is_admin
+    from keyboards import admin_main_menu
+    rows = await get_keyboard_buttons("user_main")
+    return admin_main_menu(rows) if is_admin(user_id) else user_main_menu(rows)
 
 async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
     try:
@@ -124,10 +132,8 @@ def _apply_name(text: str, entities: list, name: str):
 
 async def _send_main_menu(target, user: types.User):
     import json as _json
-    from bot import is_admin
-    from keyboards import admin_main_menu
     from aiogram.types import MessageEntity
-    menu = admin_main_menu() if is_admin(user.id) else user_main_menu()
+    menu = await _get_main_menu(user.id)
     name = user.first_name or "کاربر"
     custom_caption = await get_setting("banner_caption")
     entities_raw = await get_setting("banner_caption_entities") or ""
@@ -451,7 +457,7 @@ def register_user_handlers(dp):
     async def buy_vpn(callback: types.CallbackQuery):
         servers = await get_servers(only_active=True)
         if not servers:
-            await callback.message.edit_text(get_text("buy_no_servers"), reply_markup=user_main_menu())
+            await callback.message.edit_text(get_text("buy_no_servers"), reply_markup=await _get_main_menu(callback.from_user.id))
             await callback.answer()
             return
 
@@ -586,7 +592,7 @@ def register_user_handlers(dp):
     async def show_plans(callback: types.CallbackQuery, server_id: int, multiple_servers: bool = False):
         plans = await get_plans(server_id, only_active=True)
         if not plans:
-            await callback.message.edit_text(get_text("buy_no_plans"), reply_markup=user_main_menu())
+            await callback.message.edit_text(get_text("buy_no_plans"), reply_markup=await _get_main_menu(callback.from_user.id))
             return
         show_price = (await get_setting("show_plan_price")) == "1"
         await callback.message.edit_text(
@@ -796,7 +802,7 @@ def register_user_handlers(dp):
     @dp.callback_query(F.data == "cancel_payment")
     async def cancel_payment(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await callback.message.edit_text(get_text("payment_cancelled"), reply_markup=user_main_menu())
+        await callback.message.edit_text(get_text("payment_cancelled"), reply_markup=await _get_main_menu(callback.from_user.id))
         await callback.answer()
 
     @dp.message(BuyVPN.waiting_for_receipt, F.photo)

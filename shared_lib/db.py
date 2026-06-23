@@ -228,7 +228,27 @@ async def init_db():
                 PRIMARY KEY (code_id, user_id)
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS keyboard_buttons (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                keyboard_name TEXT NOT NULL,
+                label         TEXT NOT NULL,
+                callback_data TEXT NOT NULL,
+                row_index     INTEGER NOT NULL DEFAULT 0,
+                col_index     INTEGER NOT NULL DEFAULT 0,
+                is_active     INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS keyboard_actions (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                action_name   TEXT NOT NULL UNIQUE,
+                label         TEXT NOT NULL,
+                callback_data TEXT NOT NULL
+            )
+        """)
         await db.commit()
+    await _seed_keyboard_buttons()
     await init_texts_cache()
 
 # ─── توابع تیکت ──────────────────────────────
@@ -1340,3 +1360,107 @@ async def update_order_discount(order_id: int, discount_code: str, discount_amou
             (discount_code, discount_amount, order_id)
         )
         await db.commit()
+
+
+# ─── کیبورد ادیتور ───────────────────────────
+
+_DEFAULT_USER_MAIN_BUTTONS = [
+    ("user_main", "🔐 خرید اشتراک",      "buy_vpn",     0, 0),
+    ("user_main", "💎 کیف پول",           "wallet",      1, 0),
+    ("user_main", "🎁 تست رایگان",        "free_test",   1, 1),
+    ("user_main", "📡 سرویس‌های من",      "my_services", 1, 2),
+    ("user_main", "🎧 پشتیبانی",          "support",     2, 0),
+    ("user_main", "👤 پروفایل",           "profile",     2, 1),
+    ("user_main", "📚 آموزش و راهنما",    "tutorial",    2, 2),
+    ("user_main", "💰 دعوت دوستان",       "referral",    3, 0),
+    ("user_main", "🌐 تغییر زبان",        "language",    3, 1),
+]
+
+_DEFAULT_KEYBOARD_ACTIONS = [
+    ("buy_vpn",     "🔐 خرید اشتراک",     "buy_vpn"),
+    ("wallet",      "💎 کیف پول",         "wallet"),
+    ("free_test",   "🎁 تست رایگان",      "free_test"),
+    ("my_services", "📡 سرویس‌های من",    "my_services"),
+    ("support",     "🎧 پشتیبانی",        "support"),
+    ("profile",     "👤 پروفایل",         "profile"),
+    ("tutorial",    "📚 آموزش و راهنما",  "tutorial"),
+    ("referral",    "💰 دعوت دوستان",     "referral"),
+    ("language",    "🌐 تغییر زبان",      "language"),
+]
+
+
+async def _seed_keyboard_buttons():
+    async with aiosqlite.connect(DB_PATH) as db:
+        # فقط وقتی جدول خالیه seed می‌زنیم (ویرایش‌های ادمین حفظ می‌شن)
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM keyboard_buttons WHERE keyboard_name = 'user_main'"
+        )
+        count = (await cursor.fetchone())[0]
+        if count == 0:
+            await db.executemany(
+                "INSERT INTO keyboard_buttons (keyboard_name, label, callback_data, row_index, col_index) VALUES (?, ?, ?, ?, ?)",
+                _DEFAULT_USER_MAIN_BUTTONS
+            )
+        for action in _DEFAULT_KEYBOARD_ACTIONS:
+            await db.execute(
+                "INSERT OR REPLACE INTO keyboard_actions (action_name, label, callback_data) VALUES (?, ?, ?)",
+                action
+            )
+        await db.commit()
+
+
+async def get_keyboard_buttons(keyboard_name: str) -> list[dict]:
+    """برگرداندن دکمه‌های فعال یک کیبورد، مرتب‌شده بر اساس ردیف و ستون"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT * FROM keyboard_buttons
+               WHERE keyboard_name = ? AND is_active = 1
+               ORDER BY row_index, col_index""",
+            (keyboard_name,)
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def get_all_keyboard_buttons(keyboard_name: str) -> list[dict]:
+    """همه‌ی دکمه‌ها (فعال و غیرفعال) برای ادیتور"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """SELECT * FROM keyboard_buttons
+               WHERE keyboard_name = ?
+               ORDER BY row_index, col_index""",
+            (keyboard_name,)
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+async def save_keyboard_layout(keyboard_name: str, buttons: list[dict]):
+    """ذخیره‌ی چینش جدید کیبورد — از ادیتور جنگو صدا زده می‌شه"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM keyboard_buttons WHERE keyboard_name = ?", (keyboard_name,)
+        )
+        if buttons:
+            await db.executemany(
+                """INSERT INTO keyboard_buttons
+                   (keyboard_name, label, callback_data, row_index, col_index, is_active)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                [
+                    (keyboard_name, b["label"], b["callback_data"],
+                     b["row_index"], b["col_index"], b.get("is_active", 1))
+                    for b in buttons
+                ]
+            )
+        await db.commit()
+
+
+async def get_keyboard_actions() -> list[dict]:
+    """کاتالوگ همه‌ی امکانات ممکن برای دکمه‌ها"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM keyboard_actions ORDER BY id")
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
