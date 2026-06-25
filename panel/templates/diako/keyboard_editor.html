@@ -1178,10 +1178,9 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
 // ── داده‌های اولیه از جنگو ─────────────────────────
-const INITIAL_BUTTONS  = {{ buttons_json|safe }};
-const CATALOG          = {{ actions_json|safe }};
-const BOT_TEXTS        = {{ bot_texts_json|safe }};
-const BANNER_CAPTION   = {{ banner_caption_json|safe }};
+const INITIAL_BUTTONS = {{ buttons_json|safe }};
+const CATALOG         = {{ actions_json|safe }};
+const BOT_TEXTS       = {{ bot_texts_json|safe }};
 
 // ── متادیتای هر منو ────────────────────────────────
 const KB_META = {
@@ -1257,7 +1256,6 @@ function updateStats() {
 
 // ── حباب پیام ──────────────────────────────────────
 function getBubbleText(kbName) {
-  if (kbName === 'user_main' && BANNER_CAPTION) return BANNER_CAPTION;
   const meta = KB_META[kbName];
   if (!meta) return '';
   return BOT_TEXTS[meta.text_key] ?? meta.fallback;
@@ -1269,10 +1267,6 @@ function updateBubble() {
 }
 
 function startBubbleEdit() {
-  if (currentKeyboard === 'user_main' && BANNER_CAPTION) {
-    notify('این متن از پنل ادمین ربات تنظیم شده و دارای ایموجی پرمیوم است — برای تغییر از ربات ادمین استفاده کنید.', 'warn');
-    return;
-  }
   const bubble = document.getElementById('ke-bubble');
   const editor = document.getElementById('ke-bubble-editor');
   const ta     = document.getElementById('ke-bubble-ta');

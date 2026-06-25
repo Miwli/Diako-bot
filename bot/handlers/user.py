@@ -95,65 +95,11 @@ def _service_text(order, live=None) -> str:
     parts.append(f"🗓 خرید : {_to_jalali(order['created_at'])}")
     return "\n".join(parts)
 
-def _utf16_len(s: str) -> int:
-    return len(s.encode("utf-16-le")) // 2
-
-def _apply_name(text: str, entities: list, name: str):
-    from aiogram.types import MessageEntity
-    placeholder = "{name}"
-    if placeholder not in text:
-        return text, entities
-
-    ph_u16  = _utf16_len(placeholder)
-    name_u16 = _utf16_len(name)
-    diff = name_u16 - ph_u16
-
-    ph_positions = []
-    search_from = 0
-    while True:
-        idx = text.find(placeholder, search_from)
-        if idx == -1:
-            break
-        ph_positions.append(_utf16_len(text[:idx]))
-        search_from = idx + len(placeholder)
-
-    new_text = text.replace(placeholder, name)
-
-    if not entities or diff == 0:
-        return new_text, entities
-
-    new_entities = []
-    for e in entities:
-        d = e.model_dump()
-        shift = sum(diff for pos in ph_positions if d["offset"] >= pos + ph_u16)
-        d["offset"] += shift
-        new_entities.append(MessageEntity(**d))
-    return new_text, new_entities
-
 async def _send_main_menu(target, user: types.User):
-    import json as _json
-    from aiogram.types import MessageEntity
     menu = await _get_main_menu(user.id)
     name = user.first_name or "کاربر"
-    custom_caption = await get_setting("banner_caption")
-    entities_raw = await get_setting("banner_caption_entities") or ""
-    entities = None
-    if entities_raw:
-        try:
-            entities = [MessageEntity(**e) for e in _json.loads(entities_raw)]
-        except Exception:
-            entities = None
-    if custom_caption:
-        caption, entities = _apply_name(custom_caption, entities or [], name)
-    else:
-        caption = get_text("start_welcome_default", name=name)
+    caption = get_text("start_welcome_default", name=name)
     banner = await get_setting("banner_file_id")
-
-    send_kwargs = {"reply_markup": menu, "protect_content": True} if banner else {"reply_markup": menu}
-    if entities:
-        send_kwargs["entities"] = entities
-    else:
-        send_kwargs["parse_mode"] = "HTML"
 
     try:
         if isinstance(target, types.CallbackQuery):
@@ -163,19 +109,18 @@ async def _send_main_menu(target, user: types.User):
                 pass
             msg = target.message
             if banner:
-                await msg.answer_photo(photo=banner, caption=caption, **send_kwargs)
+                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
             else:
-                await msg.answer(caption, **send_kwargs)
+                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
             await target.answer()
         else:
             if banner:
-                await target.answer_photo(photo=banner, caption=caption, **send_kwargs)
+                await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
             else:
                 await target.answer(caption, reply_markup=menu, parse_mode="HTML")
     except TelegramForbiddenError:
         from bot import logger
-        user_id = target.from_user.id if isinstance(target, types.CallbackQuery) else target.from_user.id
-        logger.warning(f"کاربر {user_id} بات را بلاک کرده — ارسال منو لغو شد")
+        logger.warning(f"کاربر {user.id} بات را بلاک کرده — ارسال منو لغو شد")
 
 def register_user_handlers(dp):
 

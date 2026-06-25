@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from asgiref.sync import async_to_sync
-from shared_lib.db import get_admin_stats, get_all_keyboard_buttons, get_keyboard_actions, get_all_texts, get_setting
+from shared_lib.db import get_admin_stats, get_all_keyboard_buttons, get_keyboard_actions, get_all_texts
 from .models import Orders, Servers
 
 
@@ -55,11 +55,9 @@ def keyboard_editor_view(request):
     actions = async_to_sync(get_keyboard_actions)()
     all_texts_rows = async_to_sync(get_all_texts)()
     bot_texts = {row['key']: row['value'] for row in all_texts_rows}
-    banner_caption = async_to_sync(get_setting)('banner_caption') or ''
     return render(request, 'diako/keyboard_editor.html', {
         'buttons_json': json.dumps(buttons, ensure_ascii=False),
         'actions_json': json.dumps(actions, ensure_ascii=False),
         'bot_texts_json': json.dumps(bot_texts, ensure_ascii=False),
-        'banner_caption_json': json.dumps(banner_caption, ensure_ascii=False),
         'admin_username': request.user.username,
     })
