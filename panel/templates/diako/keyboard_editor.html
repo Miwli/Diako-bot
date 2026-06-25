@@ -392,8 +392,8 @@
 }
 .ke-kb-btn:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.3); }
 .ke-kb-btn.inactive { opacity: .28; text-decoration: line-through; }
-.ke-kb-btn.sortable-ghost { opacity: .18; background: rgba(255,255,255,.08) !important; border-style: dashed !important; }
-.ke-kb-btn.sortable-chosen { box-shadow: 0 4px 18px rgba(0,0,0,.35); cursor: grabbing; }
+.ke-kb-btn.sortable-ghost { opacity: .2; background: var(--accent-dim) !important; border-color: var(--accent) !important; border-style: dashed !important; }
+.ke-kb-btn.sortable-chosen { box-shadow: 0 8px 28px rgba(0,0,0,.5); cursor: grabbing; border-color: var(--accent) !important; background: rgba(255,255,255,.09) !important; }
 
 .ke-kb-btn-lbl {
   white-space: nowrap;
@@ -859,34 +859,50 @@
 
 /* ── Responsive (mobile) ─────────────────────────── */
 @media (max-width: 768px) {
-  .ke-3col {
-    flex-direction: column;
-    height: auto;
-  }
+  /* صفحه اسکرول‌پذیر می‌شه */
+  .dash-body     { overflow-y: auto !important; height: auto !important; min-height: 100vh; }
+  .dash-container { overflow: visible !important; }
+
+  /* چینش ستون‌ها */
+  .ke-3col { flex-direction: column; height: auto; }
   .ke-col-left, .ke-col-right { display: none; }
   .ke-col-center { overflow: visible; }
-  .ke-sim { min-height: 60vh; }
   .ke-mobile-kb-tabs { display: flex; }
-  .ke-kb-btn { min-height: 44px; font-size: 14px; }
+
+  /* سیمولاتور طبیعی باز می‌شه */
+  .ke-sim      { overflow: visible; flex: none; min-height: unset; }
+  .ke-sim-body { flex: none; overflow: visible; min-height: 60px; }
+  .ke-sim-kb-wrap { height: auto !important; overflow: visible !important; }
+
+  /* touch target بزرگ‌تر */
+  .ke-kb-btn     { min-height: 48px; font-size: 14px; }
+  .ke-row        { min-height: 56px; padding: 4px; gap: 6px; }
+  .ke-row-empty  { padding: 14px 0; }
   .ke-staging-chip { min-height: 44px; padding: 10px 16px; font-size: 14px; }
-  .ke-bs-item { padding: 14px 16px; font-size: 14px; }
+  .ke-bs-item    { padding: 14px 16px; font-size: 14px; }
+
+  /* دکمه کاتالوگ sticky پایین صفحه */
   .ke-mobile-cat-btn {
+    position: sticky;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
     margin-top: 14px;
-    padding: 11px;
+    padding: 15px;
     background: var(--accent);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 16px 16px 0 0;
     cursor: pointer;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     transition: opacity .15s;
+    z-index: 50;
+    box-shadow: 0 -6px 24px rgba(0,0,0,.25);
   }
   .ke-mobile-cat-btn:hover { opacity: .87; }
 }
@@ -1371,11 +1387,17 @@ function renderBoard() {
 
 function initRowSortable(rowEl) {
   return Sortable.create(rowEl, {
-    group:       'keyboard',
-    animation:   150,
-    draggable:   '.ke-kb-btn',
-    ghostClass:  'sortable-ghost',
-    chosenClass: 'sortable-chosen',
+    group:               'keyboard',
+    animation:           200,
+    draggable:           '.ke-kb-btn',
+    ghostClass:          'sortable-ghost',
+    chosenClass:         'sortable-chosen',
+    delay:               150,
+    delayOnTouchOnly:    true,
+    touchStartThreshold: 5,
+    scroll:              true,
+    scrollSensitivity:   80,
+    scrollSpeed:         12,
     onEnd() { refreshEmptyRows(); syncState(); },
     onAdd(evt) {
       const item = evt.item;
@@ -1548,11 +1570,14 @@ function renderCatalog() {
     cat.appendChild(item);
   });
   Sortable.create(cat, {
-    group:      { name: 'keyboard', pull: 'clone', put: false },
-    sort:       false,
-    animation:  150,
-    ghostClass: 'sortable-ghost',
-    draggable:  '.ke-cat-item',
+    group:               { name: 'keyboard', pull: 'clone', put: false },
+    sort:                false,
+    animation:           200,
+    ghostClass:          'sortable-ghost',
+    draggable:           '.ke-cat-item',
+    delay:               150,
+    delayOnTouchOnly:    true,
+    touchStartThreshold: 5,
   });
 }
 
@@ -1819,9 +1844,12 @@ function confirmBsSelection() {
     staging.style.display = '';
     // SortableJS برای staging chips
     Sortable.create(items, {
-      group:     'keyboard',
-      animation: 150,
-      draggable: '.ke-staging-chip',
+      group:               'keyboard',
+      animation:           200,
+      draggable:           '.ke-staging-chip',
+      delay:               150,
+      delayOnTouchOnly:    true,
+      touchStartThreshold: 5,
       onAdd(evt) {
         // وقتی chip از staging به ردیف رفت، chip رو تبدیل به دکمه می‌کنیم
         const item = evt.item;
