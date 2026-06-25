@@ -1388,13 +1388,15 @@ function renderBoard() {
 function initRowSortable(rowEl) {
   return Sortable.create(rowEl, {
     group:               'keyboard',
-    animation:           200,
+    animation:           150,
     draggable:           '.ke-kb-btn',
     ghostClass:          'sortable-ghost',
     chosenClass:         'sortable-chosen',
     delay:               150,
     delayOnTouchOnly:    true,
-    touchStartThreshold: 5,
+    touchStartThreshold: 3,
+    invertSwap:          true,
+    fallbackOnBody:      true,
     scroll:              true,
     scrollSensitivity:   80,
     scrollSpeed:         12,
