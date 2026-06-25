@@ -566,6 +566,7 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "payment_not_photo":          "📸 لطفاً تصویر رسید را ارسال کنید.",
     "payment_submitted":          "✅ رسید شما دریافت شد.\n⏳ پس از بررسی توسط پشتیبانی، نتیجه به شما اعلام خواهد شد.",
     "payment_cancelled":          "❌ پرداخت لغو شد.",
+    "wallet_menu":                "💎 کیف پول",
     "wallet_no_balance":          "موجودی کافی نیست.",
     "wallet_error_api":           "خطا در اتصال به پنل: {error}",
     "wallet_error_order":         "خطا در ثبت سفارش. مبلغ به حسابتان برگشت داده شد.",
@@ -686,6 +687,16 @@ async def init_texts_cache() -> None:
                 (key, text)
             )
         await db.commit()
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT key, value FROM bot_texts")
+        rows = await cur.fetchall()
+        _texts_cache = {row["key"]: row["value"] for row in rows}
+
+
+async def reload_texts_cache() -> None:
+    """کش متن‌ها رو از دیتابیس بارگذاری مجدد می‌کنه — بدون seed"""
+    global _texts_cache
+    async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute("SELECT key, value FROM bot_texts")
         rows = await cur.fetchall()

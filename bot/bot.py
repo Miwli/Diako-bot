@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from shared_lib.db import init_db
+from shared_lib.db import init_db, reload_texts_cache
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
@@ -50,10 +50,17 @@ register_discount_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
 
+async def _texts_refresh_loop():
+    while True:
+        await asyncio.sleep(60)
+        await reload_texts_cache()
+
+
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")
     await init_db()
     logger.info("دیتابیس آماده شد")
+    asyncio.create_task(_texts_refresh_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
