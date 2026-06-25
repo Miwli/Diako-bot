@@ -310,7 +310,7 @@
 .ke-sim-kb-wrap {
   background: var(--card-bg);
   border-top: 1px solid var(--card-border);
-  padding: 6px 290px 8px;
+  padding: 6px clamp(8px, calc(50% - 150px), 290px) 8px;
   display: flex;
   flex-direction: column;
   gap: 0;
