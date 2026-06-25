@@ -18,7 +18,7 @@
 }
 
 .ke-col-left {
-  width: 180px;
+  width: 256px;
   flex-shrink: 0;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -27,7 +27,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .ke-col-center {
@@ -40,7 +40,7 @@
 }
 
 .ke-col-right {
-  width: 220px;
+  width: 265px;
   flex-shrink: 0;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -314,6 +314,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex-shrink: 0;
+  height: 320px;
+  overflow-y: auto;
 }
 
 .ke-sim-board { display: flex; flex-direction: column; gap: 0; }
@@ -373,12 +376,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 6px;
+  padding: 9px 12px;
   background: transparent;
   border: 1px solid rgba(255,255,255,.15);
   border-radius: 5px;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   cursor: grab;
   user-select: none;
   direction: rtl;
@@ -486,10 +489,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
+  padding: 9px 12px;
   border-radius: 8px;
   cursor: grab;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   user-select: none;
   transition: background .12s;
@@ -994,18 +997,18 @@
                 </div>
               </div>
 
-              <!-- کیبورد -->
-              <div class="ke-sim-kb-wrap">
-                <div class="ke-sim-board" id="board"></div>
-                <button class="ke-sim-add-row" id="add-row-btn" onclick="addRow()">
-                  <i class="ti ti-plus"></i> ردیف جدید
-                </button>
-                <div class="ke-dyn-banner" id="ke-dyn-banner" style="display:none">
-                  ⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.
-                </div>
-              </div>
-
             </div><!-- /sim-body -->
+
+            <!-- کیبورد -->
+            <div class="ke-sim-kb-wrap">
+              <div class="ke-sim-board" id="board"></div>
+              <button class="ke-sim-add-row" id="add-row-btn" onclick="addRow()">
+                <i class="ti ti-plus"></i> ردیف جدید
+              </button>
+              <div class="ke-dyn-banner" id="ke-dyn-banner" style="display:none">
+                ⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.
+              </div>
+            </div>
           </div><!-- /ke-sim -->
         </div><!-- /col-center -->
 
