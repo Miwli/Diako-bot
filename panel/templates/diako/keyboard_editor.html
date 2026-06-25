@@ -828,6 +828,35 @@
   user-select: none;
 }
 
+/* ── Mobile keyboard switcher tabs ──────────────── */
+.ke-mobile-kb-tabs {
+  display: none;
+  overflow-x: auto;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 2px 0 6px;
+  scrollbar-width: none;
+}
+.ke-mobile-kb-tabs::-webkit-scrollbar { display: none; }
+.ke-mobile-kb-tab {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.ke-mobile-kb-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ── Responsive (mobile) ─────────────────────────── */
 @media (max-width: 768px) {
   .ke-3col {
@@ -837,6 +866,10 @@
   .ke-col-left, .ke-col-right { display: none; }
   .ke-col-center { overflow: visible; }
   .ke-sim { min-height: 60vh; }
+  .ke-mobile-kb-tabs { display: flex; }
+  .ke-kb-btn { min-height: 44px; font-size: 14px; }
+  .ke-staging-chip { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+  .ke-bs-item { padding: 14px 16px; font-size: 14px; }
   .ke-mobile-cat-btn {
     display: flex;
     align-items: center;
@@ -966,6 +999,7 @@
 
         <!-- ستون وسط: شبیه‌ساز تلگرام -->
         <div class="ke-col-center">
+          <div class="ke-mobile-kb-tabs" id="ke-mobile-kb-tabs"></div>
           <div class="ke-sim">
 
             <!-- هدر چت -->
@@ -1345,7 +1379,7 @@ function initRowSortable(rowEl) {
     onEnd() { refreshEmptyRows(); syncState(); },
     onAdd(evt) {
       const item = evt.item;
-      if (item.classList.contains('ke-cat-item')) {
+      if (item.classList.contains('ke-cat-item') || item.classList.contains('ke-staging-chip')) {
         const action = CATALOG.find(a => a.callback_data === item.dataset.callback);
         if (action) {
           item.replaceWith(makeKbBtnEl({ label: action.label, callback_data: action.callback_data, is_active: 1 }));
@@ -1425,7 +1459,7 @@ async function switchKeyboard(name) {
   if (name === currentKeyboard) return;
   const prevKb = currentKeyboard;
 
-  document.querySelectorAll('.ke-menu-item').forEach(t => {
+  document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.kb === name);
   });
 
@@ -1434,7 +1468,7 @@ async function switchKeyboard(name) {
     const data = await res.json();
     if (!data.buttons || (data.buttons.length === 0 && !DYNAMIC_KEYBOARDS.has(name))) {
       notify('این منو دکمه‌ای ندارد', 'error');
-      document.querySelectorAll('.ke-menu-item').forEach(t => {
+      document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.kb === prevKb);
       });
       return;
@@ -1444,7 +1478,7 @@ async function switchKeyboard(name) {
     renderBoard();
   } catch {
     notify('خطا در بارگذاری منو ❌', 'error');
-    document.querySelectorAll('.ke-menu-item').forEach(t => {
+    document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.kb === prevKb);
     });
   }
@@ -1524,16 +1558,29 @@ function renderCatalog() {
 
 // ── منوی راهنما ────────────────────────────────────
 function renderMenuList() {
-  const list = document.getElementById('menu-list');
+  const list      = document.getElementById('menu-list');
+  const mobileTabs = document.getElementById('ke-mobile-kb-tabs');
   list.innerHTML = '';
+  if (mobileTabs) mobileTabs.innerHTML = '';
   AVAILABLE_KEYBOARDS.forEach(kb => {
-    const meta = KB_META[kb];
+    const meta     = KB_META[kb];
+    const isActive = kb === currentKeyboard;
+
     const item = document.createElement('div');
-    item.className = 'ke-menu-item' + (kb === 'user_main' ? ' active' : '');
+    item.className = 'ke-menu-item' + (isActive ? ' active' : '');
     item.dataset.kb = kb;
     item.innerHTML = `<i class="ti ${meta.icon}"></i><span>${esc(meta.label)}</span>`;
     item.addEventListener('click', () => switchKeyboard(kb));
     list.appendChild(item);
+
+    if (mobileTabs) {
+      const tab = document.createElement('button');
+      tab.className = 'ke-mobile-kb-tab' + (isActive ? ' active' : '');
+      tab.dataset.kb = kb;
+      tab.textContent = meta.label;
+      tab.addEventListener('click', () => switchKeyboard(kb));
+      mobileTabs.appendChild(tab);
+    }
   });
 }
 
