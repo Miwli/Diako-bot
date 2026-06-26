@@ -11,16 +11,25 @@ from keyboards import (
 from shared_lib.db import (
     add_server, get_servers, get_server,
     delete_server, toggle_server_status, update_server_services,
-    update_server_url, update_server_token
+    update_server_url, update_server_token,
+    get_text,
 )
 from rebecca_api import RebeccaAPI
+
+def _server_settings_text(server, svc_ids: list) -> str:
+    status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
+    return get_text("admin_server_settings_text",
+                    name=server["name"],
+                    url=server["panel_url"],
+                    status=status,
+                    services=len(svc_ids))
 
 def register_server_handlers(dp):
 
     @dp.callback_query(F.data == "admin_servers")
     async def admin_servers(callback: types.CallbackQuery):
         await callback.message.edit_text(
-            "🖥 مدیریت سرورها",
+            get_text("admin_servers_title"),
             reply_markup=admin_servers_menu()
         )
         await callback.answer()
@@ -30,7 +39,7 @@ def register_server_handlers(dp):
     @dp.callback_query(F.data == "add_server")
     async def add_server_start(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
-            "🖥 اسم سرور رو بفرست:\n\nمثلاً: سرور آلمان 🇩🇪",
+            get_text("admin_server_ask_name"),
             reply_markup=cancel_keyboard()
         )
         await state.set_state(AddServer.waiting_for_name)
@@ -40,7 +49,7 @@ def register_server_handlers(dp):
     async def add_server_name(message: types.Message, state: FSMContext):
         await state.update_data(name=message.text)
         await message.answer(
-            "🔗 آدرس پنل رو بفرست:\n\nمثلاً: https://rebeccapanel.com:8880",
+            get_text("admin_server_ask_url"),
             reply_markup=cancel_keyboard()
         )
         await state.set_state(AddServer.waiting_for_url)
@@ -50,15 +59,13 @@ def register_server_handlers(dp):
         url = message.text.strip()
         if not re.match(r'^https?://[^\s/]+:\d+$', url):
             await message.answer(
-                "❌ <b>آدرس معتبر نیست!</b>\n\n"
-                "فرمت: <code>https://domain.com:PORT</code>\n\n"
-                "⚠️ آدرس نباید به <code>/</code> ختم بشه.",
+                get_text("admin_server_url_invalid"),
                 parse_mode="HTML",
                 reply_markup=cancel_keyboard()
             )
             return
         await state.update_data(panel_url=url)
-        await message.answer("🔑 توکن API پنل رو بفرست:", reply_markup=cancel_keyboard())
+        await message.answer(get_text("admin_server_ask_token"), reply_markup=cancel_keyboard())
         await state.set_state(AddServer.waiting_for_token)
 
     @dp.message(AddServer.waiting_for_token)
@@ -76,7 +83,7 @@ def register_server_handlers(dp):
         await state.update_data(edit_server_id=server_id)
         await state.set_state(EditServer.waiting_for_url)
         await callback.message.edit_text(
-            "🔗 آدرس جدید پنل رو بفرست:\n\nمثلاً: https://rebeccapanel.com:8880",
+            get_text("admin_server_ask_edit_url"),
             reply_markup=cancel_keyboard()
         )
         await callback.answer()
@@ -86,9 +93,7 @@ def register_server_handlers(dp):
         url = message.text.strip()
         if not re.match(r'^https?://[^\s/]+:\d+$', url):
             await message.answer(
-                "❌ <b>آدرس معتبر نیست!</b>\n\n"
-                "فرمت: <code>https://domain.com:PORT</code>\n\n"
-                "⚠️ آدرس نباید به <code>/</code> ختم بشه.",
+                get_text("admin_server_url_invalid"),
                 parse_mode="HTML",
                 reply_markup=cancel_keyboard()
             )
@@ -99,15 +104,9 @@ def register_server_handlers(dp):
         await state.clear()
         server = await get_server(server_id)
         svc_ids = json.loads(server["service_ids"] or "[]")
-        status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
+        settings = _server_settings_text(server, svc_ids)
         await message.answer(
-            f"✅ آدرس سرور بروزرسانی شد.\n\n"
-            f"⚙️ <b>تنظیمات سرور</b>\n"
-            f"{'─' * 24}\n"
-            f"🖥 <b>{server['name']}</b>\n"
-            f"🔗 {server['panel_url']}\n"
-            f"📊 وضعیت: {status}\n"
-            f"🔧 سرویس‌ها: {len(svc_ids)} سرویس",
+            get_text("admin_server_url_updated", settings=settings),
             reply_markup=server_settings_keyboard(server_id, server["is_active"]),
             parse_mode="HTML"
         )
@@ -118,7 +117,7 @@ def register_server_handlers(dp):
         await state.update_data(edit_server_id=server_id)
         await state.set_state(EditServer.waiting_for_token)
         await callback.message.edit_text(
-            "🔑 توکن جدید API پنل رو بفرست:",
+            get_text("admin_server_ask_edit_token"),
             reply_markup=cancel_keyboard()
         )
         await callback.answer()
@@ -131,15 +130,9 @@ def register_server_handlers(dp):
         await state.clear()
         server = await get_server(server_id)
         svc_ids = json.loads(server["service_ids"] or "[]")
-        status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
+        settings = _server_settings_text(server, svc_ids)
         await message.answer(
-            f"✅ توکن سرور بروزرسانی شد.\n\n"
-            f"⚙️ <b>تنظیمات سرور</b>\n"
-            f"{'─' * 24}\n"
-            f"🖥 <b>{server['name']}</b>\n"
-            f"🔗 {server['panel_url']}\n"
-            f"📊 وضعیت: {status}\n"
-            f"🔧 سرویس‌ها: {len(svc_ids)} سرویس",
+            get_text("admin_server_token_updated", settings=settings),
             reply_markup=server_settings_keyboard(server_id, server["is_active"]),
             parse_mode="HTML"
         )
@@ -172,14 +165,14 @@ def register_server_handlers(dp):
             from bot import logger
             logger.error(f"خطا در اتصال به پنل {panel_url}: {e}")
             await msg.answer(
-                f"❌ خطا در اتصال به پنل:\n<code>{e}</code>",
+                get_text("admin_server_panel_error", error=str(e)),
                 parse_mode="HTML",
                 reply_markup=cancel_keyboard()
             )
             return
         if not services:
             await msg.answer(
-                "⚠️ هیچ سرویسی در پنل تعریف نشده!",
+                get_text("admin_server_no_services"),
                 reply_markup=cancel_keyboard()
             )
             return
@@ -187,8 +180,7 @@ def register_server_handlers(dp):
         selected = [sid for sid in (current_ids or []) if sid in live_ids]
         await state.update_data(services=services, selected_service_ids=selected)
         await state.set_state(AddServer.waiting_for_service)
-        text = "✏️ سرویس‌های این سرور رو ویرایش کن:" if edit_mode else \
-               "🔧 سرویس‌هایی که می‌خوای این سرور داشته باشه رو انتخاب کن:"
+        text = get_text("admin_server_edit_services") if edit_mode else get_text("admin_server_select_services")
         keyboard = rebecca_services_keyboard(services, selected)
         if edit_mode:
             await msg.edit_text(text, reply_markup=keyboard)
@@ -215,7 +207,7 @@ def register_server_handlers(dp):
         data = await state.get_data()
         selected = data.get("selected_service_ids", [])
         if not selected:
-            await callback.answer("حداقل یک سرویس انتخاب کن!", show_alert=True)
+            await callback.answer(get_text("admin_server_min_service"), show_alert=True)
             return
         edit_server_id = data.get("edit_server_id")
         if edit_server_id:
@@ -223,7 +215,7 @@ def register_server_handlers(dp):
             await state.clear()
             server = await get_server(edit_server_id)
             await callback.message.edit_text(
-                f"✅ سرویس‌های سرور <b>{server['name']}</b> بروزرسانی شد.",
+                get_text("admin_server_services_updated", name=server["name"]),
                 reply_markup=server_settings_keyboard(edit_server_id, server["is_active"]),
                 parse_mode="HTML"
             )
@@ -236,7 +228,7 @@ def register_server_handlers(dp):
             )
             await state.clear()
             await callback.message.edit_text(
-                f"✅ سرور با موفقیت اضافه شد!\n🔧 {len(selected)} سرویس انتخاب شد.",
+                get_text("admin_server_added", count=len(selected)),
                 reply_markup=admin_servers_menu()
             )
         await callback.answer()
@@ -248,13 +240,13 @@ def register_server_handlers(dp):
         servers = await get_servers(only_active=False)
         if not servers:
             await callback.message.edit_text(
-                "❌ هیچ سروری ثبت نشده!",
+                get_text("admin_servers_empty"),
                 reply_markup=back_to_servers_menu()
             )
             await callback.answer()
             return
         await callback.message.edit_text(
-            "🖥 <b>لیست سرورها</b>",
+            get_text("admin_servers_list_title"),
             reply_markup=servers_table_keyboard(servers),
             parse_mode="HTML"
         )
@@ -267,14 +259,8 @@ def register_server_handlers(dp):
         server_id = int(callback.data.replace("server_settings_", ""))
         server = await get_server(server_id)
         svc_ids = json.loads(server["service_ids"] or "[]")
-        status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
         await callback.message.edit_text(
-            f"⚙️ <b>تنظیمات سرور</b>\n"
-            f"{'─' * 24}\n"
-            f"🖥 <b>{server['name']}</b>\n"
-            f"🔗 {server['panel_url']}\n"
-            f"📊 وضعیت: {status}\n"
-            f"🔧 سرویس‌ها: {len(svc_ids)} سرویس",
+            _server_settings_text(server, svc_ids),
             reply_markup=server_settings_keyboard(server_id, server["is_active"]),
             parse_mode="HTML"
         )
@@ -282,7 +268,6 @@ def register_server_handlers(dp):
 
     @dp.callback_query(F.data.startswith("toggle_server_"))
     async def toggle_server(callback: types.CallbackQuery):
-        """toggle از لیست سرورها — جدول رو رفرش می‌کنه"""
         server_id = int(callback.data.replace("toggle_server_", ""))
         await toggle_server_status(server_id)
         servers = await get_servers(only_active=False)
@@ -293,19 +278,12 @@ def register_server_handlers(dp):
 
     @dp.callback_query(F.data.startswith("toggle_server_settings_"))
     async def toggle_server_from_settings(callback: types.CallbackQuery):
-        """toggle از صفحه تنظیمات سرور — صفحه تنظیمات رو رفرش می‌کنه"""
         server_id = int(callback.data.replace("toggle_server_settings_", ""))
         await toggle_server_status(server_id)
         server = await get_server(server_id)
         svc_ids = json.loads(server["service_ids"] or "[]")
-        status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
         await callback.message.edit_text(
-            f"⚙️ <b>تنظیمات سرور</b>\n"
-            f"{'─' * 24}\n"
-            f"🖥 <b>{server['name']}</b>\n"
-            f"🔗 {server['panel_url']}\n"
-            f"📊 وضعیت: {status}\n"
-            f"🔧 سرویس‌ها: {len(svc_ids)} سرویس",
+            _server_settings_text(server, svc_ids),
             reply_markup=server_settings_keyboard(server_id, server["is_active"]),
             parse_mode="HTML"
         )
@@ -316,8 +294,7 @@ def register_server_handlers(dp):
         server_id = int(callback.data.replace("delete_server_", ""))
         server = await get_server(server_id)
         await callback.message.edit_text(
-            f"⚠️ مطمئنی می‌خوای سرور <b>{server['name']}</b> رو حذف کنی؟\n"
-            "این عمل قابل بازگشت نیست.",
+            get_text("admin_server_delete_confirm", name=server["name"]),
             reply_markup=confirm_delete_server_keyboard(server_id),
             parse_mode="HTML"
         )
@@ -331,13 +308,13 @@ def register_server_handlers(dp):
         servers = await get_servers(only_active=False)
         if servers:
             await callback.message.edit_text(
-                f"🗑 سرور <b>{server['name']}</b> حذف شد.\n\n🖥 <b>لیست سرورها</b>",
+                get_text("admin_server_deleted_list", name=server["name"]),
                 reply_markup=servers_table_keyboard(servers),
                 parse_mode="HTML"
             )
         else:
             await callback.message.edit_text(
-                f"🗑 سرور <b>{server['name']}</b> حذف شد.\n\n❌ هیچ سروری باقی نمونده.",
+                get_text("admin_server_deleted_empty", name=server["name"]),
                 reply_markup=back_to_servers_menu(),
                 parse_mode="HTML"
             )

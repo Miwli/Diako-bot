@@ -269,8 +269,7 @@ def register_support_handlers(dp):
         group_id = await get_setting("support_group_id") or "تنظیم نشده"
         await _edit_or_replace(
             callback,
-            f"🎧 <b>تنظیمات پشتیبانی</b>\n\n"
-            f"🆔 آیدی گروه: <code>{group_id}</code>",
+            get_text("admin_support_settings_text", group_id=group_id),
             admin_support_settings_keyboard()
         )
         await callback.answer()
@@ -279,9 +278,7 @@ def register_support_handlers(dp):
     async def admin_support_set_group_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(AdminSupportSettings.waiting_for_group_id)
         await callback.message.edit_text(
-            "🆔 آیدی گروه پشتیبانی را وارد کنید:\n\n"
-            "ربات <b>@userinfobot</b> را به گروه اضافه کنید تا آیدی رو بهتون بده.\n"
-            "<i>مثال: <code>-1001234567890</code></i>",
+            get_text("admin_support_ask_group_id"),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 لغو", callback_data="admin_support")]
             ]),
@@ -293,12 +290,12 @@ def register_support_handlers(dp):
     async def admin_support_set_group_save(message: types.Message, state: FSMContext):
         raw = message.text.strip()
         if not raw.lstrip("-").isdigit():
-            await message.answer("❌ آیدی معتبر نیست. باید عدد باشد.\nمثال: <code>-1001234567890</code>", parse_mode="HTML")
+            await message.answer(get_text("admin_support_group_id_invalid"), parse_mode="HTML")
             return
         await set_setting("support_group_id", raw)
         await state.clear()
         await message.answer(
-            f"✅ آیدی گروه ذخیره شد: <code>{raw}</code>",
+            get_text("admin_support_group_id_saved", group_id=raw),
             parse_mode="HTML",
             reply_markup=admin_support_settings_keyboard()
         )
@@ -308,11 +305,7 @@ def register_support_handlers(dp):
         current_text, _ = await _get_ticket_msg()
         await state.set_state(AdminSupportSettings.waiting_for_ticket_msg)
         await callback.message.edit_text(
-            "✏️ <b>ویرایش متن تأییدیه تیکت</b>\n\n"
-            "متن فعلی:\n"
-            f"<blockquote>{current_text}</blockquote>\n\n"
-            "متن جدید را ارسال کنید.\n"
-            "<i>اگه ایموجی پرمیوم داری همینجا بفرست — خودکار ذخیره می‌شه.</i>",
+            get_text("admin_support_ask_ticket_msg", current=current_text),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 لغو", callback_data="admin_support")]
             ]),
@@ -335,6 +328,6 @@ def register_support_handlers(dp):
         await state.clear()
         note = " (با ایموجی پرمیوم)" if has_premium else ""
         await message.answer(
-            f"✅ متن{note} ذخیره شد.",
+            get_text("admin_support_ticket_msg_saved", note=note),
             reply_markup=admin_support_settings_keyboard()
         )

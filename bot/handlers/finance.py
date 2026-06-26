@@ -2,7 +2,7 @@ from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import SetCardInfo
 from keyboards import admin_finance_menu, card_settings_keyboard, cancel_keyboard
-from shared_lib.db import get_setting, set_setting
+from shared_lib.db import get_setting, set_setting, get_text
 
 def register_finance_handlers(dp):
 
@@ -11,7 +11,7 @@ def register_finance_handlers(dp):
         card_active = await get_setting("card_active")
         is_active = card_active == "1"
         await callback.message.edit_text(
-            "💰 <b>مدیریت مالی</b>\n\nروش‌های پرداخت فعال را مدیریت کنید:",
+            get_text("admin_finance_title"),
             reply_markup=admin_finance_menu(is_active),
             parse_mode="HTML"
         )
@@ -38,10 +38,7 @@ def register_finance_handlers(dp):
         card_number = await get_setting("card_number") or "تنظیم نشده"
         card_owner = await get_setting("card_owner") or "تنظیم نشده"
         await callback.message.edit_text(
-            f"⚙️ <b>تنظیمات کارت به کارت</b>\n"
-            f"{'─' * 24}\n"
-            f"💳 شماره کارت: <code>{card_number}</code>\n"
-            f"👤 نام صاحب کارت: {card_owner}",
+            get_text("admin_card_settings_text", number=card_number, owner=card_owner),
             reply_markup=card_settings_keyboard(),
             parse_mode="HTML"
         )
@@ -50,7 +47,7 @@ def register_finance_handlers(dp):
     @dp.callback_query(F.data == "set_card_number")
     async def set_card_number_start(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
-            "💳 شماره کارت جدید را وارد کنید:\n\nمثال: <code>6219 8610 3452 9876</code>",
+            get_text("admin_card_ask_number"),
             reply_markup=cancel_keyboard(),
             parse_mode="HTML"
         )
@@ -62,7 +59,7 @@ def register_finance_handlers(dp):
         number = message.text.strip().replace(" ", "")
         if not number.isdigit() or len(number) not in (16,):
             await message.answer(
-                "❌ شماره کارت باید ۱۶ رقم باشد.\nدوباره وارد کنید:",
+                get_text("admin_card_invalid"),
                 reply_markup=cancel_keyboard()
             )
             return
@@ -70,7 +67,7 @@ def register_finance_handlers(dp):
         await set_setting("card_number", formatted)
         await state.clear()
         await message.answer(
-            f"✅ شماره کارت ذخیره شد:\n<code>{formatted}</code>",
+            get_text("admin_card_number_saved", number=formatted),
             reply_markup=card_settings_keyboard(),
             parse_mode="HTML"
         )
@@ -78,7 +75,7 @@ def register_finance_handlers(dp):
     @dp.callback_query(F.data == "set_card_owner")
     async def set_card_owner_start(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
-            "👤 نام صاحب کارت را وارد کنید:",
+            get_text("admin_card_ask_owner"),
             reply_markup=cancel_keyboard()
         )
         await state.set_state(SetCardInfo.waiting_for_card_owner)
@@ -86,9 +83,10 @@ def register_finance_handlers(dp):
 
     @dp.message(SetCardInfo.waiting_for_card_owner)
     async def save_card_owner(message: types.Message, state: FSMContext):
-        await set_setting("card_owner", message.text.strip())
+        name = message.text.strip()
+        await set_setting("card_owner", name)
         await state.clear()
         await message.answer(
-            f"✅ نام صاحب کارت ذخیره شد: {message.text.strip()}",
+            get_text("admin_card_owner_saved", name=name),
             reply_markup=card_settings_keyboard()
         )

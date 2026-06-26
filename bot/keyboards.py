@@ -1,9 +1,15 @@
+import re
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from shared_lib.db import get_keyboard_rows
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
+
+def _strip_tg_emoji(text: str) -> str:
+    """تگ‌های <tg-emoji> رو به fallback emoji تبدیل می‌کنه — چون InlineKeyboardButton از HTML پشتیبانی نمی‌کنه"""
+    return re.sub(r'<tg-emoji[^>]*>([^<]*)</tg-emoji>', r'\1', text)
+
 
 def _build_from_rows(rows: list[dict], template_id=None) -> InlineKeyboardMarkup:
     """ساخت InlineKeyboardMarkup از لیست دکمه‌های DB؛ template_id برای callback_template"""
@@ -16,8 +22,9 @@ def _build_from_rows(rows: list[dict], template_id=None) -> InlineKeyboardMarkup
             cb = tmpl.replace("{id}", str(template_id)) if template_id is not None else tmpl
         else:
             cb = r["callback_data"]
+        label = _strip_tg_emoji(r["label"])
         grid.setdefault(r["row_index"], []).append(
-            InlineKeyboardButton(text=r["label"], callback_data=cb)
+            InlineKeyboardButton(text=label, callback_data=cb)
         )
     return InlineKeyboardMarkup(inline_keyboard=[grid[k] for k in sorted(grid)])
 

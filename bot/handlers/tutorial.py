@@ -31,7 +31,7 @@ def register_tutorial_handlers(dp):
     async def admin_tutorials(callback: types.CallbackQuery, state: FSMContext):
         from handlers.user import _edit_or_replace
         await state.clear()
-        await _edit_or_replace(callback, "📚 <b>مدیریت آموزش‌ها</b>", admin_tutorials_menu())
+        await _edit_or_replace(callback, get_text("admin_tutorials_title"), admin_tutorials_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_tutorial_list")
@@ -40,7 +40,7 @@ def register_tutorial_handlers(dp):
         tutorials = await get_tutorials()
         await _edit_or_replace(
             callback,
-            f"📖 <b>آموزش‌ها</b>\n\n{len(tutorials)} آموزش ثبت شده",
+            get_text("admin_tutorial_list_title", count=len(tutorials)),
             admin_tutorial_list_menu(tutorials)
         )
         await callback.answer()
@@ -51,7 +51,7 @@ def register_tutorial_handlers(dp):
     async def tutorial_add_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(AddTutorial.waiting_for_title)
         await callback.message.edit_text(
-            "📝 عنوان آموزش را وارد کنید:\n<i>(این متن روی دکمه نمایش داده می‌شه)</i>",
+            get_text("admin_tutorial_ask_title"),
             reply_markup=_CANCEL_TUTORIALS, parse_mode="HTML"
         )
         await callback.answer()
@@ -61,8 +61,7 @@ def register_tutorial_handlers(dp):
         await state.update_data(title=message.text.strip())
         await state.set_state(AddTutorial.waiting_for_content)
         await message.answer(
-            "📎 محتوای آموزش را ارسال کنید:\n"
-            "<i>متن، عکس یا ویدیو — ربات نوع را تشخیص می‌دهد.</i>",
+            get_text("admin_tutorial_ask_content"),
             reply_markup=_CANCEL_TUTORIALS, parse_mode="HTML"
         )
 
@@ -71,13 +70,13 @@ def register_tutorial_handlers(dp):
         data = await state.get_data()
         content_type, file_id, caption, entities_json = _parse_content(message)
         if content_type is None:
-            await message.answer("❌ نوع پیام پشتیبانی نمی‌شود. متن، عکس یا ویدیو ارسال کنید.")
+            await message.answer(get_text("admin_tutorial_content_invalid"))
             return
         await create_tutorial(data["title"], content_type, file_id, caption, entities_json)
         await state.clear()
         tutorials = await get_tutorials()
         await message.answer(
-            f"✅ آموزش «{data['title']}» اضافه شد.",
+            get_text("admin_tutorial_added", title=data["title"]),
             reply_markup=admin_tutorial_list_menu(tutorials)
         )
 
@@ -136,7 +135,7 @@ def register_tutorial_handlers(dp):
             return
         await _edit_or_replace(
             callback,
-            f"🗑 حذف «{t['title']}»؟",
+            get_text("admin_tutorial_delete_confirm", title=t["title"]),
             InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(text="✅ بله", callback_data=f"tutorial_delete_confirm_{tid}"),
@@ -156,8 +155,8 @@ def register_tutorial_handlers(dp):
         tutorials = await get_tutorials()
         await _edit_or_replace(
             callback,
-            f"🗑 «{title}» حذف شد.",
-            admin_tutorials_menu(tutorials)
+            get_text("admin_tutorial_deleted", title=title),
+            admin_tutorial_list_menu(tutorials)
         )
         await callback.answer()
 
@@ -170,7 +169,7 @@ def register_tutorial_handlers(dp):
         await state.update_data(tutorial_id=tid)
         t = await get_tutorial(tid)
         await callback.message.edit_text(
-            f"✏️ عنوان فعلی: <b>{t['title']}</b>\n\nعنوان جدید:",
+            get_text("admin_tutorial_ask_edit_title", title=t["title"]),
             reply_markup=_CANCEL_TUTORIALS, parse_mode="HTML"
         )
         await callback.answer()
@@ -183,7 +182,10 @@ def register_tutorial_handlers(dp):
         await update_tutorial(tid, message.text.strip(), t["content_type"], t["file_id"], t["caption"])
         await state.clear()
         tutorials = await get_tutorials()
-        await message.answer("✅ عنوان ذخیره شد.", reply_markup=admin_tutorial_list_menu(tutorials))
+        await message.answer(
+            get_text("admin_tutorial_title_saved"),
+            reply_markup=admin_tutorial_list_menu(tutorials)
+        )
 
     # ── ادمین: ویرایش محتوا ────────────────────────
 
@@ -193,7 +195,7 @@ def register_tutorial_handlers(dp):
         await state.set_state(EditTutorial.waiting_for_content)
         await state.update_data(tutorial_id=tid)
         await callback.message.edit_text(
-            "📎 محتوای جدید را ارسال کنید:\n<i>متن، عکس یا ویدیو</i>",
+            get_text("admin_tutorial_ask_edit_content"),
             reply_markup=_CANCEL_TUTORIALS, parse_mode="HTML"
         )
         await callback.answer()
@@ -205,12 +207,15 @@ def register_tutorial_handlers(dp):
         t = await get_tutorial(tid)
         content_type, file_id, caption, entities_json = _parse_content(message)
         if content_type is None:
-            await message.answer("❌ نوع پیام پشتیبانی نمی‌شود.")
+            await message.answer(get_text("admin_tutorial_content_invalid"))
             return
         await update_tutorial(tid, t["title"], content_type, file_id, caption, entities_json)
         await state.clear()
         tutorials = await get_tutorials()
-        await message.answer("✅ محتوا ذخیره شد.", reply_markup=admin_tutorial_list_menu(tutorials))
+        await message.answer(
+            get_text("admin_tutorial_content_saved"),
+            reply_markup=admin_tutorial_list_menu(tutorials)
+        )
 
     # ── ادمین: FAQ ─────────────────────────────────
 
@@ -221,7 +226,7 @@ def register_tutorial_handlers(dp):
         faqs = await get_faqs()
         await _edit_or_replace(
             callback,
-            f"❓ <b>سوالات متداول</b>\n\n{len(faqs)} سوال ثبت شده",
+            get_text("admin_faqs_list_title", count=len(faqs)),
             admin_faqs_menu(faqs)
         )
         await callback.answer()
@@ -230,7 +235,7 @@ def register_tutorial_handlers(dp):
     async def faq_add_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(AddFAQ.waiting_for_question)
         await callback.message.edit_text(
-            "❓ سوال را وارد کنید:", reply_markup=_CANCEL_FAQS
+            get_text("admin_faq_ask_question"), reply_markup=_CANCEL_FAQS
         )
         await callback.answer()
 
@@ -238,7 +243,7 @@ def register_tutorial_handlers(dp):
     async def faq_add_question(message: types.Message, state: FSMContext):
         await state.update_data(question=message.text.strip())
         await state.set_state(AddFAQ.waiting_for_answer)
-        await message.answer("💬 جواب را وارد کنید:", reply_markup=_CANCEL_FAQS)
+        await message.answer(get_text("admin_faq_ask_answer"), reply_markup=_CANCEL_FAQS)
 
     @dp.message(AddFAQ.waiting_for_answer, F.text)
     async def faq_add_answer(message: types.Message, state: FSMContext):
@@ -248,7 +253,7 @@ def register_tutorial_handlers(dp):
         await create_faq(data["question"], message.text, ej)
         await state.clear()
         faqs = await get_faqs()
-        await message.answer("✅ سوال اضافه شد.", reply_markup=admin_faqs_menu(faqs))
+        await message.answer(get_text("admin_faq_added"), reply_markup=admin_faqs_menu(faqs))
 
     @dp.callback_query(F.data.startswith("faq_item_"))
     async def faq_item(callback: types.CallbackQuery):
@@ -282,7 +287,7 @@ def register_tutorial_handlers(dp):
             return
         await _edit_or_replace(
             callback,
-            f"🗑 حذف «{f['question']}»؟",
+            get_text("admin_faq_delete_confirm", question=f["question"]),
             InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(text="✅ بله", callback_data=f"faq_delete_confirm_{fid}"),
@@ -300,7 +305,11 @@ def register_tutorial_handlers(dp):
         q = f["question"] if f else "سوال"
         await delete_faq(fid)
         faqs = await get_faqs()
-        await _edit_or_replace(callback, f"🗑 «{q}» حذف شد.", admin_faqs_menu(faqs))
+        await _edit_or_replace(
+            callback,
+            get_text("admin_faq_deleted", question=q),
+            admin_faqs_menu(faqs)
+        )
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("faq_edit_q_"))
@@ -310,7 +319,7 @@ def register_tutorial_handlers(dp):
         await state.update_data(faq_id=fid)
         f = await get_faq(fid)
         await callback.message.edit_text(
-            f"✏️ سوال فعلی: <b>{f['question']}</b>\n\nسوال جدید:",
+            get_text("admin_faq_ask_edit_question", question=f["question"]),
             reply_markup=_CANCEL_FAQS, parse_mode="HTML"
         )
         await callback.answer()
@@ -323,7 +332,10 @@ def register_tutorial_handlers(dp):
         await update_faq(fid, message.text.strip(), f["answer"])
         await state.clear()
         faqs = await get_faqs()
-        await message.answer("✅ سوال ذخیره شد.", reply_markup=admin_faqs_menu(faqs))
+        await message.answer(
+            get_text("admin_faq_question_saved"),
+            reply_markup=admin_faqs_menu(faqs)
+        )
 
     @dp.callback_query(F.data.startswith("faq_edit_a_"))
     async def faq_edit_a_start(callback: types.CallbackQuery, state: FSMContext):
@@ -332,7 +344,7 @@ def register_tutorial_handlers(dp):
         await state.update_data(faq_id=fid)
         f = await get_faq(fid)
         await callback.message.edit_text(
-            f"✏️ جواب فعلی:\n{f['answer']}\n\nجواب جدید:",
+            get_text("admin_faq_ask_edit_answer", answer=f["answer"]),
             reply_markup=_CANCEL_FAQS
         )
         await callback.answer()
@@ -347,7 +359,10 @@ def register_tutorial_handlers(dp):
         await update_faq(fid, f["question"], message.text, ej)
         await state.clear()
         faqs = await get_faqs()
-        await message.answer("✅ جواب ذخیره شد.", reply_markup=admin_faqs_menu(faqs))
+        await message.answer(
+            get_text("admin_faq_answer_saved"),
+            reply_markup=admin_faqs_menu(faqs)
+        )
 
     # ── کاربر: آموزش ───────────────────────────────
 
@@ -431,7 +446,6 @@ def register_tutorial_handlers(dp):
 
 
 def _parse_content(message: types.Message):
-    """نوع، file_id، caption، و entities رو از پیام استخراج می‌کنه"""
     if message.photo:
         entities = message.caption_entities or []
         ej = json.dumps([e.model_dump() for e in entities]) if entities else None

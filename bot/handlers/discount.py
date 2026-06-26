@@ -33,7 +33,7 @@ def _code_detail(c) -> str:
 
 async def _show_list(target):
     codes = await get_discount_codes()
-    text  = "🎟 <b>کدهای تخفیف</b>"
+    text  = get_text("admin_discount_list_title")
     kb    = admin_discount_menu(codes)
     if isinstance(target, types.CallbackQuery):
         try:
@@ -88,7 +88,7 @@ def register_discount_handlers(dp):
     async def discount_delete(callback: types.CallbackQuery):
         code_id = int(callback.data.replace("discount_delete_", ""))
         await delete_discount_code(code_id)
-        await callback.answer("✅ کد حذف شد.")
+        await callback.answer(get_text("admin_discount_deleted"))
         await _show_list(callback)
 
     # ─── ادمین: افزودن کد ─────────────────────────
@@ -100,9 +100,7 @@ def register_discount_handlers(dp):
             [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_discount")]
         ])
         await callback.message.edit_text(
-            "🎟 <b>افزودن کد تخفیف</b>\n\n"
-            "کد تخفیف را وارد کنید:\n"
-            "<i>(فقط حروف انگلیسی و اعداد — مثال: SUMMER30)</i>",
+            get_text("admin_discount_ask_code"),
             reply_markup=cancel_kb, parse_mode="HTML"
         )
         await callback.answer()
@@ -111,11 +109,11 @@ def register_discount_handlers(dp):
     async def discount_add_code(message: types.Message, state: FSMContext):
         code = message.text.strip().upper()
         if not re.match(r"^[A-Z0-9_-]{2,20}$", code):
-            await message.answer("❌ کد باید ۲ تا ۲۰ کاراکتر انگلیسی یا عدد باشد.")
+            await message.answer(get_text("admin_discount_code_invalid"))
             return
         existing = await validate_discount_code(code)
         if existing:
-            await message.answer("❌ این کد قبلاً ثبت شده.")
+            await message.answer(get_text("admin_discount_code_exists"))
             return
         await state.update_data(code=code)
         await state.set_state(AddDiscountCode.waiting_for_type)
@@ -131,7 +129,7 @@ def register_discount_handlers(dp):
         await state.set_state(AddDiscountCode.waiting_for_value)
         hint = "درصد (۱ تا ۱۰۰)" if type_ == "percent" else "مبلغ به تومان (مثال: 50000)"
         await callback.message.edit_text(
-            f"مقدار تخفیف را وارد کنید ({hint}):",
+            get_text("admin_discount_ask_value", hint=hint),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_discount")]
             ]),
@@ -144,16 +142,16 @@ def register_discount_handlers(dp):
         text = message.text.strip().replace(",", "")
         data = await state.get_data()
         if not text.isdigit() or int(text) <= 0:
-            await message.answer("❌ عدد مثبت وارد کنید.")
+            await message.answer(get_text("admin_discount_value_invalid"))
             return
         value = int(text)
         if data["type_"] == "percent" and value > 100:
-            await message.answer("❌ درصد باید بین ۱ تا ۱۰۰ باشد.")
+            await message.answer(get_text("admin_discount_percent_invalid"))
             return
         await state.update_data(value=value)
         await state.set_state(AddDiscountCode.waiting_for_max_uses)
         await message.answer(
-            "حداکثر تعداد استفاده را وارد کنید:\n<i>(۰ = نامحدود)</i>",
+            get_text("admin_discount_ask_max_uses"),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_discount")]
             ]),
@@ -164,12 +162,12 @@ def register_discount_handlers(dp):
     async def discount_add_max_uses(message: types.Message, state: FSMContext):
         text = message.text.strip()
         if not text.isdigit():
-            await message.answer("❌ عدد صحیح وارد کنید.")
+            await message.answer(get_text("admin_discount_int_invalid"))
             return
         await state.update_data(max_uses=int(text))
         await state.set_state(AddDiscountCode.waiting_for_expiry)
         await message.answer(
-            "تاریخ انقضا را وارد کنید:\n<i>(فرمت: YYYY-MM-DD  مثال: 2025-12-31)</i>",
+            get_text("admin_discount_ask_expiry"),
             reply_markup=discount_expiry_keyboard(), parse_mode="HTML"
         )
 
@@ -182,7 +180,7 @@ def register_discount_handlers(dp):
     async def discount_add_expiry(message: types.Message, state: FSMContext):
         date = message.text.strip()
         if not _DATE_RE.match(date):
-            await message.answer("❌ فرمت اشتباه. مثال: 2025-12-31")
+            await message.answer(get_text("admin_discount_expiry_invalid"))
             return
         await _finish_add(message, state, expires_at=date)
 
@@ -191,12 +189,12 @@ def register_discount_handlers(dp):
         await state.clear()
         await create_discount_code(data["code"], data["type_"], data["value"], data["max_uses"], expires_at)
         type_label = f"{data['value']}٪" if data["type_"] == "percent" else f"{data['value']:,} تومان"
-        text = (
-            f"✅ <b>کد تخفیف ساخته شد!</b>\n\n"
-            f"🎟 کد: <code>{data['code']}</code>\n"
-            f"🏷 تخفیف: {type_label}\n"
-            f"📊 محدودیت: {'نامحدود' if not data['max_uses'] else data['max_uses']}\n"
-            f"📅 انقضا: {expires_at or 'ندارد'}"
+        text = get_text(
+            "admin_discount_created",
+            code=data["code"],
+            discount=type_label,
+            max_uses="نامحدود" if not data["max_uses"] else str(data["max_uses"]),
+            expiry=expires_at or "ندارد"
         )
         if hasattr(target, "edit_text"):
             await target.edit_text(text, parse_mode="HTML")

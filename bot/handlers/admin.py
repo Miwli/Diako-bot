@@ -128,7 +128,6 @@ def register_admin_handlers(dp):
         await _send_main_menu(message, u)
 
     async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
-        """اگه پیام عکسه، حذف کن و متن جدید بفرست — وگرنه ویرایش کن"""
         try:
             await callback.message.edit_text(text, reply_markup=markup, parse_mode=parse_mode)
         except TelegramBadRequest:
@@ -137,15 +136,14 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data == "admin_panel")
     async def admin_panel(callback: types.CallbackQuery):
-        await _edit_or_replace(callback, "⚙️ پنل ادمین", admin_panel_menu())
+        await _edit_or_replace(callback, get_text("admin_panel_title"), admin_panel_menu())
         await callback.answer()
 
     @dp.callback_query(F.data.in_(set()))
     async def admin_coming_soon(callback: types.CallbackQuery):
-        await callback.answer("🔜 به زودی...", show_alert=True)
+        await callback.answer(get_text("coming_soon"), show_alert=True)
 
     def _parse_positive_number(text: str):
-        """عدد مثبت یا صفر (بی‌نهایت) — در صورت نامعتبر بودن None برمی‌گردونه"""
         try:
             val = float(text.replace(",", "."))
             return val if val >= 0 else None
@@ -153,86 +151,72 @@ def register_admin_handlers(dp):
             return None
 
     def _format_duration(val) -> str:
-        """نمایش مدت — اگه 0 باشه بی‌نهایت نشون بده"""
         return "♾️ بی‌نهایت" if float(val) == 0 else f"{val} ساعت"
 
     def _format_max_uses(val: str) -> str:
-        """نمایش تعداد مجاز — اگه 0 باشه بی‌نهایت نشون بده"""
         return "♾️ بی‌نهایت" if str(val) == "0" else f"{val} بار"
 
     # ─── تنظیمات تست رایگان ───────────────────────
     async def _free_test_page(callback: types.CallbackQuery):
         servers = await get_servers(only_active=False)
-        await _edit_or_replace(callback, "🎁 تنظیمات تست رایگان", admin_free_test_menu(servers))
+        await _edit_or_replace(callback, get_text("admin_free_test_title"), admin_free_test_menu(servers))
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_free_test")
     async def admin_free_test(callback: types.CallbackQuery):
         await _free_test_page(callback)
 
+    def _free_test_global_text(duration, traffic, max_uses) -> str:
+        return get_text("admin_free_test_global_text",
+                        duration=_format_duration(duration),
+                        traffic=traffic,
+                        max_uses=_format_max_uses(str(max_uses)))
+
     @dp.callback_query(F.data == "admin_free_test_global")
     async def admin_free_test_global(callback: types.CallbackQuery):
         duration  = await get_setting("free_test_duration")  or "1"
         traffic   = await get_setting("free_test_traffic")   or "1"
         max_uses  = await get_setting("free_test_max_uses")  or "1"
-        text = (
-            "⚙️ تنظیمات پیش‌فرض تست رایگان\n\n"
-            f"⏱ مدت: <b>{_format_duration(duration)}</b>\n"
-            f"📊 حجم: <b>{traffic} گیگابایت</b>\n"
-            f"🔢 تعداد مجاز: <b>{_format_max_uses(max_uses)}</b>"
-        )
-        await _edit_or_replace(callback, text, admin_free_test_global_menu())
+        await _edit_or_replace(callback, _free_test_global_text(duration, traffic, max_uses), admin_free_test_global_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_free_test_global_duration")
     async def admin_free_test_global_duration_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(FreeTestSettings.waiting_for_global_duration)
-        await callback.message.edit_text("⏱ مدت پیش‌فرض تست رایگان را به <b>ساعت</b> وارد کنید:\n<i>برای بی‌نهایت (بدون انقضا) عدد 0 را وارد کنید</i>", parse_mode="HTML")
+        await callback.message.edit_text(get_text("admin_free_test_ask_duration"), parse_mode="HTML")
         await callback.answer()
 
     @dp.message(FreeTestSettings.waiting_for_global_duration, F.text)
     async def admin_free_test_global_duration_save(message: types.Message, state: FSMContext):
         val = _parse_positive_number(message.text)
         if val is None:
-            await message.answer("❌ عدد وارد کنید. مثال: 24 یا 0.5 یا 0 برای بی‌نهایت")
+            await message.answer(get_text("admin_invalid_number"))
             return
         await set_setting("free_test_duration", str(val))
         await state.clear()
-        duration = str(val)
         traffic  = await get_setting("free_test_traffic") or "1"
         max_uses = await get_setting("free_test_max_uses") or "1"
-        text = (
-            "⚙️ تنظیمات پیش‌فرض تست رایگان\n\n"
-            f"⏱ مدت: <b>{_format_duration(duration)}</b>\n"
-            f"📊 حجم: <b>{traffic} گیگابایت</b>\n"
-            f"🔢 تعداد مجاز: <b>{_format_max_uses(max_uses)}</b>"
-        )
-        await message.answer(text, reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
+        await message.answer(_free_test_global_text(str(val), traffic, max_uses),
+                             reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
 
     @dp.callback_query(F.data == "admin_free_test_global_traffic")
     async def admin_free_test_global_traffic_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(FreeTestSettings.waiting_for_global_traffic)
-        await callback.message.edit_text("📊 حجم پیش‌فرض تست رایگان را به <b>گیگابایت</b> وارد کنید:", parse_mode="HTML")
+        await callback.message.edit_text(get_text("admin_free_test_ask_traffic"), parse_mode="HTML")
         await callback.answer()
 
     @dp.message(FreeTestSettings.waiting_for_global_traffic, F.text)
     async def admin_free_test_global_traffic_save(message: types.Message, state: FSMContext):
         val = _parse_positive_number(message.text)
         if val is None:
-            await message.answer("❌ عدد مثبت وارد کنید. مثال: 1 یا 0.5")
+            await message.answer(get_text("admin_invalid_pos_number"))
             return
         await set_setting("free_test_traffic", str(val))
         await state.clear()
         duration = await get_setting("free_test_duration") or "1"
-        traffic  = str(val)
         max_uses = await get_setting("free_test_max_uses") or "1"
-        text = (
-            "⚙️ تنظیمات پیش‌فرض تست رایگان\n\n"
-            f"⏱ مدت: <b>{_format_duration(duration)}</b>\n"
-            f"📊 حجم: <b>{traffic} گیگابایت</b>\n"
-            f"🔢 تعداد مجاز: <b>{_format_max_uses(max_uses)}</b>"
-        )
-        await message.answer(text, reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
+        await message.answer(_free_test_global_text(duration, str(val), max_uses),
+                             reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
 
     @dp.callback_query(F.data == "admin_free_test_apply_all")
     async def admin_free_test_apply_all(callback: types.CallbackQuery):
@@ -246,10 +230,7 @@ def register_admin_handlers(dp):
         current = await get_setting("free_test_max_uses") or "1"
         await state.set_state(FreeTestSettings.waiting_for_max_uses)
         await callback.message.edit_text(
-            f"🔢 تعداد دفعات مجاز دریافت تست رایگان برای هر کاربر:\n\n"
-            f"مقدار فعلی: <b>{_format_max_uses(current)}</b>\n\n"
-            "عدد جدید را وارد کنید:\n"
-            "<i>برای بی‌نهایت عدد 0 را وارد کنید</i>",
+            get_text("admin_free_test_ask_max_uses", current=_format_max_uses(current)),
             parse_mode="HTML"
         )
         await callback.answer()
@@ -258,20 +239,15 @@ def register_admin_handlers(dp):
     async def admin_free_test_max_uses_save(message: types.Message, state: FSMContext):
         text_in = message.text.strip()
         if not text_in.isdigit() or int(text_in) < 0:
-            await message.answer("❌ عدد صحیح وارد کنید. مثال: 1 یا 2 یا 0 برای بی‌نهایت")
+            await message.answer(get_text("admin_invalid_int"))
             return
         val = text_in
         await set_setting("free_test_max_uses", val)
         await state.clear()
         duration = await get_setting("free_test_duration") or "1"
         traffic  = await get_setting("free_test_traffic")  or "1"
-        text = (
-            "⚙️ تنظیمات پیش‌فرض تست رایگان\n\n"
-            f"⏱ مدت: <b>{duration} ساعت</b>\n"
-            f"📊 حجم: <b>{traffic} گیگابایت</b>\n"
-            f"🔢 تعداد مجاز: <b>{_format_max_uses(val)}</b>"
-        )
-        await message.answer(text, reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
+        await message.answer(_free_test_global_text(duration, traffic, val),
+                             reply_markup=admin_free_test_global_menu(), parse_mode="HTML")
 
     @dp.callback_query(F.data == "admin_free_test_reset_all")
     async def admin_free_test_reset_all(callback: types.CallbackQuery):
@@ -281,13 +257,11 @@ def register_admin_handlers(dp):
     def _free_test_server_text(server) -> str:
         trf = server['free_test_traffic'] or 0
         trf_display = "♾️ بی‌نهایت" if float(trf) == 0 else f"{trf} گیگابایت"
-        return (
-            f"🎁 تنظیمات تست رایگان — <b>{server['name']}</b>\n"
-            f"{'─' * 28}\n"
-            f"وضعیت: {'✅ فعال' if server['free_test_enabled'] else '❌ غیرفعال'}\n"
-            f"⏱ مدت: <b>{_format_duration(server['free_test_duration'] or 0)}</b>\n"
-            f"📊 حجم: <b>{trf_display}</b>"
-        )
+        return get_text("admin_free_test_server_text",
+                        name=server['name'],
+                        status="✅ فعال" if server['free_test_enabled'] else "❌ غیرفعال",
+                        duration=_format_duration(server['free_test_duration'] or 0),
+                        traffic=trf_display)
 
     @dp.callback_query(F.data.startswith("admin_free_test_server_"))
     async def admin_free_test_server(callback: types.CallbackQuery):
@@ -311,14 +285,14 @@ def register_admin_handlers(dp):
         server_id = int(callback.data.replace("admin_free_test_duration_", ""))
         await state.update_data(server_id=server_id)
         await state.set_state(FreeTestSettings.waiting_for_server_duration)
-        await callback.message.edit_text("⏱ مدت تست رایگان این سرور را به <b>ساعت</b> وارد کنید:\n<i>برای بی‌نهایت (بدون انقضا) عدد 0 را وارد کنید</i>", parse_mode="HTML")
+        await callback.message.edit_text(get_text("admin_free_test_ask_server_dur"), parse_mode="HTML")
         await callback.answer()
 
     @dp.message(FreeTestSettings.waiting_for_server_duration, F.text)
     async def admin_free_test_server_duration_save(message: types.Message, state: FSMContext):
         val = _parse_positive_number(message.text)
         if val is None:
-            await message.answer("❌ عدد وارد کنید. مثال: 24 یا 0.5 یا 0 برای بی‌نهایت")
+            await message.answer(get_text("admin_invalid_number"))
             return
         data = await state.get_data()
         server_id = data["server_id"]
@@ -332,14 +306,14 @@ def register_admin_handlers(dp):
         server_id = int(callback.data.replace("admin_free_test_traffic_", ""))
         await state.update_data(server_id=server_id)
         await state.set_state(FreeTestSettings.waiting_for_server_traffic)
-        await callback.message.edit_text("📊 حجم تست رایگان این سرور را به <b>گیگابایت</b> وارد کنید:", parse_mode="HTML")
+        await callback.message.edit_text(get_text("admin_free_test_ask_server_trf"), parse_mode="HTML")
         await callback.answer()
 
     @dp.message(FreeTestSettings.waiting_for_server_traffic, F.text)
     async def admin_free_test_server_traffic_save(message: types.Message, state: FSMContext):
         val = _parse_positive_number(message.text)
         if val is None:
-            await message.answer("❌ عدد مثبت وارد کنید. مثال: 1 یا 0.5")
+            await message.answer(get_text("admin_invalid_pos_number"))
             return
         data = await state.get_data()
         server_id = data["server_id"]
@@ -351,18 +325,18 @@ def register_admin_handlers(dp):
     # ─── تنظیمات عمومی ────────────────────────────
     @dp.callback_query(F.data == "admin_general")
     async def admin_general(callback: types.CallbackQuery):
-        await _edit_or_replace(callback, "⚙️ تنظیمات عمومی", admin_general_menu())
+        await _edit_or_replace(callback, get_text("admin_general_title"), admin_general_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_and_text")
     async def admin_banner_and_text(callback: types.CallbackQuery):
-        await _edit_or_replace(callback, "🎨 ظاهر ربات", admin_banner_and_text_menu())
+        await _edit_or_replace(callback, get_text("admin_banner_and_text_title"), admin_banner_and_text_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_settings")
     async def admin_banner_settings(callback: types.CallbackQuery):
         banner = await get_setting("banner_file_id")
-        status = "✅ بنر فعال است." if banner else "❌ بنر تنظیم نشده."
+        status = get_text("admin_banner_status_active") if banner else get_text("admin_banner_status_none")
         await _edit_or_replace(callback, f"🖼 تنظیمات بنر\n\n{status}", admin_banner_settings_menu(has_banner=bool(banner)))
         await callback.answer()
 
@@ -371,7 +345,7 @@ def register_admin_handlers(dp):
         await state.set_state(GeneralSettings.waiting_for_banner)
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         await callback.message.edit_text(
-            "🖼 عکس بنر را ارسال کنید:",
+            get_text("admin_banner_upload_prompt"),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 انصراف", callback_data="admin_banner_settings")]
             ])
@@ -383,38 +357,33 @@ def register_admin_handlers(dp):
         file_id = message.photo[-1].file_id
         await set_setting("banner_file_id", file_id)
         await state.clear()
-        await message.answer("✅ بنر ذخیره شد.", reply_markup=admin_banner_settings_menu(has_banner=True))
+        await message.answer(get_text("admin_banner_saved"), reply_markup=admin_banner_settings_menu(has_banner=True))
 
     @dp.callback_query(F.data == "admin_banner_settings", GeneralSettings.waiting_for_banner)
     async def admin_banner_upload_cancel(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
         banner = await get_setting("banner_file_id")
-        status = "✅ بنر فعال است." if banner else "❌ بنر تنظیم نشده."
+        status = get_text("admin_banner_status_active") if banner else get_text("admin_banner_status_none")
         await _edit_or_replace(callback, f"🖼 تنظیمات بنر\n\n{status}", admin_banner_settings_menu(has_banner=bool(banner)))
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_delete")
     async def admin_banner_delete(callback: types.CallbackQuery):
         await set_setting("banner_file_id", "")
-        await _edit_or_replace(callback, "🖼 تنظیمات بنر\n\n❌ بنر تنظیم نشده.", admin_banner_settings_menu(has_banner=False))
+        status = get_text("admin_banner_status_none")
+        await _edit_or_replace(callback, f"🖼 تنظیمات بنر\n\n{status}", admin_banner_settings_menu(has_banner=False))
         await callback.answer("🗑 بنر حذف شد.")
 
     @dp.callback_query(F.data == "admin_text_settings")
     async def admin_text_settings(callback: types.CallbackQuery):
-        await _edit_or_replace(callback, "✏️ تنظیمات متن", admin_text_settings_menu())
+        await _edit_or_replace(callback, get_text("admin_text_settings_title"), admin_text_settings_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_banner_caption")
     async def admin_banner_caption_start(callback: types.CallbackQuery, state: FSMContext):
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         current = await get_setting("banner_caption") or ""
-        text = (
-            "✏️ متن فعلی بنر:\n"
-            f"<blockquote>{current or '(پیش‌فرض)'}</blockquote>\n\n"
-            "متن جدید را ارسال کنید.\n"
-            "از <code>{name}</code> برای نام کاربر استفاده کنید.\n"
-            "<i>ایموجی پرمیوم هم پشتیبانی می‌شه.</i>"
-        )
+        text = get_text("admin_caption_edit_prompt", current=current or "(پیش‌فرض)")
         await state.set_state(GeneralSettings.waiting_for_caption)
         await callback.message.edit_text(
             text,
@@ -438,21 +407,18 @@ def register_admin_handlers(dp):
             await set_setting("banner_caption_entities", "")
         await state.clear()
         note = " (با ایموجی پرمیوم)" if has_premium else ""
-        await message.answer(f"✅ متن بنر{note} ذخیره شد.", reply_markup=admin_text_settings_menu())
+        await message.answer(get_text("admin_caption_saved", note=note), reply_markup=admin_text_settings_menu())
 
     @dp.callback_query(F.data == "admin_text_settings", GeneralSettings.waiting_for_caption)
     async def admin_banner_caption_cancel(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await _edit_or_replace(callback, "✏️ تنظیمات متن", admin_text_settings_menu())
+        await _edit_or_replace(callback, get_text("admin_text_settings_title"), admin_text_settings_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "admin_build_text")
     async def admin_build_text_start(callback: types.CallbackQuery, state: FSMContext):
         await state.set_state(GeneralSettings.waiting_for_emoji_text)
-        await callback.message.edit_text(
-            "🛠 پیام خود را همراه با استیکر پرمیوم ارسال کنید.\n"
-            "ربات اموجی‌ها را با تگ HTML جایگزین می‌کند."
-        )
+        await callback.message.edit_text(get_text("admin_build_text_prompt"))
         await callback.answer()
 
     @dp.message(GeneralSettings.waiting_for_emoji_text)
@@ -486,9 +452,7 @@ def register_admin_handlers(dp):
         parts.append(raw[cursor:].decode("utf-16-le"))
         result = "".join(parts)
 
-        # پیام اول: پیش‌نمایش واقعی با اموجی پرمیوم
         await message.answer(f"✅ پیش‌نمایش:\n\n{result}", parse_mode="HTML")
-        # پیام دوم: متن خام برای کپی
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
         code_msg = f"<code>{html_lib.escape(result)}</code>"
         if len(result) <= 256:
@@ -508,7 +472,7 @@ def register_admin_handlers(dp):
     @dp.callback_query(F.data == "cancel")
     async def cancel_operation(callback: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await _edit_or_replace(callback, "❌ عملیات لغو شد.", admin_panel_menu())
+        await _edit_or_replace(callback, get_text("admin_cancel_op"), admin_panel_menu())
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("order_approve_"))
@@ -531,7 +495,6 @@ def register_admin_handlers(dp):
                 return
             api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
 
-            # سرویس‌های زنده رو از پنل می‌گیریم و اولین ID معتبر رو انتخاب می‌کنیم
             live_services = await api.get_services()
             live_ids = {s["id"] for s in live_services}
             service_id = next((sid for sid in stored_ids if sid in live_ids), None)

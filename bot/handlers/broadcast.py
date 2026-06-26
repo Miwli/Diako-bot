@@ -6,7 +6,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, MessageEntity
 from states import Broadcast
 from keyboards import admin_broadcast_menu, admin_broadcast_confirm_keyboard
-from shared_lib.db import get_all_user_ids, get_active_service_user_ids
+from shared_lib.db import get_all_user_ids, get_active_service_user_ids, get_text
 
 _TARGET_LABELS = {
     "all":    "همه کاربران",
@@ -71,10 +71,8 @@ async def _do_broadcast(bot, status_chat_id: int, status_msg_id: int,
         if (i + 1) % 20 == 0 or (i + 1) == total:
             try:
                 await bot.edit_message_text(
-                    f"📢 در حال ارسال...\n\n"
-                    f"✅ موفق: {sent}\n"
-                    f"❌ ناموفق: {failed}\n"
-                    f"📊 {i+1}/{total}",
+                    get_text("admin_broadcast_progress",
+                             sent=sent, failed=failed, done=i+1, total=total),
                     chat_id=status_chat_id,
                     message_id=status_msg_id
                 )
@@ -89,13 +87,11 @@ async def _do_broadcast(bot, status_chat_id: int, status_msg_id: int,
     ])
     try:
         await bot.edit_message_text(
-            f"✅ پیام همگانی ارسال شد!\n\n"
-            f"📨 موفق: {sent}\n"
-            f"❌ ناموفق (بلاک یا ارور): {failed}\n"
-            f"👥 کل: {total}",
+            get_text("admin_broadcast_done", sent=sent, failed=failed, total=total),
             chat_id=status_chat_id,
             message_id=status_msg_id,
-            reply_markup=back_kb
+            reply_markup=back_kb,
+            parse_mode="HTML"
         )
     except Exception:
         pass
@@ -108,14 +104,14 @@ def register_broadcast_handlers(dp):
         await state.clear()
         try:
             await callback.message.edit_text(
-                "📢 <b>پیام همگانی</b>\n\nمخاطبان را انتخاب کنید:",
+                get_text("admin_broadcast_title"),
                 reply_markup=admin_broadcast_menu(),
                 parse_mode="HTML"
             )
         except TelegramBadRequest:
             await callback.message.delete()
             await callback.message.answer(
-                "📢 <b>پیام همگانی</b>\n\nمخاطبان را انتخاب کنید:",
+                get_text("admin_broadcast_title"),
                 reply_markup=admin_broadcast_menu(),
                 parse_mode="HTML"
             )
@@ -132,16 +128,14 @@ def register_broadcast_handlers(dp):
         ])
         try:
             await callback.message.edit_text(
-                f"📢 <b>ارسال به {label}</b>\n\n"
-                f"پیام خود را ارسال کنید:\n"
-                f"<i>(متن، عکس یا ویدیو با کپشن)</i>",
+                get_text("admin_broadcast_ask_content", target=label),
                 reply_markup=cancel_kb,
                 parse_mode="HTML"
             )
         except TelegramBadRequest:
             await callback.message.delete()
             await callback.message.answer(
-                f"📢 <b>ارسال به {label}</b>\n\nپیام خود را ارسال کنید:",
+                get_text("admin_broadcast_ask_content", target=label),
                 reply_markup=cancel_kb,
                 parse_mode="HTML"
             )
@@ -151,7 +145,7 @@ def register_broadcast_handlers(dp):
     async def broadcast_receive_content(message: types.Message, state: FSMContext):
         content_type, file_id, caption, ents_json = _parse_content(message)
         if not content_type:
-            await message.answer("❌ فقط متن، عکس یا ویدیو ارسال کنید.")
+            await message.answer(get_text("admin_broadcast_invalid"))
             return
 
         data = await state.get_data()
@@ -170,9 +164,9 @@ def register_broadcast_handlers(dp):
         )
 
         await message.answer(
-            f"👆 پیش‌نمایش پیام بالا\n\n"
-            f"مخاطب: <b>{_TARGET_LABELS[target]}</b> — {count:,} نفر\n\n"
-            f"آماده ارسال هستی؟",
+            get_text("admin_broadcast_confirm_text",
+                     target=_TARGET_LABELS[target],
+                     count=f"{count:,}"),
             reply_markup=admin_broadcast_confirm_keyboard(count, target),
             parse_mode="HTML"
         )
@@ -183,7 +177,7 @@ def register_broadcast_handlers(dp):
         await state.clear()
 
         status_msg = await callback.message.edit_text(
-            "📢 شروع ارسال...\n\n✅ موفق: 0\n❌ ناموفق: 0\n📊 0/..."
+            get_text("admin_broadcast_starting")
         )
         asyncio.create_task(_do_broadcast(
             bot=callback.bot,
@@ -202,14 +196,14 @@ def register_broadcast_handlers(dp):
         await state.clear()
         try:
             await callback.message.edit_text(
-                "📢 <b>پیام همگانی</b>\n\nمخاطبان را انتخاب کنید:",
+                get_text("admin_broadcast_title"),
                 reply_markup=admin_broadcast_menu(),
                 parse_mode="HTML"
             )
         except TelegramBadRequest:
             await callback.message.delete()
             await callback.message.answer(
-                "📢 <b>پیام همگانی</b>\n\nمخاطبان را انتخاب کنید:",
+                get_text("admin_broadcast_title"),
                 reply_markup=admin_broadcast_menu(),
                 parse_mode="HTML"
             )
