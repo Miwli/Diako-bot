@@ -1267,6 +1267,11 @@ const KB_META = {
   // آموزش
   user_tutorials:         { label: 'آموزش‌ها',              icon: 'ti-book',          text_key: null,                      fallback: '📚 آموزش‌ها' },
   user_faqs:              { label: 'سوالات متداول',          icon: 'ti-help-circle',   text_key: null,                      fallback: '❓ سوالات متداول' },
+  // کاربر — صفحات ساده
+  profile:                { label: 'پروفایل',                icon: 'ti-user',          text_key: 'profile_text',            fallback: '👤 پروفایل کاربر' },
+  referral:               { label: 'دعوت دوستان',            icon: 'ti-gift',          text_key: null,                      fallback: '💰 دعوت دوستان — لینک شما:' },
+  wallet_history:         { label: 'تاریخچه تراکنش‌ها',     icon: 'ti-list',          text_key: null,                      fallback: '📜 تاریخچه تراکنش‌ها' },
+  top_up:                 { label: 'شارژ حساب',              icon: 'ti-credit-card',   text_key: null,                      fallback: '💳 مبلغ شارژ را وارد کنید:' },
   // ادمین
   admin_plans:            { label: 'مدیریت پلن‌ها',         icon: 'ti-package',       text_key: null,                      fallback: '📦 مدیریت پلن‌ها' },
   admin_discount:         { label: 'کدهای تخفیف',           icon: 'ti-discount',      text_key: null,                      fallback: '🎟 کدهای تخفیف' },
@@ -1274,14 +1279,18 @@ const KB_META = {
   admin_panel:            { label: 'پنل ادمین',             icon: 'ti-shield',        text_key: 'admin_panel_title',       fallback: '⚙️ پنل ادمین' },
   admin_general:          { label: 'تنظیمات عمومی',         icon: 'ti-settings',      text_key: 'admin_general_title',     fallback: '⚙️ تنظیمات عمومی' },
   admin_banner_and_text:  { label: 'ظاهر ربات',             icon: 'ti-palette',       text_key: 'admin_banner_and_text_title', fallback: '🎨 ظاهر ربات' },
+  admin_banner_settings:  { label: 'تنظیمات بنر',           icon: 'ti-photo',         text_key: null,                      fallback: '🖼 تنظیمات بنر' },
   admin_text_settings:    { label: 'تنظیمات متن',           icon: 'ti-file-text',     text_key: 'admin_text_settings_title', fallback: '✏️ تنظیمات متن' },
   admin_servers:          { label: 'مدیریت سرورها',         icon: 'ti-server-2',      text_key: 'admin_servers_title',     fallback: '🖥 مدیریت سرورها' },
   admin_free_test_global: { label: 'تست رایگان عمومی',      icon: 'ti-gift',          text_key: null,                      fallback: '🎁 تنظیمات تست رایگان' },
   admin_support_settings: { label: 'تنظیمات پشتیبانی',     icon: 'ti-headset',       text_key: null,                      fallback: '🎧 تنظیمات پشتیبانی' },
   admin_tutorials:        { label: 'مدیریت آموزش‌ها',       icon: 'ti-book',          text_key: 'admin_tutorials_title',   fallback: '📚 مدیریت آموزش‌ها' },
+  admin_tutorial_list:    { label: 'لیست آموزش‌ها',         icon: 'ti-list',          text_key: null,                      fallback: '📖 لیست آموزش‌ها' },
+  admin_faqs:             { label: 'سوالات متداول (ادمین)', icon: 'ti-help-circle',   text_key: null,                      fallback: '❓ مدیریت سوالات متداول' },
   admin_stats:            { label: 'آمار و گزارش',          icon: 'ti-chart-bar',     text_key: null,                      fallback: '📊 آمار دیاکو' },
   admin_broadcast:        { label: 'پیام همگانی',           icon: 'ti-send',          text_key: 'admin_broadcast_title',   fallback: '📢 پیام همگانی' },
   admin_users:            { label: 'مدیریت کاربران',        icon: 'ti-users',         text_key: null,                      fallback: '👥 مدیریت کاربران' },
+  admin_user_list:        { label: 'لیست کاربران',          icon: 'ti-list',          text_key: null,                      fallback: '👥 لیست کاربران' },
   card_settings:          { label: 'تنظیمات کارت',          icon: 'ti-credit-card',   text_key: null,                      fallback: '💳 تنظیمات کارت‌به‌کارت' },
   // زمینه‌ای
   after_order:            { label: 'بعد از سفارش (ادمین)',  icon: 'ti-package',       text_key: null,                      fallback: '📦 سفارش پردازش شد' },
@@ -1297,11 +1306,12 @@ const KB_META = {
 // ── گروه‌بندی کیبوردها در ستون چپ ──────────────────
 const KB_GROUPS = [
   { label: 'کاربر',          keys: ['user_main','wallet','support','cancel','free_test_confirm','ticket','payment_info','subscription_approved'] },
+  { label: 'پروفایل',        keys: ['profile','referral','wallet_history','top_up'] },
   { label: 'جریان خرید',     keys: ['buy_vpn','user_plans','user_proforma'] },
   { label: 'سرویس‌ها',       keys: ['my_services','user_service_detail','confirm_delete_service'] },
   { label: 'پشتیبانی',       keys: ['my_tickets'] },
   { label: 'آموزش',          keys: ['user_tutorials','user_faqs','back_to_tutorials','back_to_faqs'] },
-  { label: 'ادمین',          keys: ['admin_panel','admin_general','admin_banner_and_text','admin_text_settings','admin_servers','admin_plans','admin_free_test_global','admin_support_settings','admin_tutorials','admin_stats','admin_broadcast','admin_users','card_settings','admin_discount','admin_referral'] },
+  { label: 'ادمین',          keys: ['admin_panel','admin_general','admin_banner_and_text','admin_banner_settings','admin_text_settings','admin_servers','admin_plans','admin_free_test_global','admin_support_settings','admin_tutorials','admin_tutorial_list','admin_faqs','admin_stats','admin_broadcast','admin_users','admin_user_list','card_settings','admin_discount','admin_referral'] },
   { label: 'زمینه‌ای',       keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan'] },
 ];
 
@@ -1309,6 +1319,7 @@ const KB_GROUPS = [
 const DYNAMIC_KEYBOARDS = new Set([
   'buy_vpn','user_plans','my_services','my_tickets',
   'user_tutorials','user_faqs','admin_plans','admin_discount',
+  'admin_tutorial_list','admin_faqs','admin_user_list',
 ]);
 // همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
@@ -1316,19 +1327,31 @@ const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 // callbackهایی که اسمشون با keyboard_name یکی نیست — مپ صریح
 const CB_TO_KB = {
   // ادمین
-  'admin_free_test':  'admin_free_test_global',
-  'admin_support':    'admin_support_settings',
-  'admin_finance':    'card_settings',
-  'back_to_start':    'user_main',
-  'admin_plans':      'admin_plans',
-  'admin_discount':   'admin_discount',
-  'admin_referral':   'admin_referral',
+  'admin_free_test':       'admin_free_test_global',
+  'admin_support':         'admin_support_settings',
+  'admin_finance':         'card_settings',
+  'back_to_start':         'user_main',
+  'admin_plans':           'admin_plans',
+  'admin_discount':        'admin_discount',
+  'admin_referral':        'admin_referral',
+  'admin_banner_settings': 'admin_banner_settings',
+  'admin_tutorial_list':   'admin_tutorial_list',
+  'admin_faqs':            'admin_faqs',
+  'list_servers':          'admin_servers',
+  'admin_ul_newest_0':     'admin_user_list',
+  'admin_ul_topbuyers_0':  'admin_user_list',
+  'admin_ul_banned_0':     'admin_user_list',
   // کاربر
-  'tutorial':         'user_tutorials',
-  'user_faqs':        'user_faqs',
-  'my_services':      'my_services',
-  'my_tickets':       'my_tickets',
-  'new_ticket':       'support',
+  'tutorial':              'user_tutorials',
+  'user_faqs':             'user_faqs',
+  'my_services':           'my_services',
+  'my_tickets':            'my_tickets',
+  'new_ticket':            'support',
+  'profile':               'profile',
+  'referral':              'referral',
+  'wallet_history':        'wallet_history',
+  'top_up':                'top_up',
+  'cancel_payment':        'user_main',
 };
 
 // تشخیص اینکه یه callback به کدوم keyboard ناوبری می‌کنه (یا null اگه نمی‌کنه)
@@ -1340,14 +1363,18 @@ function resolveNavKb(cb) {
   if (/^(user_server|server)_\d+$/.test(cb))                                  return 'user_plans';
   if (/^user_plan_\d+$/.test(cb))                                              return 'user_proforma';
   if (/^user_pay_\d+$/.test(cb))                                               return 'payment_info';
-  // pay_wallet_N و apply_discount_N → عملیات FSM، بدون ناوبری → null
   if (/^(service_detail|order_detail)_\d+$/.test(cb))                         return 'user_service_detail';
+  if (/^delete_service_\d+$/.test(cb))                                          return 'confirm_delete_service';
   if (/^(ticket_detail|close_ticket)_\d+$/.test(cb))                          return 'ticket';
-  if (/^tutorial_detail_\d+$/.test(cb))                                        return 'user_tutorials';
-  if (/^faq_detail_\d+$/.test(cb))                                             return 'user_faqs';
-  if (/^discount_item_\d+$/.test(cb))                                          return 'admin_discount';
-  if (/^toggle_plan_settings_/.test(cb))                                        return 'admin_plans';
-  if (/^renew_\d+$/.test(cb))                                                   return 'user_plans';
+  if (/^tutorial_detail_\d+$|^tutorial_view_\d+$/.test(cb))                   return 'user_tutorials';
+  if (/^faq_detail_\d+$|^faq_view_\d+$/.test(cb))                             return 'user_faqs';
+  if (/^tutorial_item_\d+$/.test(cb))                                           return 'admin_tutorial_list';
+  if (/^faq_item_\d+$/.test(cb))                                                return 'admin_faqs';
+  if (/^discount_item_\d+$/.test(cb))                                           return 'admin_discount';
+  if (/^toggle_plan_settings_/.test(cb))                                         return 'admin_plans';
+  if (/^renew_\d+$/.test(cb))                                                    return 'user_plans';
+  if (/^admin_ul_/.test(cb))                                                     return 'admin_user_list';
+  if (/^admin_user_\d+$/.test(cb))                                               return 'admin_user_list';
   return null;
 }
 

@@ -1786,6 +1786,36 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
         ("admin_referral", "🔄 فعال/غیرفعال کردن",    "admin_referral_toggle",     2, 0, None),
         ("admin_referral", "🔙 بازگشت",               "admin_panel",               3, 0, None),
     ],
+    # ── صفحات کاربر (بدون منوی پیچیده) ──
+    "profile": [
+        ("profile", "🔙 بازگشت", "user_main", 0, 0, None),
+    ],
+    "referral": [
+        ("referral", "🔙 بازگشت", "back_to_start", 0, 0, None),
+    ],
+    "wallet_history": [
+        ("wallet_history", "🔙 بازگشت", "wallet", 0, 0, None),
+    ],
+    "top_up": [
+        ("top_up", "🔙 بازگشت", "wallet", 0, 0, None),
+    ],
+    # ── صفحات ادمین ──
+    "admin_banner_settings": [
+        ("admin_banner_settings", "🖼 آپلود بنر",     "admin_banner_upload",  0, 0, None),
+        ("admin_banner_settings", "🗑 حذف بنر",       "admin_banner_delete",  1, 0, None),
+        ("admin_banner_settings", "🔙 بازگشت",        "admin_banner_and_text",2, 0, None),
+    ],
+    "admin_tutorial_list": [
+        ("admin_tutorial_list", "➕ آموزش جدید", "tutorial_add",     998, 0, None),
+        ("admin_tutorial_list", "🔙 بازگشت",     "admin_tutorials",  999, 0, None),
+    ],
+    "admin_faqs": [
+        ("admin_faqs", "➕ سوال جدید", "faq_add",          998, 0, None),
+        ("admin_faqs", "🔙 بازگشت",    "admin_tutorials",  999, 0, None),
+    ],
+    "admin_user_list": [
+        ("admin_user_list", "🔙 بازگشت", "admin_users", 999, 0, None),
+    ],
 }
 
 _DEFAULT_KEYBOARD_ACTIONS = [
@@ -2125,4 +2155,64 @@ async def get_discount_codes_as_buttons() -> list[dict]:
     if not result:
         result = [_dyn("admin_discount", "✅ SUMMER20", "discount_item_1", 0)]
     result += await get_all_keyboard_buttons("admin_discount")
+    return result
+
+
+async def get_admin_tutorials_as_buttons() -> list[dict]:
+    """آموزش‌های ادمین — داینامیک برای ادیتور (admin_tutorial_list)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, title, is_active FROM tutorials ORDER BY order_index, id LIMIT 10"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("admin_tutorial_list",
+             f"{'✅' if r['is_active'] else '❌'} {r['title'][:30]}",
+             f"tutorial_item_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("admin_tutorial_list", "✅ راهنمای نصب ویندوز", "tutorial_item_1", 0)]
+    result += await get_all_keyboard_buttons("admin_tutorial_list")
+    return result
+
+
+async def get_admin_faqs_as_buttons() -> list[dict]:
+    """سوالات متداول ادمین — داینامیک برای ادیتور (admin_faqs)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, question, is_active FROM faqs ORDER BY order_index, id LIMIT 10"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("admin_faqs",
+             f"{'✅' if r['is_active'] else '❌'} {r['question'][:30]}",
+             f"faq_item_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("admin_faqs", "✅ چطور وصل شم؟", "faq_item_1", 0)]
+    result += await get_all_keyboard_buttons("admin_faqs")
+    return result
+
+
+async def get_admin_users_as_buttons() -> list[dict]:
+    """لیست کاربران ادمین — داینامیک برای ادیتور (admin_user_list)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT user_id, first_name, username FROM users ORDER BY id DESC LIMIT 8"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("admin_user_list",
+             f"👤 {r['first_name'] or '?'}" + (f" (@{r['username']})" if r['username'] else ""),
+             f"admin_user_{r['user_id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("admin_user_list", "👤 کاربر نمونه", "admin_user_1", 0)]
+    result += await get_all_keyboard_buttons("admin_user_list")
     return result

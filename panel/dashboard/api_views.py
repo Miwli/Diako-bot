@@ -14,6 +14,7 @@ from shared_lib.db import (
     get_plans_as_buttons, get_services_as_buttons, get_tickets_as_buttons,
     get_tutorials_as_buttons, get_faqs_as_buttons,
     get_admin_plans_as_buttons, get_discount_codes_as_buttons,
+    get_admin_tutorials_as_buttons, get_admin_faqs_as_buttons, get_admin_users_as_buttons,
 )
 from .models import Orders
 
@@ -86,14 +87,17 @@ def chart_data(request):
 
 
 _DYNAMIC_LOADERS = {
-    'buy_vpn':      lambda: async_to_sync(get_servers_as_buttons)(),
-    'user_plans':   lambda: async_to_sync(get_plans_as_buttons)(),
-    'my_services':  lambda: async_to_sync(get_services_as_buttons)(),
-    'my_tickets':   lambda: async_to_sync(get_tickets_as_buttons)(),
-    'user_tutorials': lambda: async_to_sync(get_tutorials_as_buttons)(),
-    'user_faqs':    lambda: async_to_sync(get_faqs_as_buttons)(),
-    'admin_plans':  lambda: async_to_sync(get_admin_plans_as_buttons)(),
-    'admin_discount': lambda: async_to_sync(get_discount_codes_as_buttons)(),
+    'buy_vpn':          lambda: async_to_sync(get_servers_as_buttons)(),
+    'user_plans':       lambda: async_to_sync(get_plans_as_buttons)(),
+    'my_services':      lambda: async_to_sync(get_services_as_buttons)(),
+    'my_tickets':       lambda: async_to_sync(get_tickets_as_buttons)(),
+    'user_tutorials':   lambda: async_to_sync(get_tutorials_as_buttons)(),
+    'user_faqs':        lambda: async_to_sync(get_faqs_as_buttons)(),
+    'admin_plans':      lambda: async_to_sync(get_admin_plans_as_buttons)(),
+    'admin_discount':   lambda: async_to_sync(get_discount_codes_as_buttons)(),
+    'admin_tutorial_list': lambda: async_to_sync(get_admin_tutorials_as_buttons)(),
+    'admin_faqs':       lambda: async_to_sync(get_admin_faqs_as_buttons)(),
+    'admin_user_list':  lambda: async_to_sync(get_admin_users_as_buttons)(),
 }
 
 
