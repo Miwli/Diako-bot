@@ -64,6 +64,21 @@
   flex-shrink: 0;
 }
 
+/* ── Keyboard Dropdown ───────────────────────────── */
+.kb-dropdown {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.kb-dropdown:focus { border-color: var(--accent); }
+
 /* ── Stats Bar ───────────────────────────────────── */
 .ke-stats-bar {
   display: flex;
@@ -970,6 +985,7 @@
       <div class="topbar-left">
         <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
         <h1 class="page-title">ادیتور کیبورد</h1>
+        <select id="kb-dropdown" class="kb-dropdown" onchange="switchKeyboard(this.value)"></select>
       </div>
       <div class="topbar-right">
         <button class="ctrl-btn" title="راهنما" onclick="openHelp()">
@@ -1505,6 +1521,8 @@ async function switchKeyboard(name) {
   document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.kb === name);
   });
+  const dropdown = document.getElementById('kb-dropdown');
+  if (dropdown) dropdown.value = name;
 
   try {
     const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
@@ -1514,6 +1532,7 @@ async function switchKeyboard(name) {
       document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.kb === prevKb);
       });
+      if (dropdown) dropdown.value = prevKb;
       return;
     }
     currentKeyboard = name;
@@ -1524,6 +1543,7 @@ async function switchKeyboard(name) {
     document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.kb === prevKb);
     });
+    if (dropdown) dropdown.value = prevKb;
   }
 }
 
@@ -1604,10 +1624,13 @@ function renderCatalog() {
 
 // ── منوی راهنما ────────────────────────────────────
 function renderMenuList() {
-  const list      = document.getElementById('menu-list');
+  const list       = document.getElementById('menu-list');
   const mobileTabs = document.getElementById('ke-mobile-kb-tabs');
+  const dropdown   = document.getElementById('kb-dropdown');
   list.innerHTML = '';
   if (mobileTabs) mobileTabs.innerHTML = '';
+  if (dropdown)   dropdown.innerHTML = '';
+
   AVAILABLE_KEYBOARDS.forEach(kb => {
     const meta     = KB_META[kb];
     const isActive = kb === currentKeyboard;
@@ -1626,6 +1649,14 @@ function renderMenuList() {
       tab.textContent = meta.label;
       tab.addEventListener('click', () => switchKeyboard(kb));
       mobileTabs.appendChild(tab);
+    }
+
+    if (dropdown) {
+      const opt = document.createElement('option');
+      opt.value = kb;
+      opt.textContent = meta.label;
+      opt.selected = isActive;
+      dropdown.appendChild(opt);
     }
   });
 }
