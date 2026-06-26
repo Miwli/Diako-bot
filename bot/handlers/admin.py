@@ -488,12 +488,16 @@ def register_admin_handlers(dp):
 
         # پیام اول: پیش‌نمایش واقعی با اموجی پرمیوم
         await message.answer(f"✅ پیش‌نمایش:\n\n{result}", parse_mode="HTML")
-        # پیام دوم: متن خام برای کپی (escape می‌کنیم تا تگ‌ها به صورت متن نمایش داده شن)
+        # پیام دوم: متن خام برای کپی
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
-        copy_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📋 کپی متن", copy_text=CopyTextButton(text=result))],
-        ])
-        await message.answer(f"<code>{html_lib.escape(result)}</code>", parse_mode="HTML", reply_markup=copy_kb)
+        code_msg = f"<code>{html_lib.escape(result)}</code>"
+        if len(result) <= 256:
+            copy_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="📋 کپی متن", copy_text=CopyTextButton(text=result))],
+            ])
+            await message.answer(code_msg, parse_mode="HTML", reply_markup=copy_kb)
+        else:
+            await message.answer(code_msg, parse_mode="HTML")
         await message.answer("⬆️", reply_markup=admin_text_settings_menu())
 
     @dp.callback_query(F.data == "back_to_start")
