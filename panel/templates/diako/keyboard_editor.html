@@ -1337,7 +1337,7 @@ function resolveNavKb(cb) {
   if (CB_TO_KB[cb]) return CB_TO_KB[cb];
   if (AVAILABLE_KEYBOARDS.includes(cb)) return cb;
   // الگوهای داینامیک
-  if (/^user_server_\d+$/.test(cb))                                           return 'user_plans';
+  if (/^(user_server|server)_\d+$/.test(cb))                                  return 'user_plans';
   if (/^(user_plan|pay_wallet|user_pay|apply_discount)_\d+$/.test(cb))        return 'user_proforma';
   if (/^(service_detail|order_detail)_\d+$/.test(cb))                         return 'user_service_detail';
   if (/^(ticket_detail|close_ticket)_\d+$/.test(cb))                          return 'ticket';
