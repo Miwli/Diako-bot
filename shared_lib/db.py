@@ -256,6 +256,13 @@ async def init_db():
             await db.commit()
         except Exception:
             pass
+    # migration: ستون grp برای دسته‌بندی اکشن‌ها در کاتالوگ
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute("ALTER TABLE keyboard_actions ADD COLUMN grp TEXT DEFAULT 'user'")
+            await db.commit()
+        except Exception:
+            pass
     await _seed_keyboard_buttons()
     await init_texts_cache()
     await init_keyboards_cache()
@@ -1711,20 +1718,67 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
 }
 
 _DEFAULT_KEYBOARD_ACTIONS = [
-    ("buy_vpn",         "🔐 خرید اشتراک",       "buy_vpn"),
-    ("wallet",          "💎 کیف پول",           "wallet"),
-    ("free_test",       "🎁 تست رایگان",        "free_test"),
-    ("my_services",     "📡 سرویس‌های من",      "my_services"),
-    ("support",         "🎧 پشتیبانی",          "support"),
-    ("profile",         "👤 پروفایل",           "profile"),
-    ("tutorial",        "📚 آموزش و راهنما",    "tutorial"),
-    ("referral",        "💰 دعوت دوستان",       "referral"),
-    ("language",        "🌐 تغییر زبان",        "language"),
-    ("top_up",          "💳 شارژ حساب",         "top_up"),
-    ("wallet_history",  "📜 تاریخچه تراکنش‌ها", "wallet_history"),
-    ("new_ticket",      "📨 تیکت جدید",         "new_ticket"),
-    ("my_tickets",      "📋 تیکت‌های من",       "my_tickets"),
-    ("user_main",       "🏠 منوی اصلی",         "user_main"),
+    # (action_name, label, callback_data, grp)
+    # ── کاربر ─────────────────────────────────────────
+    ("buy_vpn",              "🔐 خرید اشتراک",               "buy_vpn",              "user"),
+    ("wallet",               "💎 کیف پول",                   "wallet",               "user"),
+    ("free_test",            "🎁 تست رایگان",                "free_test",            "user"),
+    ("my_services",          "📡 سرویس‌های من",              "my_services",          "user"),
+    ("support",              "🎧 پشتیبانی",                  "support",              "user"),
+    ("profile",              "👤 پروفایل",                   "profile",              "user"),
+    ("tutorial",             "📚 آموزش و راهنما",            "tutorial",             "user"),
+    ("referral",             "💰 دعوت دوستان",               "referral",             "user"),
+    ("language",             "🌐 تغییر زبان",                "language",             "user"),
+    ("top_up",               "💳 شارژ حساب",                 "top_up",               "user"),
+    ("wallet_history",       "📜 تاریخچه تراکنش‌ها",         "wallet_history",       "user"),
+    ("new_ticket",           "📨 تیکت جدید",                 "new_ticket",           "user"),
+    ("my_tickets",           "📋 تیکت‌های من",               "my_tickets",           "user"),
+    ("user_main",            "🏠 منوی اصلی",                 "user_main",            "user"),
+    ("back_to_start",        "🏠 بازگشت به شروع",            "back_to_start",        "user"),
+    ("user_faqs",            "❓ سوالات متداول",              "user_faqs",            "user"),
+    ("cancel",               "❌ لغو",                       "cancel",               "user"),
+    ("cancel_payment",       "❌ انصراف از پرداخت",          "cancel_payment",       "user"),
+    # ── ادمین ─────────────────────────────────────────
+    ("admin_panel",                  "⚙️ پنل ادمین",                     "admin_panel",                  "admin"),
+    ("admin_general",                "⚙️ تنظیمات عمومی",                 "admin_general",                "admin"),
+    ("admin_banner_and_text",        "🎨 ظاهر ربات",                     "admin_banner_and_text",        "admin"),
+    ("admin_banner_settings",        "🖼 تنظیمات بنر",                   "admin_banner_settings",        "admin"),
+    ("admin_text_settings",          "✏️ تنظیمات متن",                   "admin_text_settings",          "admin"),
+    ("admin_banner_caption",         "✏️ ویرایش متن خوش‌آمدگویی",       "admin_banner_caption",         "admin"),
+    ("admin_build_text",             "🛠 ساخت متن",                      "admin_build_text",             "admin"),
+    ("admin_servers",                "🖥 مدیریت سرورها",                 "admin_servers",                "admin"),
+    ("add_server",                   "➕ سرور جدید",                     "add_server",                   "admin"),
+    ("list_servers",                 "📋 لیست سرورها",                   "list_servers",                 "admin"),
+    ("admin_plans",                  "📦 مدیریت پلن‌ها",                 "admin_plans",                  "admin"),
+    ("admin_finance",                "💰 مدیریت مالی",                   "admin_finance",                "admin"),
+    ("set_card_number",              "💳 تغییر شماره کارت",              "set_card_number",              "admin"),
+    ("set_card_owner",               "👤 تغییر نام صاحب کارت",          "set_card_owner",               "admin"),
+    ("admin_users",                  "👥 مدیریت کاربران",               "admin_users",                  "admin"),
+    ("admin_users_search",           "🔍 جستجوی کاربر",                 "admin_users_search",           "admin"),
+    ("admin_ul_newest_0",            "🕐 جدیدترین کاربران",             "admin_ul_newest_0",            "admin"),
+    ("admin_ul_topbuyers_0",         "🏆 بیشترین خرید",                  "admin_ul_topbuyers_0",         "admin"),
+    ("admin_ul_banned_0",            "🚫 کاربران بن‌شده",               "admin_ul_banned_0",            "admin"),
+    ("admin_discount",               "🎟 کدهای تخفیف",                  "admin_discount",               "admin"),
+    ("discount_type_percent",        "٪ درصدی",                          "discount_type_percent",        "admin"),
+    ("discount_type_fixed",          "💵 مبلغ ثابت",                     "discount_type_fixed",          "admin"),
+    ("discount_expiry_none",         "♾ بدون تاریخ انقضا",              "discount_expiry_none",         "admin"),
+    ("admin_free_test",              "🎁 تنظیمات تست رایگان",            "admin_free_test",              "admin"),
+    ("admin_free_test_global_dur",   "✏️ ویرایش مدت تست",               "admin_free_test_global_duration","admin"),
+    ("admin_free_test_global_trf",   "✏️ ویرایش حجم تست",               "admin_free_test_global_traffic","admin"),
+    ("admin_free_test_max_uses",     "🔢 حداکثر تعداد تست",             "admin_free_test_max_uses",     "admin"),
+    ("admin_free_test_apply_all",    "📡 اعمال روی همه سرورها",         "admin_free_test_apply_all",    "admin"),
+    ("admin_free_test_reset_all",    "🔄 ریست استفاده‌کنندگان تست",     "admin_free_test_reset_all",    "admin"),
+    ("admin_referral",               "🤝 تنظیمات دعوت دوستان",          "admin_referral",               "admin"),
+    ("admin_support",                "🎧 تنظیمات پشتیبانی",             "admin_support",                "admin"),
+    ("admin_support_set_group",      "🆔 تنظیم آیدی گروه",             "admin_support_set_group",      "admin"),
+    ("admin_support_edit_msg",       "✏️ ویرایش متن تیکت",              "admin_support_edit_msg",       "admin"),
+    ("admin_tutorials",              "📚 مدیریت آموزش‌ها",              "admin_tutorials",              "admin"),
+    ("admin_tutorial_list",          "📖 لیست آموزش‌ها",                "admin_tutorial_list",          "admin"),
+    ("admin_faqs",                   "📋 لیست سوالات متداول",            "admin_faqs",                   "admin"),
+    ("admin_broadcast",              "📢 پیام همگانی",                   "admin_broadcast",              "admin"),
+    ("broadcast_target_all",         "📢 ارسال به همه",                  "broadcast_target_all",         "admin"),
+    ("broadcast_target_active",      "✅ ارسال به کاربران فعال",        "broadcast_target_active",      "admin"),
+    ("admin_stats",                  "📊 آمار و گزارش",                 "admin_stats",                  "admin"),
 ]
 
 
@@ -1744,7 +1798,8 @@ async def _seed_keyboard_buttons():
                 )
         for action in _DEFAULT_KEYBOARD_ACTIONS:
             await db.execute(
-                "INSERT OR REPLACE INTO keyboard_actions (action_name, label, callback_data) VALUES (?, ?, ?)",
+                """INSERT OR REPLACE INTO keyboard_actions
+                   (action_name, label, callback_data, grp) VALUES (?, ?, ?, ?)""",
                 action
             )
         await db.commit()

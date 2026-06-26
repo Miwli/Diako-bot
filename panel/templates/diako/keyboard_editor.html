@@ -1266,9 +1266,9 @@ const DYNAMIC_KEYBOARDS   = new Set(['buy_vpn']);
 // همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
-// طبقه‌بندی کاتالوگ (برای تب‌های ممبر/ادمین)
-const ADMIN_CBS  = new Set([]);
-const MEMBER_CBS = new Set(CATALOG.map(a => a.callback_data));
+// طبقه‌بندی کاتالوگ بر اساس grp
+const ADMIN_CBS  = new Set(CATALOG.filter(a => a.grp === 'admin').map(a => a.callback_data));
+const MEMBER_CBS = new Set(CATALOG.filter(a => a.grp === 'user').map(a => a.callback_data));
 
 // ── state ──────────────────────────────────────────
 let boardRows = [];
