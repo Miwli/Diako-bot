@@ -64,6 +64,19 @@
   flex-shrink: 0;
 }
 
+/* ── Menu Group Header ───────────────────────────── */
+.ke-menu-group-hdr {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px 6px 3px;
+  margin-top: 2px;
+  opacity: .7;
+}
+.ke-menu-group-hdr:first-child { padding-top: 2px; }
+
 /* ── Keyboard Dropdown ───────────────────────────── */
 .kb-dropdown {
   background: var(--card-bg);
@@ -1203,13 +1216,54 @@ const BOT_TEXTS       = {{ bot_texts_json|safe }};
 
 // ── متادیتای هر منو ────────────────────────────────
 const KB_META = {
-  user_main: { label: 'منوی اصلی کاربر', icon: 'ti-home',    text_key: 'start_welcome_default', fallback: 'سلام 👋 خوش اومدی' },
-  wallet:    { label: 'کیف پول',          icon: 'ti-wallet',  text_key: 'wallet_menu',           fallback: '💎 کیف پول شما:' },
-  support:   { label: 'پشتیبانی',         icon: 'ti-headset', text_key: 'support_menu',          fallback: '🎧 پشتیبانی دیاکو:' },
-  buy_vpn:   { label: 'سرورها',           icon: 'ti-server',  text_key: 'buy_select_server',     fallback: '🔐 سرور مورد نظر را انتخاب کنید:' },
+  // کاربر
+  user_main:              { label: 'منوی اصلی کاربر',      icon: 'ti-home',          text_key: 'start_welcome_default',   fallback: 'سلام 👋 خوش اومدی' },
+  wallet:                 { label: 'کیف پول',               icon: 'ti-wallet',        text_key: 'wallet_menu',             fallback: '💎 کیف پول شما:' },
+  support:                { label: 'پشتیبانی',              icon: 'ti-headset',       text_key: 'support_menu',            fallback: '🎧 پشتیبانی دیاکو:' },
+  free_test_confirm:      { label: 'تأیید تست رایگان',      icon: 'ti-gift',          text_key: 'free_test_confirm_text',  fallback: '🎁 اطلاعات تست رایگان:' },
+  payment_info:           { label: 'اطلاعات پرداخت',        icon: 'ti-credit-card',   text_key: 'payment_card_info',       fallback: '💳 اطلاعات پرداخت:' },
+  subscription_approved:  { label: 'اشتراک تأیید شد',       icon: 'ti-circle-check',  text_key: 'order_approved',          fallback: '✅ اشتراک فعال شد!' },
+  ticket:                 { label: 'تیکت پشتیبانی',         icon: 'ti-ticket',        text_key: null,                      fallback: '✅ پیامت دریافت شد.' },
+  back_to_tutorials:      { label: 'بازگشت آموزش‌ها',       icon: 'ti-book',          text_key: 'tutorial_has_list',       fallback: '📚 آموزش‌ها:' },
+  back_to_faqs:           { label: 'بازگشت سوالات متداول',  icon: 'ti-help-circle',   text_key: 'faq_has_list',            fallback: '❓ سوالات متداول:' },
+  cancel:                 { label: 'لغو عملیات',             icon: 'ti-x',             text_key: null,                      fallback: '✏️ اطلاعات را وارد کنید:' },
+  // داینامیک
+  buy_vpn:                { label: 'انتخاب سرور',           icon: 'ti-server',        text_key: 'buy_select_server',       fallback: '🔐 سرور مورد نظر را انتخاب کنید:' },
+  // ادمین
+  admin_panel:            { label: 'پنل ادمین',             icon: 'ti-shield',        text_key: 'admin_panel_title',       fallback: '⚙️ پنل ادمین' },
+  admin_general:          { label: 'تنظیمات عمومی',         icon: 'ti-settings',      text_key: 'admin_general_title',     fallback: '⚙️ تنظیمات عمومی' },
+  admin_banner_and_text:  { label: 'ظاهر ربات',             icon: 'ti-palette',       text_key: 'admin_banner_and_text_title', fallback: '🎨 ظاهر ربات' },
+  admin_text_settings:    { label: 'تنظیمات متن',           icon: 'ti-file-text',     text_key: 'admin_text_settings_title', fallback: '✏️ تنظیمات متن' },
+  admin_servers:          { label: 'مدیریت سرورها',         icon: 'ti-server-2',      text_key: 'admin_servers_title',     fallback: '🖥 مدیریت سرورها' },
+  admin_free_test_global: { label: 'تست رایگان عمومی',      icon: 'ti-gift',          text_key: null,                      fallback: '🎁 تنظیمات تست رایگان' },
+  admin_support_settings: { label: 'تنظیمات پشتیبانی',     icon: 'ti-headset',       text_key: null,                      fallback: '🎧 تنظیمات پشتیبانی' },
+  admin_tutorials:        { label: 'مدیریت آموزش‌ها',       icon: 'ti-book',          text_key: 'admin_tutorials_title',   fallback: '📚 مدیریت آموزش‌ها' },
+  admin_stats:            { label: 'آمار و گزارش',          icon: 'ti-chart-bar',     text_key: null,                      fallback: '📊 آمار دیاکو' },
+  admin_broadcast:        { label: 'پیام همگانی',           icon: 'ti-send',          text_key: 'admin_broadcast_title',   fallback: '📢 پیام همگانی' },
+  admin_users:            { label: 'مدیریت کاربران',        icon: 'ti-users',         text_key: null,                      fallback: '👥 مدیریت کاربران' },
+  card_settings:          { label: 'تنظیمات کارت',          icon: 'ti-credit-card',   text_key: null,                      fallback: '💳 تنظیمات کارت‌به‌کارت' },
+  // زمینه‌ای
+  after_order:            { label: 'بعد از سفارش (ادمین)',  icon: 'ti-package',       text_key: null,                      fallback: '📦 سفارش پردازش شد' },
+  admin_order:            { label: 'تأیید سفارش',           icon: 'ti-circle-check',  text_key: null,                      fallback: '📸 رسید پرداخت کاربر' },
+  admin_topup:            { label: 'تأیید شارژ',            icon: 'ti-wallet',        text_key: null,                      fallback: '📸 رسید شارژ کاربر' },
+  discount_type:          { label: 'نوع تخفیف',             icon: 'ti-discount',      text_key: null,                      fallback: '🎟 نوع تخفیف را انتخاب کنید:' },
+  discount_expiry:        { label: 'تاریخ انقضا تخفیف',    icon: 'ti-calendar',      text_key: null,                      fallback: '📅 تاریخ انقضا را وارد کنید:' },
+  confirm_delete_server:  { label: 'تأیید حذف سرور',        icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (سرور)' },
+  confirm_delete_plan:    { label: 'تأیید حذف پلن',         icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (پلن)' },
+  confirm_delete_service: { label: 'تأیید حذف سرویس',       icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (سرویس)' },
 };
 
-const DYNAMIC_KEYBOARDS  = new Set(['buy_vpn']);
+// ── گروه‌بندی کیبوردها در ستون چپ ──────────────────
+const KB_GROUPS = [
+  { label: 'کاربر',    keys: ['user_main','wallet','support','free_test_confirm','payment_info','subscription_approved','ticket','back_to_tutorials','back_to_faqs','cancel'] },
+  { label: 'داینامیک', keys: ['buy_vpn'] },
+  { label: 'ادمین',    keys: ['admin_panel','admin_general','admin_banner_and_text','admin_text_settings','admin_servers','admin_free_test_global','admin_support_settings','admin_tutorials','admin_stats','admin_broadcast','admin_users','card_settings'] },
+  { label: 'زمینه‌ای', keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan','confirm_delete_service'] },
+];
+
+// کیبوردهایی که از بانک اطلاعاتی سرورها پر می‌شن
+const DYNAMIC_KEYBOARDS   = new Set(['buy_vpn']);
+// همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
 // طبقه‌بندی کاتالوگ (برای تب‌های ممبر/ادمین)
@@ -1631,33 +1685,53 @@ function renderMenuList() {
   if (mobileTabs) mobileTabs.innerHTML = '';
   if (dropdown)   dropdown.innerHTML = '';
 
-  AVAILABLE_KEYBOARDS.forEach(kb => {
-    const meta     = KB_META[kb];
-    const isActive = kb === currentKeyboard;
+  KB_GROUPS.forEach((group, gi) => {
+    // عنوان گروه در ستون چپ
+    const hdr = document.createElement('div');
+    hdr.className = 'ke-menu-group-hdr';
+    hdr.textContent = group.label;
+    list.appendChild(hdr);
 
-    const item = document.createElement('div');
-    item.className = 'ke-menu-item' + (isActive ? ' active' : '');
-    item.dataset.kb = kb;
-    item.innerHTML = `<i class="ti ${meta.icon}"></i><span>${esc(meta.label)}</span>`;
-    item.addEventListener('click', () => switchKeyboard(kb));
-    list.appendChild(item);
-
-    if (mobileTabs) {
-      const tab = document.createElement('button');
-      tab.className = 'ke-mobile-kb-tab' + (isActive ? ' active' : '');
-      tab.dataset.kb = kb;
-      tab.textContent = meta.label;
-      tab.addEventListener('click', () => switchKeyboard(kb));
-      mobileTabs.appendChild(tab);
-    }
-
+    // آپشن‌گروه در dropdown
+    let optGroup = null;
     if (dropdown) {
-      const opt = document.createElement('option');
-      opt.value = kb;
-      opt.textContent = meta.label;
-      opt.selected = isActive;
-      dropdown.appendChild(opt);
+      optGroup = document.createElement('optgroup');
+      optGroup.label = group.label;
+      dropdown.appendChild(optGroup);
     }
+
+    group.keys.forEach(kb => {
+      const meta     = KB_META[kb];
+      if (!meta) return;
+      const isActive = kb === currentKeyboard;
+
+      // آیتم ستون چپ
+      const item = document.createElement('div');
+      item.className = 'ke-menu-item' + (isActive ? ' active' : '');
+      item.dataset.kb = kb;
+      item.innerHTML = `<i class="ti ${meta.icon}"></i><span>${esc(meta.label)}</span>`;
+      item.addEventListener('click', () => switchKeyboard(kb));
+      list.appendChild(item);
+
+      // تب موبایل فقط برای کیبوردهای کاربر
+      if (mobileTabs && gi === 0) {
+        const tab = document.createElement('button');
+        tab.className = 'ke-mobile-kb-tab' + (isActive ? ' active' : '');
+        tab.dataset.kb = kb;
+        tab.textContent = meta.label;
+        tab.addEventListener('click', () => switchKeyboard(kb));
+        mobileTabs.appendChild(tab);
+      }
+
+      // option در dropdown
+      if (optGroup) {
+        const opt = document.createElement('option');
+        opt.value = kb;
+        opt.textContent = meta.label;
+        opt.selected = isActive;
+        optGroup.appendChild(opt);
+      }
+    });
   });
 }
 
