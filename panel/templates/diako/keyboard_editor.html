@@ -1338,7 +1338,9 @@ function resolveNavKb(cb) {
   if (AVAILABLE_KEYBOARDS.includes(cb)) return cb;
   // الگوهای داینامیک
   if (/^(user_server|server)_\d+$/.test(cb))                                  return 'user_plans';
-  if (/^(user_plan|pay_wallet|user_pay|apply_discount)_\d+$/.test(cb))        return 'user_proforma';
+  if (/^user_plan_\d+$/.test(cb))                                              return 'user_proforma';
+  if (/^user_pay_\d+$/.test(cb))                                               return 'payment_info';
+  // pay_wallet_N و apply_discount_N → عملیات FSM، بدون ناوبری → null
   if (/^(service_detail|order_detail)_\d+$/.test(cb))                         return 'user_service_detail';
   if (/^(ticket_detail|close_ticket)_\d+$/.test(cb))                          return 'ticket';
   if (/^tutorial_detail_\d+$/.test(cb))                                        return 'user_tutorials';
