@@ -96,10 +96,23 @@ def _service_text(order, live=None) -> str:
     return "\n".join(parts)
 
 async def _send_main_menu(target, user: types.User):
+    from bot import logger
     menu = await _get_main_menu(user.id)
     name = user.first_name or "کاربر"
     caption = get_text("start_welcome_default", name=name)
     banner = await get_setting("banner_file_id")
+
+    async def _send(msg, is_cb=False):
+        try:
+            if banner:
+                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
+            else:
+                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
+        except TelegramBadRequest as e:
+            logger.error(f"خطا در ارسال منوی اصلی (HTML): {e} — متن: {caption[:80]!r}")
+            import re as _re
+            plain = _re.sub(r'<[^>]+>', '', caption)
+            await msg.answer(plain, reply_markup=menu)
 
     try:
         if isinstance(target, types.CallbackQuery):
@@ -107,19 +120,11 @@ async def _send_main_menu(target, user: types.User):
                 await target.message.delete()
             except Exception:
                 pass
-            msg = target.message
-            if banner:
-                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
-            else:
-                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
+            await _send(target.message)
             await target.answer()
         else:
-            if banner:
-                await target.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
-            else:
-                await target.answer(caption, reply_markup=menu, parse_mode="HTML")
+            await _send(target)
     except TelegramForbiddenError:
-        from bot import logger
         logger.warning(f"کاربر {user.id} بات را بلاک کرده — ارسال منو لغو شد")
 
 def register_user_handlers(dp):
