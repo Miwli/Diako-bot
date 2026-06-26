@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from shared_lib.db import init_db, reload_texts_cache
+from shared_lib.db import init_db, reload_texts_cache, reload_keyboards_cache
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
@@ -54,6 +54,7 @@ async def _texts_refresh_loop():
     while True:
         await asyncio.sleep(60)
         await reload_texts_cache()
+        await reload_keyboards_cache()
 
 
 async def main():

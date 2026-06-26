@@ -249,8 +249,16 @@ async def init_db():
             )
         """)
         await db.commit()
+    # migration: ستون callback_template اگه وجود نداشت اضافه می‌شه
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute("ALTER TABLE keyboard_buttons ADD COLUMN callback_template TEXT")
+            await db.commit()
+        except Exception:
+            pass
     await _seed_keyboard_buttons()
     await init_texts_cache()
+    await init_keyboards_cache()
 
 # ─── توابع تیکت ──────────────────────────────
 
@@ -701,6 +709,37 @@ async def reload_texts_cache() -> None:
         cur = await db.execute("SELECT key, value FROM bot_texts")
         rows = await cur.fetchall()
         _texts_cache = {row["key"]: row["value"] for row in rows}
+
+
+# ─── کش کیبوردها (در حافظه) ─────────────────────
+
+_keyboards_cache: dict[str, list[dict]] = {}
+
+
+def get_keyboard_rows(name: str) -> list[dict]:
+    """برگرداندن دکمه‌های یک کیبورد از کش — sync، بدون await"""
+    return _keyboards_cache.get(name, [])
+
+
+async def init_keyboards_cache() -> None:
+    """همه کیبوردهای فعال رو از DB می‌خونه و در کش نگه می‌داره"""
+    global _keyboards_cache
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM keyboard_buttons WHERE is_active = 1 ORDER BY keyboard_name, row_index, col_index"
+        )
+        rows = await cur.fetchall()
+        cache: dict[str, list[dict]] = {}
+        for row in rows:
+            cache.setdefault(row["keyboard_name"], []).append(dict(row))
+        _keyboards_cache = cache
+
+
+async def reload_keyboards_cache() -> None:
+    """بارگذاری مجدد کش کیبوردها — برای loop تازه‌سازی بات"""
+    await init_keyboards_cache()
+
 
 # ─── توابع سفارش‌ها ────────────────────────────
 
@@ -1376,27 +1415,160 @@ async def update_order_discount(order_id: int, discount_code: str, discount_amou
 
 # ─── کیبورد ادیتور ───────────────────────────
 
-_DEFAULT_KEYBOARDS = {
+_DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
+    # ── کاربر ──────────────────────────────────────────────────────────────
     "user_main": [
-        ("user_main", "🔐 خرید اشتراک",      "buy_vpn",          0, 0),
-        ("user_main", "💎 کیف پول",           "wallet",           1, 0),
-        ("user_main", "🎁 تست رایگان",        "free_test",        1, 1),
-        ("user_main", "📡 سرویس‌های من",      "my_services",      1, 2),
-        ("user_main", "🎧 پشتیبانی",          "support",          2, 0),
-        ("user_main", "👤 پروفایل",           "profile",          2, 1),
-        ("user_main", "📚 آموزش و راهنما",    "tutorial",         2, 2),
-        ("user_main", "💰 دعوت دوستان",       "referral",         3, 0),
-        ("user_main", "🌐 تغییر زبان",        "language",         3, 1),
+        ("user_main", "🔐 خرید اشتراک",      "buy_vpn",          0, 0, None),
+        ("user_main", "💎 کیف پول",           "wallet",           1, 0, None),
+        ("user_main", "🎁 تست رایگان",        "free_test",        1, 1, None),
+        ("user_main", "📡 سرویس‌های من",      "my_services",      1, 2, None),
+        ("user_main", "🎧 پشتیبانی",          "support",          2, 0, None),
+        ("user_main", "👤 پروفایل",           "profile",          2, 1, None),
+        ("user_main", "📚 آموزش و راهنما",    "tutorial",         2, 2, None),
+        ("user_main", "💰 دعوت دوستان",       "referral",         3, 0, None),
+        ("user_main", "🌐 تغییر زبان",        "language",         3, 1, None),
     ],
     "wallet": [
-        ("wallet", "💳 شارژ حساب",            "top_up",           0, 0),
-        ("wallet", "📜 تاریخچه تراکنش‌ها",    "wallet_history",   1, 0),
-        ("wallet", "🔙 بازگشت",               "user_main",        2, 0),
+        ("wallet", "💳 شارژ حساب",            "top_up",           0, 0, None),
+        ("wallet", "📜 تاریخچه تراکنش‌ها",    "wallet_history",   1, 0, None),
+        ("wallet", "🔙 بازگشت",               "user_main",        2, 0, None),
     ],
     "support": [
-        ("support", "📨 تیکت جدید",           "new_ticket",       0, 0),
-        ("support", "📋 تیکت‌های من",         "my_tickets",       1, 0),
-        ("support", "🔙 بازگشت",              "user_main",        2, 0),
+        ("support", "📨 تیکت جدید",           "new_ticket",       0, 0, None),
+        ("support", "📋 تیکت‌های من",         "my_tickets",       1, 0, None),
+        ("support", "🔙 بازگشت",              "user_main",        2, 0, None),
+    ],
+    "free_test_confirm": [
+        ("free_test_confirm", "✅ دریافت تست رایگان", "_",  0, 0, "free_test_confirm_{id}"),
+        ("free_test_confirm", "🔙 بازگشت",             "user_main",              1, 0, None),
+    ],
+    "ticket": [
+        ("ticket", "❌ بستن تیکت",      "_",          0, 0, "close_ticket_{id}"),
+        ("ticket", "🔙 بازگشت به منو", "user_main",   1, 0, None),
+    ],
+    "cancel": [
+        ("cancel", "❌ لغو", "cancel", 0, 0, None),
+    ],
+    "payment_info": [
+        ("payment_info", "❌ انصراف", "cancel_payment", 0, 0, None),
+    ],
+    "subscription_approved": [
+        ("subscription_approved", "🗂 سرویس‌های من", "my_services", 0, 0, None),
+    ],
+    "back_to_tutorials": [
+        ("back_to_tutorials", "🔙 بازگشت", "tutorial", 0, 0, None),
+    ],
+    "back_to_faqs": [
+        ("back_to_faqs", "🔙 بازگشت", "user_faqs", 0, 0, None),
+    ],
+    # ── ادمین — منوها ──────────────────────────────────────────────────────
+    "admin_panel": [
+        ("admin_panel", "🖥 مدیریت سرورها",          "admin_servers",    0,  0, None),
+        ("admin_panel", "📦 پلن‌ها",                  "admin_plans",      1,  0, None),
+        ("admin_panel", "💰 مدیریت مالی",            "admin_finance",    2,  0, None),
+        ("admin_panel", "👥 مدیریت کاربران",         "admin_users",      3,  0, None),
+        ("admin_panel", "🎟 کدهای تخفیف",            "admin_discount",   4,  0, None),
+        ("admin_panel", "🎁 تنظیمات تست رایگان",     "admin_free_test",  5,  0, None),
+        ("admin_panel", "🤝 تنظیمات دعوت دوستان",   "admin_referral",   6,  0, None),
+        ("admin_panel", "🎧 تنظیمات پشتیبانی",       "admin_support",    7,  0, None),
+        ("admin_panel", "📚 مدیریت آموزش‌ها",        "admin_tutorials",  8,  0, None),
+        ("admin_panel", "📢 پیام همگانی",             "admin_broadcast",  9,  0, None),
+        ("admin_panel", "📊 آمار و گزارش",           "admin_stats",      10, 0, None),
+        ("admin_panel", "⚙️ تنظیمات عمومی",         "admin_general",    11, 0, None),
+        ("admin_panel", "🔙 بازگشت",                 "back_to_start",    12, 0, None),
+    ],
+    "admin_general": [
+        ("admin_general", "🎨 ظاهر ربات", "admin_banner_and_text", 0, 0, None),
+        ("admin_general", "🔙 بازگشت",    "admin_panel",           1, 0, None),
+    ],
+    "admin_banner_and_text": [
+        ("admin_banner_and_text", "🖼 تنظیمات بنر",  "admin_banner_settings", 0, 0, None),
+        ("admin_banner_and_text", "✏️ تنظیمات متن",  "admin_text_settings",   1, 0, None),
+        ("admin_banner_and_text", "🔙 بازگشت",        "admin_general",          2, 0, None),
+    ],
+    "admin_text_settings": [
+        ("admin_text_settings", "✏️ ویرایش متن",  "admin_banner_caption",  0, 0, None),
+        ("admin_text_settings", "🛠 ساخت متن",    "admin_build_text",      1, 0, None),
+        ("admin_text_settings", "🔙 بازگشت",       "admin_banner_and_text", 2, 0, None),
+    ],
+    "admin_servers": [
+        ("admin_servers", "➕ سرور جدید",   "add_server",   0, 0, None),
+        ("admin_servers", "📋 لیست سرورها", "list_servers", 1, 0, None),
+        ("admin_servers", "🔙 بازگشت",      "admin_panel",  2, 0, None),
+    ],
+    "admin_free_test_global": [
+        ("admin_free_test_global", "✏️ ویرایش مدت",           "admin_free_test_global_duration", 0, 0, None),
+        ("admin_free_test_global", "✏️ ویرایش حجم",           "admin_free_test_global_traffic",  0, 1, None),
+        ("admin_free_test_global", "🔢 تعداد مجاز دریافت",    "admin_free_test_max_uses",         1, 0, None),
+        ("admin_free_test_global", "📡 اعمال روی همه سرورها", "admin_free_test_apply_all",        2, 0, None),
+        ("admin_free_test_global", "🔄 ریست همه کاربران",     "admin_free_test_reset_all",        3, 0, None),
+        ("admin_free_test_global", "🔙 بازگشت",               "admin_free_test",                  4, 0, None),
+    ],
+    "admin_support_settings": [
+        ("admin_support_settings", "🆔 تنظیم آیدی گروه",   "admin_support_set_group", 0, 0, None),
+        ("admin_support_settings", "✏️ ویرایش متن تیکت",   "admin_support_edit_msg",  1, 0, None),
+        ("admin_support_settings", "🔙 بازگشت",             "admin_panel",             2, 0, None),
+    ],
+    "admin_tutorials": [
+        ("admin_tutorials", "📖 آموزش‌ها",       "admin_tutorial_list", 0, 0, None),
+        ("admin_tutorials", "📋 سوالات متداول",  "admin_faqs",          1, 0, None),
+        ("admin_tutorials", "🔙 بازگشت",         "admin_panel",         2, 0, None),
+    ],
+    "admin_stats": [
+        ("admin_stats", "🔄 بروزرسانی", "admin_stats", 0, 0, None),
+        ("admin_stats", "🔙 بازگشت",    "admin_panel", 1, 0, None),
+    ],
+    "admin_broadcast": [
+        ("admin_broadcast", "📢 همه کاربران",           "broadcast_target_all",    0, 0, None),
+        ("admin_broadcast", "✅ کاربران با سرویس فعال", "broadcast_target_active", 1, 0, None),
+        ("admin_broadcast", "🔙 بازگشت",                "admin_panel",             2, 0, None),
+    ],
+    "admin_users": [
+        ("admin_users", "🔍 جستجوی کاربر",   "admin_users_search",   0, 0, None),
+        ("admin_users", "🕐 جدیدترین‌ها",     "admin_ul_newest_0",    1, 0, None),
+        ("admin_users", "🏆 بیشترین خرید",    "admin_ul_topbuyers_0", 2, 0, None),
+        ("admin_users", "🚫 کاربران بن‌شده",  "admin_ul_banned_0",    3, 0, None),
+        ("admin_users", "🔙 بازگشت",          "admin_panel",          4, 0, None),
+    ],
+    "card_settings": [
+        ("card_settings", "💳 تغییر شماره کارت",    "set_card_number", 0, 0, None),
+        ("card_settings", "👤 تغییر نام صاحب کارت", "set_card_owner",  1, 0, None),
+        ("card_settings", "🔙 بازگشت",              "admin_finance",   2, 0, None),
+    ],
+    "after_order": [
+        ("after_order", "⚙️ پنل ادمین", "admin_panel",   0, 0, None),
+        ("after_order", "🏠 منوی اصلی", "back_to_start", 0, 1, None),
+    ],
+    "discount_type": [
+        ("discount_type", "٪ درصدی",     "discount_type_percent", 0, 0, None),
+        ("discount_type", "💵 مبلغ ثابت", "discount_type_fixed",   1, 0, None),
+        ("discount_type", "🔙 انصراف",    "admin_discount",         2, 0, None),
+    ],
+    "discount_expiry": [
+        ("discount_expiry", "♾ بدون تاریخ انقضا", "discount_expiry_none", 0, 0, None),
+        ("discount_expiry", "🔙 انصراف",           "admin_discount",        1, 0, None),
+    ],
+    # ── Action keyboards — با callback_template ────────────────────────────
+    "confirm_delete_server": [
+        ("confirm_delete_server", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_server_{id}"),
+        ("confirm_delete_server", "❌ انصراف",       "_", 0, 1, "server_settings_{id}"),
+    ],
+    "confirm_delete_plan": [
+        ("confirm_delete_plan", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_plan_{id}"),
+        ("confirm_delete_plan", "❌ انصراف",       "_", 0, 1, "plan_settings_{id}"),
+    ],
+    "confirm_delete_service": [
+        ("confirm_delete_service", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_service_{id}"),
+        ("confirm_delete_service", "❌ انصراف",       "_", 0, 1, "my_service_{id}"),
+    ],
+    "admin_order": [
+        ("admin_order", "✅ تایید",       "_", 0, 0, "order_approve_{id}"),
+        ("admin_order", "❌ رد",          "_", 1, 0, "order_reject_{id}"),
+        ("admin_order", "❌ رد با دلیل", "_", 1, 1, "order_reject_reason_{id}"),
+    ],
+    "admin_topup": [
+        ("admin_topup", "✅ تایید شارژ", "_", 0, 0, "topup_approve_{id}"),
+        ("admin_topup", "❌ رد",          "_", 1, 0, "topup_reject_{id}"),
     ],
 }
 
@@ -1427,8 +1599,10 @@ async def _seed_keyboard_buttons():
             count = (await cursor.fetchone())[0]
             if count == 0:
                 await db.executemany(
-                    "INSERT INTO keyboard_buttons (keyboard_name, label, callback_data, row_index, col_index) VALUES (?, ?, ?, ?, ?)",
-                    buttons
+                    """INSERT INTO keyboard_buttons
+                       (keyboard_name, label, callback_data, row_index, col_index, callback_template)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    [(b[0], b[1], b[2], b[3], b[4], b[5] if len(b) > 5 else None) for b in buttons]
                 )
         for action in _DEFAULT_KEYBOARD_ACTIONS:
             await db.execute(
@@ -1475,15 +1649,17 @@ async def save_keyboard_layout(keyboard_name: str, buttons: list[dict]):
         if buttons:
             await db.executemany(
                 """INSERT INTO keyboard_buttons
-                   (keyboard_name, label, callback_data, row_index, col_index, is_active)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                   (keyboard_name, label, callback_data, row_index, col_index, is_active, callback_template)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 [
                     (keyboard_name, b["label"], b["callback_data"],
-                     b["row_index"], b["col_index"], b.get("is_active", 1))
+                     b["row_index"], b["col_index"], b.get("is_active", 1),
+                     b.get("callback_template"))
                     for b in buttons
                 ]
             )
         await db.commit()
+    _keyboards_cache[keyboard_name] = [dict(b) for b in buttons if b.get("is_active", 1)]
 
 
 async def get_servers_as_buttons() -> list[dict]:
