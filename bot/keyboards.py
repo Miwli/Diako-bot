@@ -364,12 +364,16 @@ def free_test_confirm_keyboard(server_id: int) -> InlineKeyboardMarkup:
 
 
 def user_servers_keyboard(servers: list) -> InlineKeyboardMarkup:
-    rows = get_keyboard_rows("user_main")
-    back_label = next((r["label"] for r in rows if r["callback_data"] == "user_main"), "🔙 بازگشت")
+    static_rows = get_keyboard_rows("buy_vpn")
     buttons = []
     for server in servers:
         buttons.append([InlineKeyboardButton(text=f"🖥 {server['name']}", callback_data=f"user_server_{server['id']}")])
-    buttons.append([InlineKeyboardButton(text=back_label, callback_data="user_main")])
+    if static_rows:
+        for r in static_rows:
+            label = _strip_tg_emoji(r["label"])
+            buttons.append([InlineKeyboardButton(text=label, callback_data=r["callback_data"])])
+    else:
+        buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 

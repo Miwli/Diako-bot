@@ -263,6 +263,33 @@ async def init_db():
             await db.commit()
         except Exception:
             pass
+    # migration: ستون admin_only برای دکمه‌هایی که فقط ادمین می‌بینه
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute("ALTER TABLE keyboard_buttons ADD COLUMN admin_only INTEGER DEFAULT 0")
+            await db.commit()
+        except Exception:
+            pass
+        # دکمه‌ی پنل ادمین در user_main — اگه وجود نداشت اضافه می‌کنیم
+        await db.execute("""
+            INSERT OR IGNORE INTO keyboard_buttons
+              (keyboard_name, label, callback_data, row_index, col_index, is_active, admin_only)
+            SELECT 'user_main','⚙️ پنل ادمین','admin_panel',99,0,1,1
+            WHERE NOT EXISTS (
+              SELECT 1 FROM keyboard_buttons
+              WHERE keyboard_name='user_main' AND callback_data='admin_panel'
+            )
+        """)
+        # دکمه‌ی بازگشت در buy_vpn — اگه وجود نداشت اضافه می‌کنیم
+        await db.execute("""
+            INSERT OR IGNORE INTO keyboard_buttons
+              (keyboard_name, label, callback_data, row_index, col_index, is_active, admin_only)
+            SELECT 'buy_vpn','🔙 بازگشت','user_main',999,0,1,0
+            WHERE NOT EXISTS (
+              SELECT 1 FROM keyboard_buttons WHERE keyboard_name='buy_vpn'
+            )
+        """)
+        await db.commit()
     await _seed_keyboard_buttons()
     await init_texts_cache()
     await init_keyboards_cache()
@@ -867,12 +894,14 @@ def get_keyboard_rows(name: str) -> list[dict]:
 
 
 async def init_keyboards_cache() -> None:
-    """همه کیبوردهای فعال رو از DB می‌خونه و در کش نگه می‌داره"""
+    """همه کیبوردهای فعال (غیر ادمین) رو از DB می‌خونه و در کش نگه می‌داره"""
     global _keyboards_cache
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            "SELECT * FROM keyboard_buttons WHERE is_active = 1 ORDER BY keyboard_name, row_index, col_index"
+            """SELECT * FROM keyboard_buttons
+               WHERE is_active = 1 AND (admin_only IS NULL OR admin_only = 0)
+               ORDER BY keyboard_name, row_index, col_index"""
         )
         rows = await cur.fetchall()
         cache: dict[str, list[dict]] = {}
@@ -1805,16 +1834,25 @@ async def _seed_keyboard_buttons():
         await db.commit()
 
 
-async def get_keyboard_buttons(keyboard_name: str) -> list[dict]:
-    """برگرداندن دکمه‌های فعال یک کیبورد، مرتب‌شده بر اساس ردیف و ستون"""
+async def get_keyboard_buttons(keyboard_name: str, admin: bool = False) -> list[dict]:
+    """برگرداندن دکمه‌های فعال یک کیبورد؛ admin=True دکمه‌های admin_only را هم برمی‌گرداند"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            """SELECT * FROM keyboard_buttons
-               WHERE keyboard_name = ? AND is_active = 1
-               ORDER BY row_index, col_index""",
-            (keyboard_name,)
-        )
+        if admin:
+            cursor = await db.execute(
+                """SELECT * FROM keyboard_buttons
+                   WHERE keyboard_name = ? AND is_active = 1
+                   ORDER BY row_index, col_index""",
+                (keyboard_name,)
+            )
+        else:
+            cursor = await db.execute(
+                """SELECT * FROM keyboard_buttons
+                   WHERE keyboard_name = ? AND is_active = 1
+                     AND (admin_only IS NULL OR admin_only = 0)
+                   ORDER BY row_index, col_index""",
+                (keyboard_name,)
+            )
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
 

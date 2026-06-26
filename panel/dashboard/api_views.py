@@ -85,7 +85,9 @@ def chart_data(request):
 @login_required
 def keyboard_data(request, keyboard_name):
     if keyboard_name == 'buy_vpn':
-        buttons = async_to_sync(get_servers_as_buttons)()
+        dynamic = async_to_sync(get_servers_as_buttons)()
+        static  = async_to_sync(get_all_keyboard_buttons)('buy_vpn')
+        buttons = dynamic + static
     elif request.GET.get('all') == '1':
         buttons = async_to_sync(get_all_keyboard_buttons)(keyboard_name)
     else:
@@ -161,7 +163,10 @@ def save_keyboard(request):
         buttons = data.get('buttons', [])
         keyboard_name = data.get('keyboard_name', 'user_main')
         if keyboard_name == 'buy_vpn':
-            async_to_sync(save_server_order)(buttons)
+            dynamic = [b for b in buttons if b.get('is_dynamic')]
+            static  = [b for b in buttons if not b.get('is_dynamic')]
+            async_to_sync(save_server_order)(dynamic)
+            async_to_sync(save_keyboard_layout)('buy_vpn', static)
         else:
             async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
         return JsonResponse({'ok': True})

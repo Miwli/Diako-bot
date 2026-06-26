@@ -64,6 +64,20 @@
   flex-shrink: 0;
 }
 
+/* ── Admin-only badge روی دکمه‌ها ─────────────────── */
+.ke-admin-badge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  background: rgba(var(--accent-rgb, 99,102,241),.18);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
 /* ── Menu Group Header ───────────────────────────── */
 .ke-menu-group-hdr {
   font-size: 9px;
@@ -1391,6 +1405,13 @@ function makeKbBtnEl(btn) {
   lbl.className = 'ke-kb-btn-lbl';
   lbl.textContent = btn.label;
   el.appendChild(lbl);
+
+  if (btn.admin_only) {
+    const badge = document.createElement('span');
+    badge.className = 'ke-admin-badge';
+    badge.textContent = 'ادمین';
+    el.appendChild(badge);
+  }
 
   el.addEventListener('click', () => {
     const cb = el._d?.callback_data;

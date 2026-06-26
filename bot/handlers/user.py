@@ -30,9 +30,8 @@ TEHRAN = timezone(timedelta(hours=3, minutes=30))
 async def _get_main_menu(user_id: int):
     """منوی اصلی رو از DB می‌خونه و برمی‌گردونه"""
     from bot import is_admin
-    from keyboards import admin_main_menu
-    rows = await get_keyboard_buttons("user_main")
-    return admin_main_menu(rows) if is_admin(user_id) else user_main_menu(rows)
+    rows = await get_keyboard_buttons("user_main", admin=is_admin(user_id))
+    return user_main_menu(rows)
 
 async def _edit_or_replace(callback: types.CallbackQuery, text: str, markup, parse_mode="HTML"):
     try:
