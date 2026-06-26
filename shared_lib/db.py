@@ -646,6 +646,13 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "referral_error":             "خطا در دریافت اطلاعات.",
     "referral_disabled":          "سیستم دعوت دوستان در حال حاضر غیرفعال است.",
     "referral_commission_notify": "💰 <b>پورسانت دریافت کردی!</b>\nدوستت خرید کرد و <b>{amount}</b> تومان به کیف پولت اضافه شد.",
+    # ─── متن‌های عمومی کاربر (قبلاً hardcode بودند) ──────────────────────
+    "coming_soon":             "🔜 به زودی...",
+    "free_test_select_server": "🎁 <b>تست رایگان</b>\n\nسرور مورد نظر را انتخاب کنید:",
+    "free_test_confirm_text":  "🎁 <b>تست رایگان</b>\n────────────────────────\n🖥 سرور: <b>{server}</b>\n⏱ مدت: <b>{duration}</b>\n📊 حجم: <b>{traffic}</b>\n────────────────────────\n\nبا زدن دکمه زیر سرویس تست برات ساخته می‌شه:",
+    "profile_text":            "👤 {name}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 آیدی تلگرام : <code>{user_id}</code>\n{username_line}\n📅 تاریخ عضویت : {join_date}\n💰 موجودی : <b>{balance} تومان</b>\n🎫 کد معرف : <code>{referral_code}</code>\n━━━━━━━━━━━━━━━━━━━━━━━━",
+    "payment_card_info":       "💳 <b>اطلاعات پرداخت</b>\n\nمبلغ: <b>{amount} تومان</b>\n\nشماره کارت:\n<code>{card_number}</code>\nبه نام: <b>{card_owner}</b>\n\nبعد از واریز، تصویر رسید را ارسال کنید.",
+    "wallet_balance_text":     "👤 {name} عزیز\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n💰 موجودی\n<b>{balance} تومان</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n🛒 سرویس‌های خریداری‌شده    <b>{services}</b> عدد\n📑 فاکتورهای پرداخت‌شده     <b>{invoices}</b> عدد",
 }
 
 _texts_cache: dict[str, str] = {}

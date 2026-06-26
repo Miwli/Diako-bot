@@ -131,7 +131,7 @@ def register_user_handlers(dp):
 
     @dp.callback_query(F.data.in_({"language"}))
     async def coming_soon(callback: types.CallbackQuery):
-        await callback.answer("🔜 به زودی...", show_alert=True)
+        await callback.answer(get_text("coming_soon"), show_alert=True)
 
     # ─── تست رایگان ──────────────────────────────
 
@@ -167,7 +167,7 @@ def register_user_handlers(dp):
         else:
             await _edit_or_replace(
                 callback,
-                "🎁 <b>تست رایگان</b>\n\nسرور مورد نظر را انتخاب کنید:",
+                get_text("free_test_select_server"),
                 free_test_servers_keyboard(servers)
             )
         await callback.answer()
@@ -190,15 +190,7 @@ def register_user_handlers(dp):
     async def _show_free_test_confirm(callback, server):
         dur = _fmt_dur(server["free_test_duration"])
         trf = _fmt_trf(server["free_test_traffic"])
-        text = (
-            f"🎁 <b>تست رایگان</b>\n"
-            f"{'─' * 24}\n"
-            f"🖥 سرور: <b>{server['name']}</b>\n"
-            f"⏱ مدت: <b>{dur}</b>\n"
-            f"📊 حجم: <b>{trf}</b>\n"
-            f"{'─' * 24}\n\n"
-            "با زدن دکمه زیر سرویس تست برات ساخته می‌شه:"
-        )
+        text = get_text("free_test_confirm_text", server=server["name"], duration=dur, traffic=trf)
         await _edit_or_replace(callback, text, free_test_confirm_keyboard(server["id"]))
 
     @dp.callback_query(F.data.startswith("free_test_confirm_"))
@@ -284,15 +276,14 @@ def register_user_handlers(dp):
         user = await get_or_create_user(u.id, u.first_name, u.username)
         stats = await get_user_wallet_stats(u.id)
         username_line = f"📱 یوزرنیم : @{u.username}" if u.username else "📱 یوزرنیم : —"
-        text = (
-            f"👤 {u.first_name}\n\n"
-            f"{'━' * 24}\n"
-            f"🆔 آیدی تلگرام : <code>{u.id}</code>\n"
-            f"{username_line}\n"
-            f"📅 تاریخ عضویت : {_to_jalali(user['created_at'])}\n"
-            f"💰 موجودی : <b>{stats['balance']:,} تومان</b>\n"
-            f"🎫 کد معرف : <code>{user['referral_code']}</code>\n"
-            f"{'━' * 24}"
+        text = get_text(
+            "profile_text",
+            name=u.first_name,
+            user_id=u.id,
+            username_line=username_line,
+            join_date=_to_jalali(user["created_at"]),
+            balance=f"{stats['balance']:,}",
+            referral_code=user["referral_code"],
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")],
@@ -323,11 +314,10 @@ def register_user_handlers(dp):
         card_number = await get_setting("card_number")
         card_owner  = await get_setting("card_owner")
         await message.answer(
-            f"💳 <b>اطلاعات پرداخت</b>\n\n"
-            f"مبلغ: <b>{amount:,} تومان</b>\n\n"
-            f"شماره کارت:\n<code>{card_number or '—'}</code>\n"
-            f"به نام: <b>{card_owner or '—'}</b>\n\n"
-            "بعد از واریز، تصویر رسید را ارسال کنید.",
+            get_text("payment_card_info",
+                     amount=f"{amount:,}",
+                     card_number=card_number or "—",
+                     card_owner=card_owner or "—"),
             parse_mode="HTML"
         )
         await state.set_state(TopUp.waiting_for_receipt)
@@ -372,14 +362,12 @@ def register_user_handlers(dp):
         await get_or_create_user(u.id, u.first_name, u.username)
         stats = await get_user_wallet_stats(u.id)
         name = u.first_name or "کاربر"
-        text = (
-            f"👤 {name} عزیز\n\n"
-            f"{'━' * 24}\n"
-            f"💰 موجودی\n"
-            f"<b>{stats['balance']:,} تومان</b>\n"
-            f"{'━' * 24}\n\n"
-            f"🛒 سرویس‌های خریداری‌شده    <b>{stats['services']}</b> عدد\n"
-            f"📑 فاکتورهای پرداخت‌شده     <b>{stats['invoices']}</b> عدد"
+        text = get_text(
+            "wallet_balance_text",
+            name=name,
+            balance=f"{stats['balance']:,}",
+            services=stats["services"],
+            invoices=stats["invoices"],
         )
         await _edit_or_replace(callback, text, wallet_keyboard())
         await callback.answer()
