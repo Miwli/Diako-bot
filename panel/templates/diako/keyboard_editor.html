@@ -64,6 +64,19 @@
   flex-shrink: 0;
 }
 
+/* ── Navigation indicator on buttons ────────────────── */
+.ke-kb-btn-lbl { flex: 1; }
+.ke-nav-icon {
+  font-size: 10px;
+  color: var(--accent);
+  opacity: .55;
+  flex-shrink: 0;
+  transition: opacity .15s;
+}
+.ke-btn-nav:hover .ke-nav-icon { opacity: 1; }
+.ke-btn-nav { cursor: pointer; }
+.ke-kb-btn:not(.ke-btn-nav) { cursor: default; }
+
 /* ── Admin-only badge روی دکمه‌ها ─────────────────── */
 .ke-admin-badge {
   font-size: 8px;
@@ -964,6 +977,7 @@
 .notif-success { background: rgba(52,211,153,.85); }
 .notif-error   { background: rgba(248,113,113,.85); }
 .notif-warn    { background: rgba(167,139,250,.85); }
+.notif-info    { background: rgba(99,102,241,.8); }
 </style>
 {% endblock %}
 
@@ -1280,6 +1294,24 @@ const DYNAMIC_KEYBOARDS   = new Set(['buy_vpn']);
 // همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
+// callbackهایی که اسمشون با keyboard_name یکی نیست — مپ صریح
+const CB_TO_KB = {
+  'admin_free_test': 'admin_free_test_global',
+  'admin_support':   'admin_support_settings',
+  'admin_finance':   'card_settings',
+  'back_to_start':   'user_main',
+  'tutorial':        'back_to_tutorials',
+  'user_faqs':       'back_to_faqs',
+};
+
+// تشخیص اینکه یه callback به کدوم keyboard ناوبری می‌کنه (یا null اگه نمی‌کنه)
+function resolveNavKb(cb) {
+  if (!cb || cb === '_') return null;
+  if (CB_TO_KB[cb]) return CB_TO_KB[cb];
+  if (AVAILABLE_KEYBOARDS.includes(cb)) return cb;
+  return null;
+}
+
 // طبقه‌بندی کاتالوگ بر اساس grp
 const ADMIN_CBS  = new Set(CATALOG.filter(a => a.grp === 'admin').map(a => a.callback_data));
 const MEMBER_CBS = new Set(CATALOG.filter(a => a.grp === 'user').map(a => a.callback_data));
@@ -1317,14 +1349,14 @@ function getCsrf() {
   return '';
 }
 
-function notify(msg, type = 'success') {
+function notify(msg, type = 'success', duration = 3500) {
   const stack = document.getElementById('notif-stack');
   if (!stack) return;
   const n = document.createElement('div');
   n.className = `notif notif-${type}`;
   n.textContent = msg;
   stack.appendChild(n);
-  setTimeout(() => n.remove(), 3500);
+  setTimeout(() => n.remove(), duration);
 }
 
 // ── آمار ───────────────────────────────────────────
@@ -1397,14 +1429,28 @@ async function saveBubbleEdit() {
 
 // ── ساختن المان دکمه ───────────────────────────────
 function makeKbBtnEl(btn) {
+  const navKb = resolveNavKb(btn.callback_data);
   const el = document.createElement('div');
-  el.className = 'ke-kb-btn' + (btn.is_active ? '' : ' inactive');
+  el.className = 'ke-kb-btn'
+    + (btn.is_active ? '' : ' inactive')
+    + (navKb ? ' ke-btn-nav' : '');
   el._d = { ...btn };
+  el.title = navKb
+    ? `کلیک کن تا به "${KB_META[navKb]?.label || navKb}" بری`
+    : (btn.callback_data && btn.callback_data !== '_')
+      ? 'این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند'
+      : '';
 
   const lbl = document.createElement('span');
   lbl.className = 'ke-kb-btn-lbl';
   lbl.textContent = btn.label;
   el.appendChild(lbl);
+
+  if (navKb) {
+    const ic = document.createElement('i');
+    ic.className = 'ti ti-corner-down-right ke-nav-icon';
+    el.appendChild(ic);
+  }
 
   if (btn.admin_only) {
     const badge = document.createElement('span');
@@ -1414,9 +1460,10 @@ function makeKbBtnEl(btn) {
   }
 
   el.addEventListener('click', () => {
-    const cb = el._d?.callback_data;
-    if (cb && AVAILABLE_KEYBOARDS.includes(cb) && cb !== currentKeyboard) {
-      switchKeyboard(cb);
+    if (navKb && navKb !== currentKeyboard) {
+      switchKeyboard(navKb);
+    } else if (!navKb && btn.callback_data && btn.callback_data !== '_') {
+      notify('این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند', 'info', 2200);
     }
   });
   el.addEventListener('contextmenu', e => {
