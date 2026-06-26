@@ -11,6 +11,9 @@ from asgiref.sync import async_to_sync
 from shared_lib.db import (
     get_all_keyboard_buttons, get_keyboard_actions, save_keyboard_layout,
     get_servers_as_buttons, save_server_order,
+    get_plans_as_buttons, get_services_as_buttons, get_tickets_as_buttons,
+    get_tutorials_as_buttons, get_faqs_as_buttons,
+    get_admin_plans_as_buttons, get_discount_codes_as_buttons,
 )
 from .models import Orders
 
@@ -82,12 +85,21 @@ def chart_data(request):
     })
 
 
-@login_required
+_DYNAMIC_LOADERS = {
+    'buy_vpn':      lambda: async_to_sync(get_servers_as_buttons)(),
+    'user_plans':   lambda: async_to_sync(get_plans_as_buttons)(),
+    'my_services':  lambda: async_to_sync(get_services_as_buttons)(),
+    'my_tickets':   lambda: async_to_sync(get_tickets_as_buttons)(),
+    'user_tutorials': lambda: async_to_sync(get_tutorials_as_buttons)(),
+    'user_faqs':    lambda: async_to_sync(get_faqs_as_buttons)(),
+    'admin_plans':  lambda: async_to_sync(get_admin_plans_as_buttons)(),
+    'admin_discount': lambda: async_to_sync(get_discount_codes_as_buttons)(),
+}
+
+
 def keyboard_data(request, keyboard_name):
-    if keyboard_name == 'buy_vpn':
-        dynamic = async_to_sync(get_servers_as_buttons)()
-        static  = async_to_sync(get_all_keyboard_buttons)('buy_vpn')
-        buttons = dynamic + static
+    if keyboard_name in _DYNAMIC_LOADERS:
+        buttons = _DYNAMIC_LOADERS[keyboard_name]()
     elif request.GET.get('all') == '1':
         buttons = async_to_sync(get_all_keyboard_buttons)(keyboard_name)
     else:
@@ -162,11 +174,14 @@ def save_keyboard(request):
         data = json.loads(request.body)
         buttons = data.get('buttons', [])
         keyboard_name = data.get('keyboard_name', 'user_main')
+        static  = [b for b in buttons if not b.get('is_dynamic')]
+        dynamic = [b for b in buttons if b.get('is_dynamic')]
         if keyboard_name == 'buy_vpn':
-            dynamic = [b for b in buttons if b.get('is_dynamic')]
-            static  = [b for b in buttons if not b.get('is_dynamic')]
             async_to_sync(save_server_order)(dynamic)
             async_to_sync(save_keyboard_layout)('buy_vpn', static)
+        elif keyboard_name in _DYNAMIC_LOADERS:
+            # داینامیک‌های دیگه: فقط دکمه‌های ثابت ذخیره می‌شن
+            async_to_sync(save_keyboard_layout)(keyboard_name, static)
         else:
             async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
         return JsonResponse({'ok': True})

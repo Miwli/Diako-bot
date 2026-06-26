@@ -1744,6 +1744,48 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
         ("admin_topup", "✅ تایید شارژ", "_", 0, 0, "topup_approve_{id}"),
         ("admin_topup", "❌ رد",          "_", 1, 0, "topup_reject_{id}"),
     ],
+    # ── صفحات داینامیک کاربر (دکمه‌های ثابت — داینامیک از API میاد) ──
+    "user_plans": [
+        ("user_plans", "🔙 بازگشت",         "buy_vpn",    999, 0, None),
+    ],
+    "user_proforma": [
+        ("user_proforma", "💎 پرداخت با کیف پول", "pay_wallet_0",    0, 0, None),
+        ("user_proforma", "💳 پرداخت با کارت",     "user_pay_0",      1, 0, None),
+        ("user_proforma", "🎟 کد تخفیف",           "apply_discount_0",2, 0, None),
+        ("user_proforma", "🔙 بازگشت",             "user_plans",      3, 0, None),
+    ],
+    "my_services": [
+        ("my_services", "🔙 بازگشت",  "user_main", 999, 0, None),
+    ],
+    "user_service_detail": [
+        ("user_service_detail", "🔄 تمدید سرویس",   "renew_0",          0, 0, None),
+        ("user_service_detail", "🗑 حذف سرویس",      "delete_service_0", 1, 0, None),
+        ("user_service_detail", "🔙 بازگشت",         "my_services",      2, 0, None),
+    ],
+    "my_tickets": [
+        ("my_tickets", "🔙 بازگشت", "support", 999, 0, None),
+    ],
+    "user_tutorials": [
+        ("user_tutorials", "🔙 بازگشت", "user_main", 999, 0, None),
+    ],
+    "user_faqs": [
+        ("user_faqs", "🔙 بازگشت", "user_main", 999, 0, None),
+    ],
+    # ── صفحات داینامیک ادمین ──────────────────────────
+    "admin_plans": [
+        ("admin_plans", "➕ پلن جدید",  "add_plan",    998, 0, None),
+        ("admin_plans", "🔙 بازگشت",    "admin_panel", 999, 0, None),
+    ],
+    "admin_discount": [
+        ("admin_discount", "➕ کد تخفیف جدید", "discount_add", 998, 0, None),
+        ("admin_discount", "🔙 بازگشت",         "admin_panel",  999, 0, None),
+    ],
+    "admin_referral": [
+        ("admin_referral", "💰 تنظیم درصد کمیسیون",  "admin_referral_edit_pct",   0, 0, None),
+        ("admin_referral", "🎟 تنظیم مبلغ ثابت",      "admin_referral_edit_fixed", 1, 0, None),
+        ("admin_referral", "🔄 فعال/غیرفعال کردن",    "admin_referral_toggle",     2, 0, None),
+        ("admin_referral", "🔙 بازگشت",               "admin_panel",               3, 0, None),
+    ],
 }
 
 _DEFAULT_KEYBOARD_ACTIONS = [
@@ -1943,3 +1985,144 @@ async def get_keyboard_actions() -> list[dict]:
         cursor = await db.execute("SELECT * FROM keyboard_actions ORDER BY id")
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
+
+
+def _dyn(kb, label, cb, row, *, col=0, is_dynamic=True):
+    return {"keyboard_name": kb, "label": label, "callback_data": cb,
+            "row_index": row, "col_index": col, "is_active": 1, "is_dynamic": is_dynamic}
+
+
+async def get_plans_as_buttons() -> list[dict]:
+    """پلن‌های فعال — داینامیک برای ادیتور (user_plans)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """SELECT p.id, p.name, p.price, s.name as sname
+               FROM plans p LEFT JOIN servers s ON p.server_id = s.id
+               WHERE p.is_active=1 AND p.server_id IS NOT NULL
+               ORDER BY p.server_id, p.id"""
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("user_plans", f"{r['name']} — {r['price']:,} تومان", f"user_plan_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    result += await get_all_keyboard_buttons("user_plans")  # دکمه‌های ثابت (بازگشت)
+    return result
+
+
+async def get_services_as_buttons() -> list[dict]:
+    """سرویس‌های اخیر — داینامیک برای ادیتور (my_services)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """SELECT o.id, pl.name, s.name as sname
+               FROM orders o
+               LEFT JOIN plans pl ON o.plan_id = pl.id
+               LEFT JOIN servers s ON pl.server_id = s.id
+               WHERE o.status='approved'
+               ORDER BY o.id DESC LIMIT 8"""
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("my_services", f"📡 {r['name'] or 'سرویس'} ({r['sname'] or '?'})",
+             f"service_detail_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    result += await get_all_keyboard_buttons("my_services")
+    return result
+
+
+async def get_tickets_as_buttons() -> list[dict]:
+    """تیکت‌های اخیر — داینامیک برای ادیتور (my_tickets)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, subject FROM support_tickets ORDER BY id DESC LIMIT 6"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("my_tickets", f"🎫 {r['subject'][:30]}", f"ticket_detail_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("my_tickets", "🎫 تیکت نمونه ۱", "ticket_detail_1", 0),
+                  _dyn("my_tickets", "🎫 تیکت نمونه ۲", "ticket_detail_2", 1)]
+    result += await get_all_keyboard_buttons("my_tickets")
+    return result
+
+
+async def get_tutorials_as_buttons() -> list[dict]:
+    """آموزش‌ها — داینامیک برای ادیتور (user_tutorials)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, title FROM tutorials WHERE is_active=1 ORDER BY order_index, id LIMIT 8"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("user_tutorials", f"📖 {r['title'][:30]}", f"tutorial_detail_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("user_tutorials", "📖 راهنمای نصب ویندوز", "tutorial_detail_1", 0)]
+    result += await get_all_keyboard_buttons("user_tutorials")
+    return result
+
+
+async def get_faqs_as_buttons() -> list[dict]:
+    """سوالات متداول — داینامیک برای ادیتور (user_faqs)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, question FROM faqs WHERE is_active=1 ORDER BY order_index, id LIMIT 8"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("user_faqs", f"❓ {r['question'][:30]}", f"faq_detail_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("user_faqs", "❓ چطور وصل شم؟", "faq_detail_1", 0)]
+    result += await get_all_keyboard_buttons("user_faqs")
+    return result
+
+
+async def get_admin_plans_as_buttons() -> list[dict]:
+    """پلن‌های ادمین — داینامیک برای ادیتور (admin_plans)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """SELECT p.id, p.name, p.price, p.is_active, s.name as sname
+               FROM plans p LEFT JOIN servers s ON p.server_id = s.id
+               ORDER BY p.server_id, p.id"""
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("admin_plans",
+             f"{'✅' if r['is_active'] else '❌'} {r['name']} | {r['sname'] or '?'}",
+             f"toggle_plan_settings_{r['id']}_0", i)
+        for i, r in enumerate(rows)
+    ]
+    result += await get_all_keyboard_buttons("admin_plans")
+    return result
+
+
+async def get_discount_codes_as_buttons() -> list[dict]:
+    """کدهای تخفیف — داینامیک برای ادیتور (admin_discount)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, code, is_active FROM discount_codes ORDER BY id DESC LIMIT 8"
+        )
+        rows = await cur.fetchall()
+    result = [
+        _dyn("admin_discount",
+             f"{'✅' if r['is_active'] else '❌'} {r['code']}",
+             f"discount_item_{r['id']}", i)
+        for i, r in enumerate(rows)
+    ]
+    if not result:
+        result = [_dyn("admin_discount", "✅ SUMMER20", "discount_item_1", 0)]
+    result += await get_all_keyboard_buttons("admin_discount")
+    return result

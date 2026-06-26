@@ -1244,7 +1244,7 @@ const BOT_TEXTS       = {{ bot_texts_json|safe }};
 
 // ── متادیتای هر منو ────────────────────────────────
 const KB_META = {
-  // کاربر
+  // کاربر — منوی اصلی
   user_main:              { label: 'منوی اصلی کاربر',      icon: 'ti-home',          text_key: 'start_welcome_default',   fallback: 'سلام 👋 خوش اومدی' },
   wallet:                 { label: 'کیف پول',               icon: 'ti-wallet',        text_key: 'wallet_menu',             fallback: '💎 کیف پول شما:' },
   support:                { label: 'پشتیبانی',              icon: 'ti-headset',       text_key: 'support_menu',            fallback: '🎧 پشتیبانی دیاکو:' },
@@ -1255,9 +1255,22 @@ const KB_META = {
   back_to_tutorials:      { label: 'بازگشت آموزش‌ها',       icon: 'ti-book',          text_key: 'tutorial_has_list',       fallback: '📚 آموزش‌ها:' },
   back_to_faqs:           { label: 'بازگشت سوالات متداول',  icon: 'ti-help-circle',   text_key: 'faq_has_list',            fallback: '❓ سوالات متداول:' },
   cancel:                 { label: 'لغو عملیات',             icon: 'ti-x',             text_key: null,                      fallback: '✏️ اطلاعات را وارد کنید:' },
-  // داینامیک
+  // جریان خرید
   buy_vpn:                { label: 'انتخاب سرور',           icon: 'ti-server',        text_key: 'buy_select_server',       fallback: '🔐 سرور مورد نظر را انتخاب کنید:' },
+  user_plans:             { label: 'انتخاب پلن',            icon: 'ti-package',       text_key: 'buy_select_plan',         fallback: '📦 پلن مورد نظر را انتخاب کنید:' },
+  user_proforma:          { label: 'پیش‌فاکتور',            icon: 'ti-receipt',       text_key: null,                      fallback: '🧾 پیش‌فاکتور پرداخت' },
+  // سرویس‌های من
+  my_services:            { label: 'سرویس‌های من',          icon: 'ti-wifi',          text_key: 'services_menu_title',     fallback: '📡 سرویس‌های من' },
+  user_service_detail:    { label: 'جزئیات سرویس',          icon: 'ti-info-circle',   text_key: null,                      fallback: '📊 جزئیات سرویس' },
+  // پشتیبانی
+  my_tickets:             { label: 'تیکت‌های من',           icon: 'ti-ticket',        text_key: null,                      fallback: '📋 تیکت‌های من' },
+  // آموزش
+  user_tutorials:         { label: 'آموزش‌ها',              icon: 'ti-book',          text_key: null,                      fallback: '📚 آموزش‌ها' },
+  user_faqs:              { label: 'سوالات متداول',          icon: 'ti-help-circle',   text_key: null,                      fallback: '❓ سوالات متداول' },
   // ادمین
+  admin_plans:            { label: 'مدیریت پلن‌ها',         icon: 'ti-package',       text_key: null,                      fallback: '📦 مدیریت پلن‌ها' },
+  admin_discount:         { label: 'کدهای تخفیف',           icon: 'ti-discount',      text_key: null,                      fallback: '🎟 کدهای تخفیف' },
+  admin_referral:         { label: 'تنظیمات معرف',           icon: 'ti-gift',          text_key: null,                      fallback: '🤝 تنظیمات دعوت دوستان' },
   admin_panel:            { label: 'پنل ادمین',             icon: 'ti-shield',        text_key: 'admin_panel_title',       fallback: '⚙️ پنل ادمین' },
   admin_general:          { label: 'تنظیمات عمومی',         icon: 'ti-settings',      text_key: 'admin_general_title',     fallback: '⚙️ تنظیمات عمومی' },
   admin_banner_and_text:  { label: 'ظاهر ربات',             icon: 'ti-palette',       text_key: 'admin_banner_and_text_title', fallback: '🎨 ظاهر ربات' },
@@ -1283,25 +1296,39 @@ const KB_META = {
 
 // ── گروه‌بندی کیبوردها در ستون چپ ──────────────────
 const KB_GROUPS = [
-  { label: 'کاربر',    keys: ['user_main','wallet','support','free_test_confirm','payment_info','subscription_approved','ticket','back_to_tutorials','back_to_faqs','cancel'] },
-  { label: 'داینامیک', keys: ['buy_vpn'] },
-  { label: 'ادمین',    keys: ['admin_panel','admin_general','admin_banner_and_text','admin_text_settings','admin_servers','admin_free_test_global','admin_support_settings','admin_tutorials','admin_stats','admin_broadcast','admin_users','card_settings'] },
-  { label: 'زمینه‌ای', keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan','confirm_delete_service'] },
+  { label: 'کاربر',          keys: ['user_main','wallet','support','cancel','free_test_confirm','ticket','payment_info','subscription_approved'] },
+  { label: 'جریان خرید',     keys: ['buy_vpn','user_plans','user_proforma'] },
+  { label: 'سرویس‌ها',       keys: ['my_services','user_service_detail','confirm_delete_service'] },
+  { label: 'پشتیبانی',       keys: ['my_tickets'] },
+  { label: 'آموزش',          keys: ['user_tutorials','user_faqs','back_to_tutorials','back_to_faqs'] },
+  { label: 'ادمین',          keys: ['admin_panel','admin_general','admin_banner_and_text','admin_text_settings','admin_servers','admin_plans','admin_free_test_global','admin_support_settings','admin_tutorials','admin_stats','admin_broadcast','admin_users','card_settings','admin_discount','admin_referral'] },
+  { label: 'زمینه‌ای',       keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan'] },
 ];
 
-// کیبوردهایی که از بانک اطلاعاتی سرورها پر می‌شن
-const DYNAMIC_KEYBOARDS   = new Set(['buy_vpn']);
+// کیبوردهایی که محتوای داینامیک از DB دارن
+const DYNAMIC_KEYBOARDS = new Set([
+  'buy_vpn','user_plans','my_services','my_tickets',
+  'user_tutorials','user_faqs','admin_plans','admin_discount',
+]);
 // همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
 // callbackهایی که اسمشون با keyboard_name یکی نیست — مپ صریح
 const CB_TO_KB = {
-  'admin_free_test': 'admin_free_test_global',
-  'admin_support':   'admin_support_settings',
-  'admin_finance':   'card_settings',
-  'back_to_start':   'user_main',
-  'tutorial':        'back_to_tutorials',
-  'user_faqs':       'back_to_faqs',
+  // ادمین
+  'admin_free_test':  'admin_free_test_global',
+  'admin_support':    'admin_support_settings',
+  'admin_finance':    'card_settings',
+  'back_to_start':    'user_main',
+  'admin_plans':      'admin_plans',
+  'admin_discount':   'admin_discount',
+  'admin_referral':   'admin_referral',
+  // کاربر
+  'tutorial':         'user_tutorials',
+  'user_faqs':        'user_faqs',
+  'my_services':      'my_services',
+  'my_tickets':       'my_tickets',
+  'new_ticket':       'support',
 };
 
 // تشخیص اینکه یه callback به کدوم keyboard ناوبری می‌کنه (یا null اگه نمی‌کنه)
@@ -1309,6 +1336,16 @@ function resolveNavKb(cb) {
   if (!cb || cb === '_') return null;
   if (CB_TO_KB[cb]) return CB_TO_KB[cb];
   if (AVAILABLE_KEYBOARDS.includes(cb)) return cb;
+  // الگوهای داینامیک
+  if (/^user_server_\d+$/.test(cb))                                           return 'user_plans';
+  if (/^(user_plan|pay_wallet|user_pay|apply_discount)_\d+$/.test(cb))        return 'user_proforma';
+  if (/^(service_detail|order_detail)_\d+$/.test(cb))                         return 'user_service_detail';
+  if (/^(ticket_detail|close_ticket)_\d+$/.test(cb))                          return 'ticket';
+  if (/^tutorial_detail_\d+$/.test(cb))                                        return 'user_tutorials';
+  if (/^faq_detail_\d+$/.test(cb))                                             return 'user_faqs';
+  if (/^discount_item_\d+$/.test(cb))                                          return 'admin_discount';
+  if (/^toggle_plan_settings_/.test(cb))                                        return 'admin_plans';
+  if (/^renew_\d+$/.test(cb))                                                   return 'user_plans';
   return null;
 }
 
