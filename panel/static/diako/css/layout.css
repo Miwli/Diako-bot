@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotate(-5deg);
+  transform: rotate(-30deg);
   font-family: 'Noto Nastaliq Urdu', serif;
   font-size: 18vw;
   font-weight: 700;
@@ -15,11 +15,12 @@
   pointer-events: none;
   user-select: none;
   z-index: 50;
-  color: rgba(0,196,190,0.09);
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(0,196,190,0.25);
 }
 
 [data-theme="warm"] .wm {
-  color: rgba(249,115,22,0.09);
+  -webkit-text-stroke: 1.5px rgba(249,115,22,0.28);
 }
 
 /* ════════════════════════════════
@@ -151,6 +152,13 @@
 .nav-item:hover::after { opacity: 1; }
 
 /* ════════════════════════════════
+   CARD SHADOWS
+════════════════════════════════ */
+.card, .dash-card, [class*="card"] {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.04) inset;
+}
+
+/* ════════════════════════════════
    DASH BODY
 ════════════════════════════════ */
 .dash-body {
@@ -165,6 +173,15 @@
   overflow-x: hidden;
   position: relative;
   z-index: 1;
+  background:
+    radial-gradient(ellipse at 60% 30%, rgba(0,196,190,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 80%, rgba(0,196,190,0.04) 0%, transparent 45%);
+}
+
+[data-theme="warm"] .dash-body {
+  background:
+    radial-gradient(ellipse at 60% 30%, rgba(249,115,22,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 80%, rgba(249,115,22,0.04) 0%, transparent 45%);
 }
 
 /* ════════════════════════════════
