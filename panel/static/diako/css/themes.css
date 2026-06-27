@@ -1,4 +1,5 @@
 :root {
+  --accent-rgb: 0,196,190;
   --bg-base: #0C1622;
   --glow-1: rgba(0,196,190,0.26);
   --glow-pos-1: 12% 92%;
@@ -18,6 +19,7 @@
 }
 
 [data-theme="warm"] {
+  --accent-rgb: 249,115,22;
   --bg-base: #110A05;
   --glow-1: rgba(249,115,22,0.28);
   --glow-pos-1: 12% 92%;
