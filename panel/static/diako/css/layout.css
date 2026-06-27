@@ -1,11 +1,7 @@
 /* ════════════════════════════════
    WATERMARK
 ════════════════════════════════ */
-.main-content {
-  isolation: isolate;
-}
-
-.main-content::before {
+body::before {
   content: "هگمتانه";
   font-family: 'Noto Nastaliq Urdu', serif;
   font-size: 18vw;
@@ -15,14 +11,14 @@
   left: 50%;
   transform: translate(-50%, -50%) rotate(-45deg);
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;
   white-space: nowrap;
   user-select: none;
   color: #00C4BE;
   opacity: 0.045;
 }
 
-[data-theme="warm"] .main-content::before {
+[data-theme="warm"] body::before {
   color: #F97316;
   opacity: 0.05;
 }
@@ -167,6 +163,8 @@
   padding: 20px 60px 20px 60px;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 /* ════════════════════════════════
