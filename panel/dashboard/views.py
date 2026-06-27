@@ -91,6 +91,47 @@ def texts_editor_view(request):
 
 
 @login_required
+def orders_view(request):
+    status_filter = request.GET.get('status', 'all')
+    search = request.GET.get('q', '').strip()
+    page_num = max(1, int(request.GET.get('page', 1)))
+    per_page = 20
+
+    qs = Orders.objects.select_related('plan').order_by('-id')
+    if status_filter != 'all':
+        qs = qs.filter(status=status_filter)
+    if search:
+        qs = qs.filter(username__icontains=search)
+
+    stats = {
+        'all':      Orders.objects.count(),
+        'pending':  Orders.objects.filter(status='pending').count(),
+        'approved': Orders.objects.filter(status='approved').count(),
+        'rejected': Orders.objects.filter(status='rejected').count(),
+    }
+
+    total = qs.count()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page_num = min(page_num, total_pages)
+    orders = list(qs[(page_num - 1) * per_page: page_num * per_page])
+
+    pr_start = max(1, page_num - 3)
+    pr_end   = min(total_pages + 1, page_num + 4)
+
+    return render(request, 'diako/orders.html', {
+        'orders':        orders,
+        'stats':         stats,
+        'status_filter': status_filter,
+        'search':        search,
+        'page':          page_num,
+        'total_pages':   total_pages,
+        'total':         total,
+        'page_range':    range(pr_start, pr_end),
+        'admin_username': request.user.username,
+    })
+
+
+@login_required
 def keyboard_editor_view(request):
     buttons = async_to_sync(get_all_keyboard_buttons)("user_main")
     actions = async_to_sync(get_keyboard_actions)()

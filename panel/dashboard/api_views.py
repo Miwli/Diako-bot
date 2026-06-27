@@ -16,6 +16,7 @@ from shared_lib.db import (
     get_admin_plans_as_buttons, get_discount_codes_as_buttons,
     get_admin_tutorials_as_buttons, get_admin_faqs_as_buttons, get_admin_users_as_buttons,
 )
+from shared_lib.db import update_order_status
 from .models import Orders
 
 
@@ -191,3 +192,30 @@ def save_keyboard(request):
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def order_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    order_id = data.get('order_id')
+    action   = data.get('action')
+    reason   = data.get('reason', '').strip() or None
+
+    if not order_id or action not in ('reject',):
+        return JsonResponse({'ok': False, 'error': 'پارامتر نامعتبر'}, status=400)
+
+    try:
+        order = Orders.objects.get(id=order_id)
+    except Orders.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'سفارش یافت نشد'}, status=404)
+
+    if order.status != 'pending':
+        return JsonResponse({'ok': False, 'error': 'سفارش قابل تغییر نیست'})
+
+    async_to_sync(update_order_status)(order_id, 'rejected', reason)
+    return JsonResponse({'ok': True})

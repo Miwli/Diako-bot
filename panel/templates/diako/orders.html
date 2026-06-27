@@ -1,0 +1,1168 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}سفارش‌ها — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ══════════════════════════════════════════════════════
+   ORDERS — Glassmorphic atmosphere
+   Layout elements from layout.css are overridden here
+   only for this page (comes after in cascade).
+══════════════════════════════════════════════════════ */
+
+/* ── Ambient glow element positioning ── */
+.ord-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Primary teal bloom — upper-left behind sidebar gap */
+  background:
+    radial-gradient(ellipse 55% 45% at 28% 18%,
+      rgba(0,196,190,0.11) 0%, transparent 68%),
+    radial-gradient(ellipse 35% 55% at 72% 82%,
+      rgba(20,60,180,0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 25% 30% at 55% 45%,
+      rgba(0,196,190,0.04) 0%, transparent 60%);
+}
+
+/* Bring topbar + container above ambient */
+.dash-topbar,
+.dash-container { position: relative; z-index: 1; }
+
+/* ── TOPBAR — frosted glass ── */
+.dash-topbar {
+  background: rgba(4, 10, 20, 0.72);
+  backdrop-filter: blur(36px) saturate(160%);
+  -webkit-backdrop-filter: blur(36px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* ── MAIN CONTAINER — deep frosted glass ── */
+.dash-container {
+  background: rgba(4, 10, 20, 0.78);
+  backdrop-filter: blur(56px) saturate(160%);
+  -webkit-backdrop-filter: blur(56px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    inset 0 0 80px rgba(0,196,190,0.025),
+    0 48px 100px rgba(0,0,0,0.6);
+}
+
+/* ── INNER CARDS — glass tiles ── */
+.inner-card {
+  background: rgba(255,255,255,0.022);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.055);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 4px 16px rgba(0,0,0,0.2);
+}
+
+/* ══ FILTER TOOLBAR ══ */
+.orders-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.028);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 200ms ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.filter-tab:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.filter-tab.active {
+  background: rgba(0,196,190,0.09);
+  border-color: rgba(0,196,190,0.32);
+  color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(0,196,190,0.15),
+    0 0 18px rgba(0,196,190,0.1),
+    0 0 36px rgba(0,196,190,0.05);
+}
+.filter-tab.tab-pending.active {
+  background: rgba(167,139,250,0.09);
+  border-color: rgba(167,139,250,0.32);
+  color: var(--warn);
+  box-shadow:
+    inset 0 1px 0 rgba(167,139,250,0.15),
+    0 0 18px rgba(167,139,250,0.1);
+}
+.filter-tab .tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+}
+.filter-tab.active .tab-count           { background: var(--accent); color: #000; }
+.filter-tab.tab-pending.active .tab-count { background: var(--warn);   color: #000; }
+
+/* ── Search ── */
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-wrap {
+  position: relative;
+}
+.search-wrap .search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+.search-input {
+  padding: 8px 32px 8px 12px;
+  width: 220px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  transition: border-color 200ms, background 200ms, box-shadow 200ms;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.search-input:focus {
+  border-color: rgba(0,196,190,0.4);
+  background: rgba(0,0,0,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 3px rgba(0,196,190,0.08);
+}
+.search-input::placeholder { color: var(--text-muted); }
+
+/* ── Glass Table ── */
+.orders-table-wrap {
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 5px;
+  direction: rtl;
+}
+
+.orders-table thead th {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 4px 14px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+.orders-table thead th.col-actions { text-align: left; }
+
+.order-row {
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.order-row td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  background: rgba(255,255,255,0.018);
+  border-top: 1px solid rgba(255,255,255,0.038);
+  border-bottom: 1px solid rgba(0,0,0,0.18);
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  transition: background 180ms, border-color 180ms, box-shadow 180ms;
+}
+.order-row td:first-child {
+  border-radius: 12px 0 0 12px;
+  border-right: 1px solid rgba(255,255,255,0.038);
+}
+.order-row td:last-child {
+  border-radius: 0 12px 12px 0;
+  border-left: 1px solid rgba(255,255,255,0.038);
+}
+
+.order-row:hover td {
+  background: rgba(0,196,190,0.045);
+  border-color: rgba(0,196,190,0.12);
+  box-shadow: inset 0 1px 0 rgba(0,196,190,0.06);
+}
+.order-row.selected td {
+  background: rgba(0,196,190,0.065);
+  border-color: rgba(0,196,190,0.2);
+  box-shadow: inset 0 1px 0 rgba(0,196,190,0.1);
+}
+/* Left accent line on selected row — music player "playing" indicator */
+.order-row.selected td:first-child {
+  border-right: 2px solid rgba(0,196,190,0.7);
+  box-shadow: inset 4px 0 12px rgba(0,196,190,0.08), inset 0 1px 0 rgba(0,196,190,0.1);
+}
+
+/* Cells */
+.cell-id {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.user-name-main {
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-id-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.cell-plan-name {
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cell-plan-price {
+  font-size: 10px;
+  color: var(--accent);
+  margin-top: 1px;
+}
+
+.type-chip {
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Status badges with glow */
+.st-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.st-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.st-badge.st-pending {
+  background: rgba(167,139,250,0.1);
+  border: 1px solid rgba(167,139,250,0.3);
+  color: var(--warn);
+  box-shadow:
+    0 0 14px rgba(167,139,250,0.12),
+    inset 0 1px 0 rgba(167,139,250,0.1);
+}
+.st-badge.st-pending::before {
+  background: var(--warn);
+  box-shadow: 0 0 6px var(--warn);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.st-badge.st-approved {
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.3);
+  color: var(--green);
+  box-shadow:
+    0 0 14px rgba(52,211,153,0.12),
+    inset 0 1px 0 rgba(52,211,153,0.1);
+}
+.st-badge.st-approved::before {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+
+.st-badge.st-rejected {
+  background: rgba(248,113,113,0.1);
+  border: 1px solid rgba(248,113,113,0.28);
+  color: var(--red);
+  box-shadow: inset 0 1px 0 rgba(248,113,113,0.06);
+}
+.st-badge.st-rejected::before { background: var(--red); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--warn); }
+  50%       { opacity: 0.5; box-shadow: 0 0 10px var(--warn); }
+}
+
+.cell-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Row action icons */
+.row-acts {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 180ms;
+}
+.order-row:hover .row-acts { opacity: 1; }
+.order-row.selected .row-acts { opacity: 1; }
+
+.row-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+  transition: all 140ms;
+}
+.row-btn:hover         { background: rgba(255,255,255,0.12); color: var(--text); }
+.row-btn.rb-reject:hover { background: rgba(248,113,113,0.15); color: var(--red); }
+
+/* ── Pagination ── */
+.ord-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pag-info {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.pag-btns {
+  display: flex;
+  gap: 4px;
+}
+.pg-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 140ms;
+}
+.pg-btn:hover   { background: rgba(255,255,255,0.09); color: var(--text); }
+.pg-btn.current { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.pg-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+/* ── Empty state ── */
+.ord-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.ord-empty i { font-size: 44px; display: block; margin-bottom: 10px; opacity: 0.35; }
+.ord-empty p { font-size: 13px; }
+
+/* ══════════════════════════════════════
+   DETAIL DRAWER
+══════════════════════════════════════ */
+.drw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.38);
+  backdrop-filter: blur(5px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 280ms ease;
+}
+.drw-overlay.open { opacity: 1; pointer-events: all; }
+
+.drw {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 100vh;
+  background: rgba(3, 8, 16, 0.94);
+  backdrop-filter: blur(80px) saturate(200%);
+  -webkit-backdrop-filter: blur(80px) saturate(200%);
+  border-right: 1px solid rgba(255,255,255,0.07);
+  box-shadow:
+    32px 0 120px rgba(0,0,0,0.7),
+    inset 1px 0 0 rgba(0,196,190,0.08),   /* teal left-edge glow line */
+    inset -1px 0 0 rgba(255,255,255,0.02),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  z-index: 210;
+  transform: translateX(-100%);
+  transition: transform 320ms cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drw.open { transform: translateX(0); }
+
+.drw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.drw-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.drw-title i { color: var(--accent); font-size: 16px; }
+
+.drw-close {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted); font-size: 14px;
+  transition: all 140ms;
+}
+.drw-close:hover { background: rgba(248,113,113,0.15); color: var(--red); border-color: rgba(248,113,113,0.3); }
+
+.drw-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drw-section {
+  background: rgba(255,255,255,0.026);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.drw-sec-title {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 8px;
+}
+.drw-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  gap: 8px;
+}
+.drw-lbl { color: var(--text-muted); flex-shrink: 0; }
+.drw-val {
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  word-break: break-all;
+  max-width: 180px;
+}
+.drw-val.accent { color: var(--accent); }
+.drw-val.danger { color: var(--red); }
+
+.drw-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  padding: 10px 12px;
+  line-height: 1.7;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.drw-note i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+.drw-foot {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.drw-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: opacity 180ms, transform 140ms;
+}
+.drw-btn:hover  { opacity: 0.85; transform: translateY(-1px); }
+.drw-btn:active { transform: translateY(0); }
+.drw-btn.btn-reject {
+  background: rgba(248,113,113,0.14);
+  color: var(--red);
+  border: 1px solid rgba(248,113,113,0.28);
+}
+.drw-btn.btn-bot-approve {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #000;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0,196,190,0.25);
+}
+
+/* ══════════════════════════════════════
+   REJECT MODAL
+══════════════════════════════════════ */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  backdrop-filter: blur(10px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+
+.modal-box {
+  width: 360px;
+  background: rgba(3, 8, 16, 0.96);
+  backdrop-filter: blur(80px) saturate(180%);
+  -webkit-backdrop-filter: blur(80px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow:
+    0 48px 120px rgba(0,0,0,0.75),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 1px rgba(0,196,190,0.04) inset;
+  transform: scale(0.93) translateY(12px);
+  transition: transform 240ms cubic-bezier(0.34,1.56,0.64,1);
+}
+.modal-bg.open .modal-box { transform: scale(1) translateY(0); }
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-title i { color: var(--red); font-size: 18px; }
+
+.modal-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.modal-ta {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  direction: rtl;
+  transition: border-color 180ms;
+  margin-bottom: 14px;
+}
+.modal-ta:focus { border-color: var(--red); }
+.modal-ta::placeholder { color: var(--text-muted); }
+
+.modal-acts { display: flex; gap: 8px; }
+.modal-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 140ms;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+}
+.modal-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.modal-btn.btn-confirm-reject {
+  background: rgba(248,113,113,0.15);
+  border-color: rgba(248,113,113,0.3);
+  color: var(--red);
+}
+.modal-btn.btn-confirm-reject:hover { background: rgba(248,113,113,0.25); }
+
+/* Spinner inside button */
+.spin {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .drw { width: 100%; }
+  .search-input { width: 160px; }
+}
+</style>
+{% endblock %}
+
+
+{% block body %}
+<div class="ord-ambient" aria-hidden="true"></div>
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
+        <i class="ti ti-layout-dashboard"></i>
+      </a>
+      <a href="/diako/orders/" class="nav-item active" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
+        <i class="ti ti-package"></i>
+        {% if stats.pending > 0 %}
+        <span class="nav-badge">{{ stats.pending }}</span>
+        {% endif %}
+      </a>
+      <a href="/admin/dashboard/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
+        <i class="ti ti-users"></i>
+      </a>
+      <a href="/admin/dashboard/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
+        <i class="ti ti-server"></i>
+      </a>
+      <a href="/admin/dashboard/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
+        <i class="ti ti-list"></i>
+      </a>
+      <a href="/admin/dashboard/transactions/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
+        <i class="ti ti-wallet"></i>
+      </a>
+      <a href="/diako/keyboard-editor/" class="nav-item" data-fa="ادیتور کیبورد" data-en="Keyboard" data-tooltip="ادیتور کیبورد">
+        <i class="ti ti-keyboard"></i>
+      </a>
+      <a href="/diako/texts-editor/" class="nav-item" data-fa="ادیتور متن‌ها" data-en="Texts" data-tooltip="ادیتور متن‌ها">
+        <i class="ti ti-text-size"></i>
+      </a>
+      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
+        <i class="ti ti-settings"></i>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Body -->
+  <div class="dash-body">
+
+    <!-- Topbar -->
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title" data-fa="سفارش‌ها" data-en="Orders">سفارش‌ها</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()">
+          <i id="theme-icon" class="ti ti-sun"></i>
+        </button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">
+            {{ admin_username|slice:":1"|upper }}
+          </button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item">
+              <i class="ti ti-logout"></i>
+              <span data-fa="خروج" data-en="Logout">خروج</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Container -->
+    <div class="dash-container">
+
+      <!-- Toolbar: filters + search -->
+      <div class="inner-card orders-toolbar anim-card">
+        <div class="filter-tabs">
+          <a href="?status=all{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab {% if status_filter == 'all' %}active{% endif %}">
+            <i class="ti ti-list" style="font-size:12px"></i>
+            <span data-fa="همه" data-en="All">همه</span>
+            <span class="tab-count">{{ stats.all }}</span>
+          </a>
+          <a href="?status=pending{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab tab-pending {% if status_filter == 'pending' %}active{% endif %}">
+            <i class="ti ti-clock-hour-4" style="font-size:12px"></i>
+            <span data-fa="در انتظار" data-en="Pending">در انتظار</span>
+            <span class="tab-count">{{ stats.pending }}</span>
+          </a>
+          <a href="?status=approved{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab {% if status_filter == 'approved' %}active{% endif %}">
+            <i class="ti ti-check" style="font-size:12px"></i>
+            <span data-fa="تایید‌شده" data-en="Approved">تایید‌شده</span>
+            <span class="tab-count">{{ stats.approved }}</span>
+          </a>
+          <a href="?status=rejected{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">
+            <i class="ti ti-x" style="font-size:12px"></i>
+            <span data-fa="رد‌شده" data-en="Rejected">رد‌شده</span>
+            <span class="tab-count">{{ stats.rejected }}</span>
+          </a>
+        </div>
+
+        <form method="get" class="search-form">
+          <input type="hidden" name="status" value="{{ status_filter }}">
+          <div class="search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input class="search-input" type="text" name="q"
+                   placeholder="جستجو یوزرنیم..." value="{{ search }}">
+          </div>
+          <button type="submit" class="ctrl-btn" style="height:34px; padding:0 10px;">
+            <i class="ti ti-search" style="font-size:14px"></i>
+          </button>
+          {% if search %}
+          <a href="?status={{ status_filter }}" class="ctrl-btn" style="height:34px; padding:0 10px;">
+            <i class="ti ti-x" style="font-size:14px"></i>
+          </a>
+          {% endif %}
+        </form>
+      </div>
+
+      <!-- Table card -->
+      <div class="inner-card anim-card" style="padding: 6px 0 8px;">
+
+        {% if orders %}
+        <div class="orders-table-wrap" style="padding: 0 6px;">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-fa="کاربر" data-en="User">کاربر</th>
+                <th data-fa="پلن" data-en="Plan">پلن</th>
+                <th data-fa="نوع" data-en="Type">نوع</th>
+                <th data-fa="وضعیت" data-en="Status">وضعیت</th>
+                <th data-fa="تاریخ" data-en="Date">تاریخ</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in orders %}
+              <tr class="order-row"
+                  data-id="{{ order.id }}"
+                  data-uid="{{ order.user_id }}"
+                  data-uname="{{ order.username|default:'' }}"
+                  data-plan="{{ order.plan.name|default:'—' }}"
+                  data-price="{{ order.plan.price|default:0 }}"
+                  data-type="{{ order.order_type|default:'regular' }}"
+                  data-status="{{ order.status }}"
+                  data-date="{{ order.created_at|default:''|slice:':16' }}"
+                  data-vpn="{{ order.vpn_username|default:'' }}"
+                  data-sub="{{ order.subscription_url|default:'' }}"
+                  data-reason="{{ order.rejection_reason|default:'' }}"
+                  onclick="openDrawer(this)">
+
+                <td><span class="cell-id">#{{ order.id }}</span></td>
+
+                <td>
+                  <div class="cell-user">
+                    <div class="user-av">{{ order.username|default:order.user_id|slice:":1"|upper }}</div>
+                    <div>
+                      <div class="user-name-main">{{ order.username|default:"—" }}</div>
+                      <div class="user-id-sub">{{ order.user_id }}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <div class="cell-plan-name">{{ order.plan.name|default:"—" }}</div>
+                  <div class="cell-plan-price">{{ order.plan.price|default:0 }} تومان</div>
+                </td>
+
+                <td>
+                  {% if order.order_type == 'free_test' %}
+                    <span class="type-chip" data-fa="تست رایگان" data-en="Free test">تست رایگان</span>
+                  {% elif order.order_type == 'renewal' %}
+                    <span class="type-chip" data-fa="تمدید" data-en="Renewal">تمدید</span>
+                  {% else %}
+                    <span class="type-chip" data-fa="خرید" data-en="Purchase">خرید</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if order.status == 'pending' %}
+                    <span class="st-badge st-pending" data-fa="در انتظار" data-en="Pending">در انتظار</span>
+                  {% elif order.status == 'approved' %}
+                    <span class="st-badge st-approved" data-fa="تایید" data-en="Approved">تایید</span>
+                  {% elif order.status == 'rejected' %}
+                    <span class="st-badge st-rejected" data-fa="رد شده" data-en="Rejected">رد شده</span>
+                  {% else %}
+                    <span class="st-badge">{{ order.status }}</span>
+                  {% endif %}
+                </td>
+
+                <td><span class="cell-date">{{ order.created_at|default:"—"|slice:":16" }}</span></td>
+
+                <td>
+                  <div class="row-acts">
+                    {% if order.status == 'pending' %}
+                    <button class="row-btn rb-reject" title="رد کردن"
+                            onclick="event.stopPropagation(); openRejectModal({{ order.id }})">
+                      <i class="ti ti-x"></i>
+                    </button>
+                    {% endif %}
+                    <button class="row-btn" title="جزئیات">
+                      <i class="ti ti-chevron-left"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="ord-pagination" style="padding: 10px 16px 4px;">
+          <span class="pag-info">
+            نمایش {{ orders|length }} از {{ total }}
+          </span>
+          <div class="pag-btns">
+            {% if page > 1 %}
+            <a class="pg-btn" href="?status={{ status_filter }}&q={{ search }}&page={{ page|add:'-1' }}">
+              <i class="ti ti-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="pg-btn disabled"><i class="ti ti-chevron-right"></i></span>
+            {% endif %}
+
+            {% for p in page_range %}
+              {% if p == page %}
+              <span class="pg-btn current">{{ p }}</span>
+              {% else %}
+              <a class="pg-btn" href="?status={{ status_filter }}&q={{ search }}&page={{ p }}">{{ p }}</a>
+              {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <a class="pg-btn" href="?status={{ status_filter }}&q={{ search }}&page={{ page|add:'1' }}">
+              <i class="ti ti-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="pg-btn disabled"><i class="ti ti-chevron-left"></i></span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="ord-empty">
+          <i class="ti ti-package-off"></i>
+          <p>سفارشی یافت نشد</p>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer overlay -->
+<div class="drw-overlay" id="drwOverlay" onclick="closeDrawer()"></div>
+
+<!-- Detail Drawer -->
+<div class="drw" id="drw">
+  <div class="drw-head">
+    <div class="drw-title">
+      <i class="ti ti-package"></i>
+      <span id="drwTitle">جزئیات سفارش</span>
+    </div>
+    <button class="drw-close" onclick="closeDrawer()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="drw-body" id="drwBody"></div>
+  <div class="drw-foot" id="drwFoot" style="display:none;"></div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-bg" id="rejectModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <i class="ti ti-alert-triangle"></i>
+      رد کردن سفارش
+    </div>
+    <div class="modal-sub">دلیل رد را وارد کنید (اختیاری). این پیام به کاربر نمایش داده می‌شود.</div>
+    <textarea class="modal-ta" id="rejectReason" placeholder="دلیل رد..."></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeRejectModal()">
+        <i class="ti ti-arrow-right"></i> انصراف
+      </button>
+      <button class="modal-btn btn-confirm-reject" id="rejectConfirmBtn" onclick="confirmReject()">
+        <i class="ti ti-x"></i> رد کردن
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
+
+let activeOrderId  = null;
+let activeOrderRow = null;
+
+/* ── Drawer ── */
+function openDrawer(row) {
+  if (activeOrderRow) activeOrderRow.classList.remove('selected');
+  activeOrderRow = row;
+  row.classList.add('selected');
+
+  const d = row.dataset;
+  document.getElementById('drwTitle').textContent = 'سفارش #' + d.id;
+
+  const typeLabel = { regular: 'خرید عادی', free_test: 'تست رایگان', renewal: 'تمدید' };
+  const statusHtml = {
+    pending:  '<span class="st-badge st-pending">در انتظار</span>',
+    approved: '<span class="st-badge st-approved">تایید شده</span>',
+    rejected: '<span class="st-badge st-rejected">رد شده</span>',
+  };
+
+  let html = `
+    <div class="drw-section">
+      <div class="drw-sec-title">کاربر</div>
+      <div class="drw-row"><span class="drw-lbl">یوزرنیم</span><span class="drw-val">${d.uname || '—'}</span></div>
+      <div class="drw-row"><span class="drw-lbl">آیدی تلگرام</span><span class="drw-val">${d.uid}</span></div>
+    </div>
+    <div class="drw-section">
+      <div class="drw-sec-title">سفارش</div>
+      <div class="drw-row"><span class="drw-lbl">پلن</span><span class="drw-val">${d.plan}</span></div>
+      <div class="drw-row"><span class="drw-lbl">مبلغ</span><span class="drw-val accent">${Number(d.price).toLocaleString()} تومان</span></div>
+      <div class="drw-row"><span class="drw-lbl">نوع</span><span class="drw-val">${typeLabel[d.type] || d.type}</span></div>
+      <div class="drw-row"><span class="drw-lbl">وضعیت</span><span class="drw-val">${statusHtml[d.status] || d.status}</span></div>
+      <div class="drw-row"><span class="drw-lbl">تاریخ</span><span class="drw-val">${d.date}</span></div>
+    </div>`;
+
+  if (d.status === 'approved' && d.vpn) {
+    html += `
+    <div class="drw-section">
+      <div class="drw-sec-title">اطلاعات VPN</div>
+      <div class="drw-row"><span class="drw-lbl">یوزر VPN</span><span class="drw-val" style="font-size:11px">${d.vpn}</span></div>
+      ${d.sub ? `<div class="drw-row"><span class="drw-lbl">لینک</span><a href="${d.sub}" target="_blank" class="drw-val accent" style="font-size:10px;text-decoration:none;">مشاهده ↗</a></div>` : ''}
+    </div>`;
+  }
+
+  if (d.status === 'rejected' && d.reason) {
+    html += `
+    <div class="drw-section">
+      <div class="drw-sec-title">دلیل رد</div>
+      <div style="font-size:12px;color:var(--red);line-height:1.7">${d.reason}</div>
+    </div>`;
+  }
+
+  document.getElementById('drwBody').innerHTML = html;
+
+  const foot = document.getElementById('drwFoot');
+  if (d.status === 'pending') {
+    foot.style.display = 'flex';
+    foot.innerHTML = `
+      <button class="drw-btn btn-reject" onclick="openRejectModal(${d.id})">
+        <i class="ti ti-x"></i> رد کردن
+      </button>
+      <button class="drw-btn btn-bot-approve" onclick="showBotApproveNote()">
+        <i class="ti ti-check"></i> تایید از بات
+      </button>`;
+  } else {
+    foot.style.display = 'none';
+  }
+
+  document.getElementById('drwOverlay').classList.add('open');
+  document.getElementById('drw').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drwOverlay').classList.remove('open');
+  document.getElementById('drw').classList.remove('open');
+  if (activeOrderRow) { activeOrderRow.classList.remove('selected'); activeOrderRow = null; }
+}
+
+function showBotApproveNote() {
+  showNotif('راهنما',
+    'تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود.',
+    'info');
+}
+
+/* ── Reject ── */
+function openRejectModal(orderId) {
+  activeOrderId = orderId;
+  document.getElementById('rejectReason').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+function closeRejectModal() {
+  document.getElementById('rejectModal').classList.remove('open');
+}
+
+async function confirmReject() {
+  const reason = document.getElementById('rejectReason').value.trim();
+  const btn    = document.getElementById('rejectConfirmBtn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> در حال ارسال...';
+
+  try {
+    const res = await fetch('/diako/api/order-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ order_id: activeOrderId, action: 'reject', reason })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      closeRejectModal();
+      closeDrawer();
+      showNotif('رد شد', 'سفارش #' + activeOrderId + ' رد شد.', 'reject');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showNotif('خطا', data.error || 'خطایی رخ داد', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-x"></i> رد کردن';
+    }
+  } catch (e) {
+    showNotif('خطا', 'خطای شبکه', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-x"></i> رد کردن';
+  }
+}
+
+/* ── Notif ── */
+function showNotif(title, body, type) {
+  const stack = document.getElementById('notif-stack');
+  const card  = document.createElement('div');
+  card.className = 'notif-card';
+  const colors = { approve: 'var(--green)', reject: 'var(--warn)', info: 'var(--accent)', error: 'var(--red)' };
+  const color  = colors[type] || 'var(--accent)';
+  card.innerHTML = `<div class="notif-header" style="color:${color}">${title}</div><div class="notif-body">${body}</div>`;
+  stack.appendChild(card);
+  setTimeout(() => { card.classList.add('hiding'); setTimeout(() => card.remove(), 300); }, 3500);
+}
+
+/* Close modal/drawer on Esc */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('rejectModal').classList.contains('open')) closeRejectModal();
+    else closeDrawer();
+  }
+});
+</script>
+{% endblock %}

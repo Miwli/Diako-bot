@@ -19,4 +19,6 @@ urlpatterns = [
     path('diako/api/keyboard/<str:keyboard_name>/', api_views.keyboard_data, name='diako_keyboard_data'),
     path('diako/api/bot-info/', api_views.bot_info, name='diako_bot_info'),
     path('diako/api/update-text/', api_views.update_text, name='diako_update_text'),
+    path('diako/orders/', v.orders_view, name='diako_orders'),
+    path('diako/api/order-action/', api_views.order_action, name='diako_order_action'),
 ]
