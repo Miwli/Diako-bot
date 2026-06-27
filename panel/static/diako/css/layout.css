@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotate(-45deg);
+  transform: rotate(-30deg);
   font-family: 'Noto Nastaliq Urdu', serif;
   font-size: 18vw;
   font-weight: 700;
@@ -15,12 +15,13 @@
   pointer-events: none;
   user-select: none;
   z-index: 50;
-  color: #00C4BE;
-  opacity: 0.055;
+  color: rgba(0,196,190,0.07);
+  text-shadow: 0 0 80px rgba(0,196,190,0.3), 0 0 200px rgba(0,196,190,0.15);
 }
 
 [data-theme="warm"] .wm {
-  color: #F97316;
+  color: rgba(249,115,22,0.07);
+  text-shadow: 0 0 80px rgba(249,115,22,0.3), 0 0 200px rgba(249,115,22,0.15);
 }
 
 /* ════════════════════════════════
