@@ -1,7 +1,7 @@
 /* ════════════════════════════════
    WATERMARK
 ════════════════════════════════ */
-body::before {
+.dash-wrap::before {
   content: "هگمتانه";
   font-family: 'Noto Nastaliq Urdu', serif;
   font-size: 18vw;
@@ -18,7 +18,7 @@ body::before {
   opacity: 0.045;
 }
 
-[data-theme="warm"] body::before {
+[data-theme="warm"] .dash-wrap::before {
   color: #F97316;
   opacity: 0.05;
 }
@@ -30,6 +30,7 @@ body::before {
   display: flex;
   min-height: 100vh;
   overflow-x: hidden;
+  position: relative;
 }
 
 /* ════════════════════════════════
