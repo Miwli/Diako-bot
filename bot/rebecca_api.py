@@ -84,6 +84,57 @@ class RebeccaAPI:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def add_time(self, username: str, extra_days: int) -> dict:
+        """افزودن زمان به یوزر — اگه منقضی شده از الان حساب می‌کنه، وگرنه از انقضای فعلی"""
+        import time as _time
+        current = await self.get_user(username)
+        current_expire = current.get("expire", 0)
+        now = int(_time.time())
+        base = max(current_expire, now) if current_expire else now
+        new_expire = base + extra_days * 86400
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.put(
+                f"{self.base_url}/api/user/{username}",
+                json={"expire": new_expire},
+                ssl=False
+            ) as resp:
+                if not resp.ok:
+                    body = await resp.text()
+                    raise Exception(f"HTTP {resp.status}: {body}")
+                return await resp.json()
+
+    async def add_volume(self, username: str, extra_gb: float) -> dict:
+        """افزودن حجم به یوزر موجود — اگه نامحدود باشد بدون تغییر برمی‌گردد"""
+        current = await self.get_user(username)
+        current_limit = current.get("data_limit", 0)
+        if current_limit == 0:
+            return current  # نامحدود — تغییر نمی‌کند
+        extra_bytes = int(extra_gb * 1024 * 1024 * 1024)
+        new_limit = current_limit + extra_bytes
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.put(
+                f"{self.base_url}/api/user/{username}",
+                json={"data_limit": new_limit},
+                ssl=False
+            ) as resp:
+                if not resp.ok:
+                    body = await resp.text()
+                    raise Exception(f"HTTP {resp.status}: {body}")
+                return await resp.json()
+
+    async def toggle_status(self, username: str, active: bool) -> dict:
+        """فعال یا غیرفعال کردن یوزر"""
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.put(
+                f"{self.base_url}/api/user/{username}",
+                json={"status": "active" if active else "disabled"},
+                ssl=False
+            ) as resp:
+                if not resp.ok:
+                    body = await resp.text()
+                    raise Exception(f"HTTP {resp.status}: {body}")
+                return await resp.json()
+
     def _random_username(self) -> str:
         chars = string.ascii_lowercase + string.digits
         return "bp_" + "".join(random.choices(chars, k=8))

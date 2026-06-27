@@ -209,4 +209,110 @@ class Users(models.Model):
         managed = False
         db_table = 'users'
         verbose_name = 'کاربر'
+
+
+class KeyboardButtons(models.Model):
+    keyboard_name     = models.TextField()
+    label             = models.TextField()
+    callback_data     = models.TextField()
+    row_index         = models.IntegerField(default=0)
+    col_index         = models.IntegerField(default=0)
+    is_active         = models.IntegerField(default=1)
+    callback_template = models.TextField(blank=True, null=True)
+    admin_only        = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = 'keyboard_buttons'
+        verbose_name = 'دکمه کیبورد'
+        verbose_name_plural = 'دکمه‌های کیبورد'
+
+    def __str__(self):
+        return f"[{self.keyboard_name}] {self.label} → {self.callback_data}"
+
+
+class KeyboardActions(models.Model):
+    action_name   = models.TextField(unique=True)
+    label         = models.TextField()
+    callback_data = models.TextField()
+    grp           = models.TextField(default='user')
+
+    class Meta:
+        managed = False
+        db_table = 'keyboard_actions'
+        verbose_name = 'اکشن کیبورد'
+        verbose_name_plural = 'کاتالوگ اکشن‌ها'
+
+    def __str__(self):
+        return f"[{self.grp}] {self.label} — {self.callback_data}"
+
+
+class ExtraVolumePlans(models.Model):
+    name        = models.TextField()
+    traffic_gb  = models.FloatField()
+    price       = models.IntegerField()
+    is_active   = models.IntegerField(default=1)
+    order_index = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = 'extra_volume_plans'
+        verbose_name = 'پکیج افزودن حجم'
+        verbose_name_plural = 'پکیج‌های افزودن حجم'
+
+    def __str__(self):
+        return f"{self.name} — {self.traffic_gb}GB — {self.price:,} تومان"
+
+
+class ExtraVolumeRequests(models.Model):
+    user_id         = models.IntegerField()
+    order_id        = models.IntegerField()
+    plan_id         = models.IntegerField()
+    receipt_file_id = models.TextField(blank=True, null=True)
+    status          = models.TextField(default='pending')
+    created_at      = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'extra_volume_requests'
+        verbose_name = 'درخواست افزودن حجم'
+        verbose_name_plural = 'درخواست‌های افزودن حجم'
+
+    def __str__(self):
+        return f"درخواست #{self.pk} — کاربر {self.user_id} — وضعیت: {self.status}"
         verbose_name_plural = 'کاربران'
+
+
+class ExtraTimePlans(models.Model):
+    name        = models.TextField()
+    days        = models.IntegerField()
+    price       = models.IntegerField()
+    is_active   = models.IntegerField(default=1)
+    order_index = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = 'extra_time_plans'
+        verbose_name = 'پکیج افزودن زمان'
+        verbose_name_plural = 'پکیج‌های افزودن زمان'
+
+    def __str__(self):
+        return f"{self.name} — {self.days} روز — {self.price:,} تومان"
+
+
+class ExtraTimeRequests(models.Model):
+    user_id         = models.IntegerField()
+    order_id        = models.IntegerField()
+    plan_id         = models.IntegerField()
+    receipt_file_id = models.TextField(blank=True, null=True)
+    status          = models.TextField(default='pending')
+    created_at      = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'extra_time_requests'
+        verbose_name = 'درخواست افزودن زمان'
+        verbose_name_plural = 'درخواست‌های افزودن زمان'
+
+    def __str__(self):
+        return f"درخواست #{self.pk} — کاربر {self.user_id} — وضعیت: {self.status}"

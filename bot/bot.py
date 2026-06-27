@@ -18,6 +18,7 @@ from handlers.admin_users import register_admin_users_handlers
 from handlers.broadcast import register_broadcast_handlers
 from handlers.stats import register_stats_handlers
 from handlers.discount import register_discount_handlers
+from handlers.services import register_services_handlers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,12 +48,13 @@ register_admin_users_handlers(dp)
 register_broadcast_handlers(dp)
 register_stats_handlers(dp)
 register_discount_handlers(dp)
+register_services_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
 
 async def _texts_refresh_loop():
     while True:
-        await asyncio.sleep(60)
+        await asyncio.sleep(10)
         await reload_texts_cache()
         await reload_keyboards_cache()
 

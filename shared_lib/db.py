@@ -230,6 +230,48 @@ async def init_db():
             )
         """)
         await db.execute("""
+            CREATE TABLE IF NOT EXISTS extra_volume_plans (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                name        TEXT NOT NULL,
+                traffic_gb  REAL NOT NULL,
+                price       INTEGER NOT NULL,
+                is_active   INTEGER DEFAULT 1,
+                order_index INTEGER DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS extra_time_plans (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                name        TEXT NOT NULL,
+                days        INTEGER NOT NULL,
+                price       INTEGER NOT NULL,
+                is_active   INTEGER DEFAULT 1,
+                order_index INTEGER DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS extra_time_requests (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id         INTEGER NOT NULL,
+                order_id        INTEGER NOT NULL,
+                plan_id         INTEGER NOT NULL,
+                receipt_file_id TEXT,
+                status          TEXT DEFAULT 'pending',
+                created_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS extra_volume_requests (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id         INTEGER NOT NULL,
+                order_id        INTEGER NOT NULL,
+                plan_id         INTEGER NOT NULL,
+                receipt_file_id TEXT,
+                status          TEXT DEFAULT 'pending',
+                created_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
             CREATE TABLE IF NOT EXISTS keyboard_buttons (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
                 keyboard_name TEXT NOT NULL,
@@ -290,6 +332,43 @@ async def init_db():
             )
         """)
         await db.commit()
+    # migration: درست کردن callback_template برای user_service_detail
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            UPDATE keyboard_buttons
+            SET callback_template = 'renew_service_{id}', callback_data = 'renew_service_0'
+            WHERE keyboard_name = 'user_service_detail' AND label LIKE '%تمدید%'
+              AND (callback_template IS NULL OR callback_template = '')
+        """)
+        await db.execute("""
+            UPDATE keyboard_buttons
+            SET callback_template = 'delete_service_{id}'
+            WHERE keyboard_name = 'user_service_detail' AND label LIKE '%حذف%'
+              AND (callback_template IS NULL OR callback_template = '')
+        """)
+        await db.commit()
+
+    # migration: پاک‌کردن دکمه‌های داینامیک که اشتباهاً در keyboard_buttons ذخیره شده بودند
+    async with aiosqlite.connect(DB_PATH) as db:
+        cleanups = [
+            ("user_plans",         "callback_data LIKE 'user_plan_%'"),
+            ("my_services",        "callback_data LIKE 'service_detail_%' OR callback_data LIKE 'order_detail_%'"),
+            ("my_tickets",         "callback_data LIKE 'ticket_detail_%'"),
+            ("user_tutorials",     "callback_data LIKE 'tutorial_view_%'"),
+            ("user_faqs",          "callback_data LIKE 'faq_view_%'"),
+            ("admin_plans",        "callback_data LIKE 'toggle_plan_settings_%'"),
+            ("admin_discount",     "callback_data LIKE 'discount_item_%'"),
+            ("admin_tutorial_list","callback_data LIKE 'tutorial_item_%'"),
+            ("admin_faqs",         "callback_data LIKE 'faq_item_%'"),
+            ("admin_user_list",    "callback_data LIKE 'admin_ul_%' OR callback_data LIKE 'admin_user_%'"),
+        ]
+        for kb_name, condition in cleanups:
+            await db.execute(
+                f"DELETE FROM keyboard_buttons WHERE keyboard_name = ? AND ({condition})",
+                (kb_name,)
+            )
+        await db.commit()
+
     await _seed_keyboard_buttons()
     await init_texts_cache()
     await init_keyboards_cache()
@@ -687,6 +766,35 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "profile_text":            "👤 {name}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🆔 آیدی تلگرام : <code>{user_id}</code>\n{username_line}\n📅 تاریخ عضویت : {join_date}\n💰 موجودی : <b>{balance} تومان</b>\n🎫 کد معرف : <code>{referral_code}</code>\n━━━━━━━━━━━━━━━━━━━━━━━━",
     "payment_card_info":       "💳 <b>اطلاعات پرداخت</b>\n\nمبلغ: <b>{amount} تومان</b>\n\nشماره کارت:\n<code>{card_number}</code>\nبه نام: <b>{card_owner}</b>\n\nبعد از واریز، تصویر رسید را ارسال کنید.",
     "wallet_balance_text":     "👤 {name} عزیز\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n💰 موجودی\n<b>{balance} تومان</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n🛒 سرویس‌های خریداری‌شده    <b>{services}</b> عدد\n📑 فاکتورهای پرداخت‌شده     <b>{invoices}</b> عدد",
+    "proforma_text":           "🧾 <b>پیش‌فاکتور</b>\n────────────────────────\n📦 <b>پلن:</b> {plan_name}\n📊 <b>حجم:</b> {traffic} گیگابایت\n📅 <b>مدت:</b> {duration} روز\n────────────────────────\n💰 <b>مبلغ قابل پرداخت:</b> {price} تومان{balance_line}",
+    "payment_buy_card_info":   "💳 <b>اطلاعات پرداخت</b>\n────────────────────────\n💳 <b>شماره کارت:</b>\n<code>{card_number}</code>{owner_line}{discount_line}\n💰 <b>مبلغ:</b> {amount} تومان\n────────────────────────\n\n📸 پس از واریز، تصویر رسید را ارسال کنید.",
+    "admin_order_notify":      "🛎 <b>سفارش جدید — شماره #{order_id}</b>\n────────────────────────\nیک کاربر پلن زیر را خریداری کرده و رسید پرداخت ارسال کرده است:\n\n👤 کاربر: @{username} (<code>{user_id}</code>)\n📦 پلن: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n📅 مدت: {duration} روز\n{discount_line}💰 مبلغ: <b>{amount} تومان</b>\n────────────────────────\nپس از بررسی رسید، وضعیت سفارش را تعیین کنید:",
+    "admin_topup_notify":      "💳 <b>درخواست شارژ حساب</b>\n\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n💰 مبلغ: <b>{amount} تومان</b>\n🔖 شماره درخواست: #{request_id}",
+    "plan_service_not_found":  "❌ سرویس مناسب در پنل یافت نشد. با پشتیبانی تماس بگیرید.",
+    # ─── افزودن حجم (services.py) ────────────────────────────────────────
+    # ─── افزودن زمان (services.py) ───────────────────────────────────────
+    "extra_time_no_plans":         "در حال حاضر پکیجی برای افزودن زمان موجود نیست.",
+    "extra_time_select":           "⏱ <b>افزودن زمان</b>\n\nیک پکیج انتخاب کنید:",
+    "extra_time_confirm":          "⏱ <b>پیش‌فاکتور افزودن زمان</b>\n────────────────────────\n📦 <b>پکیج:</b> {plan_name}\n📅 <b>مدت اضافه:</b> {days} روز\n💰 <b>قیمت:</b> {price} تومان",
+    "extra_time_success_wallet":   "✅ <b>زمان اضافه شد!</b>\n\n📅 <b>{days} روز</b> به سرویس شما اضافه شد.",
+    "extra_time_ask_receipt":      "📸 تصویر رسید پرداخت را ارسال کنید:",
+    "extra_time_submitted":        "✅ درخواست افزودن زمان ثبت شد. پس از تایید ادمین، زمان اضافه می‌شود.",
+    "extra_time_approved":         "✅ <b>افزودن زمان تایید شد!</b>\n\n📅 <b>{days} روز</b> به سرویس شما اضافه شد.",
+    "extra_time_rejected":         "❌ درخواست افزودن زمان رد شد.",
+    "extra_time_error":            "❌ خطا در افزودن زمان. با پشتیبانی تماس بگیرید.",
+    "admin_et_notify":             "⏱ <b>درخواست افزودن زمان — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📅 مدت: {days} روز\n💰 مبلغ: <b>{price} تومان</b>",
+    # ─── افزودن حجم (services.py) ────────────────────────────────────────
+    "extra_volume_no_plans":       "در حال حاضر پکیجی برای افزودن حجم موجود نیست.",
+    "extra_volume_unlimited":      "ℹ️ این سرویس حجم نامحدود دارد، افزودن حجم ممکن نیست.",
+    "extra_volume_select":         "➕ <b>افزودن حجم</b>\n\nیک پکیج انتخاب کنید:",
+    "extra_volume_confirm":        "➕ <b>پیش‌فاکتور افزودن حجم</b>\n────────────────────────\n📦 <b>پکیج:</b> {plan_name}\n📊 <b>حجم اضافه:</b> {traffic} گیگابایت\n💰 <b>قیمت:</b> {price} تومان",
+    "extra_volume_success_wallet": "✅ <b>حجم اضافه شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد.",
+    "extra_volume_ask_receipt":    "📸 تصویر رسید پرداخت را ارسال کنید:",
+    "extra_volume_submitted":      "✅ درخواست افزودن حجم ثبت شد. پس از تایید ادمین، حجم اضافه می‌شود.",
+    "extra_volume_approved":       "✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد.",
+    "extra_volume_rejected":       "❌ درخواست افزودن حجم رد شد.",
+    "extra_volume_error":          "❌ خطا در افزودن حجم. با پشتیبانی تماس بگیرید.",
+    "admin_ev_notify":             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n💰 مبلغ: <b>{price} تومان</b>",
     # ─── پنل ادمین (admin.py) ─────────────────────────────────────────────
     "admin_panel_title":              "⚙️ پنل ادمین",
     "admin_general_title":            "⚙️ تنظیمات عمومی",
@@ -1587,6 +1695,128 @@ async def update_order_discount(order_id: int, discount_code: str, discount_amou
         await db.commit()
 
 
+# ─── پلن‌ها و درخواست‌های افزودن زمان ──────────────────────────────────────
+
+async def get_extra_time_plans() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM extra_time_plans WHERE is_active=1 ORDER BY order_index, days"
+        )
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def get_extra_time_plan(plan_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM extra_time_plans WHERE id=?", (plan_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def create_extra_time_request(user_id: int, order_id: int, plan_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO extra_time_requests (user_id, order_id, plan_id) VALUES (?,?,?)",
+            (user_id, order_id, plan_id)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+
+async def get_extra_time_request(req_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("""
+            SELECT r.*,
+                   p.name AS plan_name, p.days, p.price AS plan_price,
+                   o.vpn_username, o.user_id AS service_user_id,
+                   o.plan_id AS vpn_plan_id
+            FROM extra_time_requests r
+            JOIN extra_time_plans p ON r.plan_id = p.id
+            JOIN orders o ON r.order_id = o.id
+            WHERE r.id = ?
+        """, (req_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def update_extra_time_request(req_id: int, status: str, receipt_file_id: str = None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        if receipt_file_id:
+            await db.execute(
+                "UPDATE extra_time_requests SET status=?, receipt_file_id=? WHERE id=?",
+                (status, receipt_file_id, req_id)
+            )
+        else:
+            await db.execute(
+                "UPDATE extra_time_requests SET status=? WHERE id=?",
+                (status, req_id)
+            )
+        await db.commit()
+
+
+# ─── پلن‌ها و درخواست‌های افزودن حجم ──────────────────────────────────────
+
+async def get_extra_volume_plans() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM extra_volume_plans WHERE is_active=1 ORDER BY order_index, price"
+        )
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def get_extra_volume_plan(plan_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM extra_volume_plans WHERE id=?", (plan_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def create_extra_volume_request(user_id: int, order_id: int, plan_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO extra_volume_requests (user_id, order_id, plan_id) VALUES (?,?,?)",
+            (user_id, order_id, plan_id)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+
+async def get_extra_volume_request(req_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("""
+            SELECT r.*,
+                   p.name AS plan_name, p.traffic_gb, p.price AS plan_price,
+                   o.vpn_username, o.user_id AS service_user_id,
+                   o.plan_id AS vpn_plan_id
+            FROM extra_volume_requests r
+            JOIN extra_volume_plans p ON r.plan_id = p.id
+            JOIN orders o ON r.order_id = o.id
+            WHERE r.id = ?
+        """, (req_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def update_extra_volume_request(req_id: int, status: str, receipt_file_id: str = None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        if receipt_file_id:
+            await db.execute(
+                "UPDATE extra_volume_requests SET status=?, receipt_file_id=? WHERE id=?",
+                (status, receipt_file_id, req_id)
+            )
+        else:
+            await db.execute(
+                "UPDATE extra_volume_requests SET status=? WHERE id=?",
+                (status, req_id)
+            )
+        await db.commit()
+
+
 # ─── کیبورد ادیتور ───────────────────────────
 
 _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
@@ -1758,9 +1988,9 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
         ("my_services", "🔙 بازگشت",  "user_main", 999, 0, None),
     ],
     "user_service_detail": [
-        ("user_service_detail", "🔄 تمدید سرویس",   "renew_0",          0, 0, None),
-        ("user_service_detail", "🗑 حذف سرویس",      "delete_service_0", 1, 0, None),
-        ("user_service_detail", "🔙 بازگشت",         "my_services",      2, 0, None),
+        ("user_service_detail", "🔄 تمدید سرویس", "renew_service_0",  0, 0, "renew_service_{id}"),
+        ("user_service_detail", "🗑 حذف سرویس",   "delete_service_0", 1, 0, "delete_service_{id}"),
+        ("user_service_detail", "🔙 بازگشت",       "my_services",      2, 0, None),
     ],
     "my_tickets": [
         ("my_tickets", "🔙 بازگشت", "support", 999, 0, None),
@@ -1880,6 +2110,9 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     ("broadcast_target_all",         "📢 ارسال به همه",                  "broadcast_target_all",         "admin"),
     ("broadcast_target_active",      "✅ ارسال به کاربران فعال",        "broadcast_target_active",      "admin"),
     ("admin_stats",                  "📊 آمار و گزارش",                 "admin_stats",                  "admin"),
+    # ── سرویس‌محور (داخل user_service_detail) ──────────────────────────────
+    ("extra_volume",                 "➕ افزودن حجم",                   "extra_volume_{id}",             "service"),
+    ("extra_time",                   "⏱ افزودن زمان",                  "extra_time_{id}",               "service"),
 ]
 
 
@@ -1952,12 +2185,12 @@ async def save_keyboard_layout(keyboard_name: str, buttons: list[dict]):
         if buttons:
             await db.executemany(
                 """INSERT INTO keyboard_buttons
-                   (keyboard_name, label, callback_data, row_index, col_index, is_active, callback_template)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   (keyboard_name, label, callback_data, row_index, col_index, is_active, callback_template, admin_only)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 [
                     (keyboard_name, b["label"], b["callback_data"],
                      b["row_index"], b["col_index"], b.get("is_active", 1),
-                     b.get("callback_template"))
+                     b.get("callback_template"), b.get("admin_only", 0))
                     for b in buttons
                 ]
             )

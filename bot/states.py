@@ -97,3 +97,9 @@ class AddDiscountCode(StatesGroup):
 class ApplyDiscount(StatesGroup):
     waiting_for_code = State()
 
+class ExtraVolume(StatesGroup):
+    waiting_for_receipt = State()
+
+class ExtraTime(StatesGroup):
+    waiting_for_receipt = State()
+

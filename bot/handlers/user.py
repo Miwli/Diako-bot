@@ -335,13 +335,13 @@ def register_user_handlers(dp):
         await state.clear()
 
         from bot import ADMIN_IDS
-        caption = (
-            f"💳 <b>درخواست شارژ حساب</b>\n\n"
-            f"👤 کاربر: {u.full_name}"
-            + (f" (@{u.username})" if u.username else "") +
-            f"\n🆔 آیدی: <code>{u.id}</code>\n"
-            f"💰 مبلغ: <b>{amount:,} تومان</b>\n"
-            f"🔖 شماره درخواست: #{request_id}"
+        caption = get_text(
+            "admin_topup_notify",
+            full_name=u.full_name,
+            username_part=f" (@{u.username})" if u.username else "",
+            user_id=u.id,
+            amount=f"{amount:,}",
+            request_id=request_id,
         )
         for admin_id in ADMIN_IDS:
             await message.bot.send_photo(
@@ -548,17 +548,15 @@ def register_user_handlers(dp):
         stats = await get_user_wallet_stats(callback.from_user.id)
         has_balance = stats["balance"] >= plan["price"]
 
-        text = (
-            f"🧾 <b>پیش‌فاکتور</b>\n"
-            f"{'─' * 24}\n"
-            f"📦 <b>پلن:</b> {plan['name']}\n"
-            f"📊 <b>حجم:</b> {plan['traffic']} گیگابایت\n"
-            f"📅 <b>مدت:</b> {plan['duration']} روز\n"
-            f"{'─' * 24}\n"
-            f"💰 <b>مبلغ قابل پرداخت:</b> {plan['price']:,} تومان"
+        balance_line = f"\n💎 <b>موجودی کیف پول:</b> {stats['balance']:,} تومان" if has_balance else ""
+        text = get_text(
+            "proforma_text",
+            plan_name=plan["name"],
+            traffic=plan["traffic"],
+            duration=plan["duration"],
+            price=f"{plan['price']:,}",
+            balance_line=balance_line,
         )
-        if has_balance:
-            text += f"\n💎 <b>موجودی کیف پول:</b> {stats['balance']:,} تومان"
 
         await callback.message.edit_text(
             text,
@@ -602,7 +600,7 @@ def register_user_handlers(dp):
                 live_ids = {s["id"] for s in live}
                 sid = next((s for s in service_ids if s in live_ids), None)
                 if not sid:
-                    await callback.answer("سرویس پنل یافت نشد.", show_alert=True)
+                    await callback.answer(get_text("plan_service_not_found"), show_alert=True)
                     return
                 user_data = await api.create_user(sid, plan["traffic"], plan["duration"])
                 sub_path = user_data.get("subscription_url", "")
@@ -637,17 +635,16 @@ def register_user_handlers(dp):
         await state.update_data(plan_id=plan_id)
         await state.set_state(BuyVPN.waiting_for_receipt)
 
-        owner_line    = f"👤 <b>به نام:</b> {card_owner}\n" if card_owner else ""
-        discount_line = f"🎟 <b>تخفیف:</b> {discount_amount:,} تومان\n" if discount_amount else ""
+        owner_line    = f"\n👤 <b>به نام:</b> {card_owner}" if card_owner else ""
+        discount_line = f"\n🎟 <b>تخفیف:</b> {discount_amount:,} تومان" if discount_amount else ""
         await callback.message.edit_text(
-            f"💳 <b>اطلاعات پرداخت</b>\n"
-            f"{'─' * 24}\n"
-            f"💳 <b>شماره کارت:</b>\n<code>{card_number}</code>\n"
-            f"{owner_line}"
-            f"{discount_line}"
-            f"💰 <b>مبلغ:</b> {final_price:,} تومان\n"
-            f"{'─' * 24}\n\n"
-            f"📸 پس از واریز، تصویر رسید را ارسال کنید.",
+            get_text(
+                "payment_buy_card_info",
+                card_number=card_number,
+                owner_line=owner_line,
+                discount_line=discount_line,
+                amount=f"{final_price:,}",
+            ),
             reply_markup=payment_info_keyboard(),
             parse_mode="HTML"
         )
@@ -776,18 +773,16 @@ def register_user_handlers(dp):
 
         final_price   = plan["price"] - discount_amount
         discount_line = f"🎟 کد تخفیف: <code>{discount_code}</code> ({discount_amount:,} تومان)\n" if discount_code else ""
-        admin_text = (
-            f"🛎 <b>سفارش جدید — شماره #{order_id}</b>\n"
-            f"{'─' * 24}\n"
-            f"یک کاربر پلن زیر را خریداری کرده و رسید پرداخت ارسال کرده است:\n\n"
-            f"👤 کاربر: @{username} (<code>{message.from_user.id}</code>)\n"
-            f"📦 پلن: <b>{plan['name']}</b>\n"
-            f"📊 حجم: {plan['traffic']} گیگابایت\n"
-            f"📅 مدت: {plan['duration']} روز\n"
-            f"{discount_line}"
-            f"💰 مبلغ: <b>{final_price:,} تومان</b>\n"
-            f"{'─' * 24}\n"
-            f"پس از بررسی رسید، وضعیت سفارش را تعیین کنید:"
+        admin_text = get_text(
+            "admin_order_notify",
+            order_id=order_id,
+            username=username,
+            user_id=message.from_user.id,
+            plan_name=plan["name"],
+            traffic=plan["traffic"],
+            duration=plan["duration"],
+            discount_line=discount_line,
+            amount=f"{final_price:,}",
         )
         for admin_id in ADMIN_IDS:
             await message.bot.send_photo(

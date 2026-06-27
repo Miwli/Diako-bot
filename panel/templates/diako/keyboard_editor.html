@@ -1742,12 +1742,15 @@ async function saveLayout() {
   boardRows.forEach((row, ri) => {
     row.forEach((btn, ci) => {
       buttons.push({
-        keyboard_name: currentKeyboard,
-        label:         btn.label,
-        callback_data: btn.callback_data,
-        row_index:     ri,
-        col_index:     ci,
-        is_active:     btn.is_active !== undefined ? btn.is_active : 1,
+        keyboard_name:     currentKeyboard,
+        label:             btn.label,
+        callback_data:     btn.callback_data,
+        row_index:         ri,
+        col_index:         ci,
+        is_active:         btn.is_active !== undefined ? btn.is_active : 1,
+        callback_template: btn.callback_template || null,
+        admin_only:        btn.admin_only || 0,
+        is_dynamic:        btn.is_dynamic || false,
       });
     });
   });

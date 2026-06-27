@@ -426,18 +426,23 @@ def user_services_keyboard(orders: list) -> InlineKeyboardMarkup:
 
 
 def user_service_detail_keyboard(order_id: int, subscription_url: str = None) -> InlineKeyboardMarkup:
-    rows = get_keyboard_rows("user_main")
-    back_label = next((r["label"] for r in rows if r["callback_data"] == "my_services"), "🔙 بازگشت به سرویس‌ها")
     buttons = []
+    # لینک اشتراک همیشه اول است — از DB نمی‌آید (CopyTextButton خاص aiogram است)
     if subscription_url:
         buttons.append([InlineKeyboardButton(text="📋 کپی لینک اشتراک", copy_text=CopyTextButton(text=subscription_url))])
     else:
         buttons.append([InlineKeyboardButton(text="🔗 لینک اشتراک", callback_data=f"sub_link_{order_id}")])
-    buttons.append([
-        InlineKeyboardButton(text="🔄 تمدید",       callback_data=f"renew_service_{order_id}"),
-        InlineKeyboardButton(text="🗑 حذف سرویس",   callback_data=f"delete_service_{order_id}"),
-    ])
-    buttons.append([InlineKeyboardButton(text=back_label, callback_data="my_services")])
+    # بقیه دکمه‌ها از DB — ادمین از پنل مدیریت می‌کند (تمدید، حذف، و فیچرهای جدید)
+    rows = get_keyboard_rows("user_service_detail")
+    if rows:
+        db_part = _build_from_rows(rows, template_id=order_id)
+        buttons.extend(db_part.inline_keyboard)
+    else:
+        buttons.append([
+            InlineKeyboardButton(text="🔄 تمدید",     callback_data=f"renew_service_{order_id}"),
+            InlineKeyboardButton(text="🗑 حذف سرویس", callback_data=f"delete_service_{order_id}"),
+        ])
+        buttons.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data="my_services")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
