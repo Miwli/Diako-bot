@@ -22,7 +22,7 @@ services:
     ports:
       - "${PANEL_PORT:-8000}:8000"
     volumes:
-      - db_data:/app/db
+      - db_data:/shared-data/bot.db
       - static_data:/app/staticfiles
 
 volumes:
