@@ -1,0 +1,30 @@
+services:
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: diako-bot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - db_data:/app/db
+    depends_on:
+      - panel
+
+  panel:
+    build:
+      context: .
+      dockerfile: Dockerfile.panel
+    container_name: diako-panel
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PANEL_PORT:-8000}:8000"
+    volumes:
+      - db_data:/app/db
+      - static_data:/app/staticfiles
+
+volumes:
+  db_data:
+  static_data:

@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY panel/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
+
+# Copy panel source
+COPY panel/ .
+
+# Collect static files and run migrations on startup
+CMD ["sh", "-c", "python manage.py migrate --noinput && \
+                  python manage.py collectstatic --noinput && \
+                  gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
