@@ -15,10 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY panel/ .
 COPY shared_lib/ shared_lib/
 
-# Make db directory
-RUN mkdir -p /app/db
 
 # Collect static files and run migrations on startup
-CMD ["sh", "-c", "python manage.py migrate --noinput && \
-                python manage.py collectstatic --noinput && \
-                gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
+CMD ["sh", "-c", "mkdir -p /app/db && \
+                  python manage.py migrate --noinput && \
+                  python manage.py collectstatic --noinput && \
+                  gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2"]
