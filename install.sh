@@ -141,7 +141,9 @@ EOF
 
 ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/diako-panel
 rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+nginx -t
+systemctl enable nginx
+systemctl start nginx || systemctl reload nginx
 print_ok "Nginx پیکربندی شد"
 
 # ── ۸. Build و اجرا ──────────────────────────
