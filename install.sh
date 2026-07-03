@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ─────────────────────────────────────────────
-#  Diako Bot — مدیریت سرور
+#  Diako Bot — Server Management
 # ─────────────────────────────────────────────
 
 RED='\033[0;31m'
@@ -23,12 +23,12 @@ INSTALL_DIR="/opt/diako-bot"
 ENV_FILE="$INSTALL_DIR/.env"
 
 # ─────────────────────────────────────────────
-#  توابع کمکی
+#  Helper Functions
 # ─────────────────────────────────────────────
 
 check_root() {
   if [ "$EUID" -ne 0 ]; then
-    print_err "لطفاً با دسترسی root اجرا کنید: sudo bash install.sh"
+    print_err "Please run with root privileges: sudo bash install.sh"
     exit 1
   fi
 }
@@ -45,11 +45,11 @@ is_installed() {
 
 press_enter() {
   echo ""
-  read -rp "  اینتر بزن تا به منو برگردی..."
+  read -rp "  Press Enter to return to menu..."
 }
 
 # ─────────────────────────────────────────────
-#  منو اصلی
+#  Main Menu
 # ─────────────────────────────────────────────
 
 show_menu() {
@@ -60,106 +60,112 @@ show_menu() {
   echo "  ╚══════════════════════════════════════╝"
   echo -e "${NC}"
 
-  # وضعیت سرویس‌ها
+  # Service status
   if is_installed; then
     cd "$INSTALL_DIR"
     BOT_STATUS=$(docker compose ps bot --format "{{.Status}}" 2>/dev/null | head -1)
     PANEL_STATUS=$(docker compose ps panel --format "{{.Status}}" 2>/dev/null | head -1)
 
     if echo "$BOT_STATUS" | grep -q "Up"; then
-      echo -e "  ربات:   ${GREEN}● فعال${NC}"
+      echo -e "  Bot:   ${GREEN}● Active${NC}"
     else
-      echo -e "  ربات:   ${RED}● غیرفعال${NC}"
+      echo -e "  Bot:   ${RED}● Inactive${NC}"
     fi
 
     if echo "$PANEL_STATUS" | grep -q "Up"; then
       DOMAIN=$(get_domain)
-      echo -e "  پنل:    ${GREEN}● فعال${NC}  —  https://${DOMAIN}"
+      echo -e "  Panel: ${GREEN}● Active${NC}  —  https://${DOMAIN}"
     else
-      echo -e "  پنل:    ${RED}● غیرفعال${NC}"
+      echo -e "  Panel: ${RED}● Inactive${NC}"
     fi
   else
-    echo -e "  وضعیت:  ${YELLOW}● نصب نشده${NC}"
+    echo -e "  Status: ${YELLOW}● Not Installed${NC}"
   fi
 
   echo ""
   echo -e "  ${BOLD}─────────────────────────────────────${NC}"
-  echo -e "  ${CYAN}1)${NC}  نصب کامل"
-  echo -e "  ${CYAN}2)${NC}  آپدیت (pull + rebuild)"
-  echo -e "  ${CYAN}3)${NC}  ریستارت سرویس‌ها"
-  echo -e "  ${CYAN}4)${NC}  وضعیت کانتینرها"
-  echo -e "  ${CYAN}5)${NC}  لاگ ربات"
-  echo -e "  ${CYAN}6)${NC}  لاگ پنل"
-  echo -e "  ${CYAN}7)${NC}  گرفتن / تمدید SSL"
-  echo -e "  ${CYAN}8)${NC}  ویرایش تنظیمات (.env)"
-  echo -e "  ${RED}9)${NC}  حذف کامل"
+  echo -e "  ${CYAN}1)${NC}  Full Installation"
+  echo -e "  ${CYAN}2)${NC}  Update (pull + rebuild)"
+  echo -e "  ${CYAN}3)${NC}  Restart Services"
+  echo -e "  ${CYAN}4)${NC}  Container Status"
+  echo -e "  ${CYAN}5)${NC}  Bot Logs"
+  echo -e "  ${CYAN}6)${NC}  Panel Logs"
+  echo -e "  ${CYAN}7)${NC}  Get/Renew SSL"
+  echo -e "  ${CYAN}8)${NC}  Edit Settings (.env)"
+  echo -e "  ${RED}9)${NC}  Full Uninstall"
   echo -e "  ${BOLD}─────────────────────────────────────${NC}"
-  echo -e "  ${CYAN}0)${NC}  خروج"
+  echo -e "  ${CYAN}0)${NC}  Exit"
   echo ""
-  read -rp "  انتخاب کن: " CHOICE
+  read -rp "  Select: " CHOICE
 }
 
 # ─────────────────────────────────────────────
-#  عملیات‌ها
+#  Operations
 # ─────────────────────────────────────────────
 
 do_install() {
   check_root
 
   if is_installed; then
-    print_warn "پروژه از قبل نصب است. برای آپدیت گزینه ۲ رو انتخاب کن."
+    print_warn "Project is already installed. Choose option 2 for update."
     press_enter; return
   fi
 
-  # پیش‌نیازها
-  print_step "نصب پیش‌نیازها..."
+  # Prerequisites
+  print_step "Installing prerequisites..."
   apt-get update -qq
-  apt-get install -y -qq git curl nginx certbot python3-certbot-nginx
-  print_ok "پیش‌نیازها نصب شدند"
+  apt-get install -y -qq git curl nginx certbot python3-certbot-nginx 2>&1 | grep -v "is the author" || true
+  print_ok "Prerequisites installed"
 
   # Docker
-  print_step "بررسی Docker..."
+  print_step "Checking Docker..."
   if ! command -v docker &>/dev/null; then
-    print_warn "Docker پیدا نشد، در حال نصب..."
+    print_warn "Docker not found, installing..."
     curl -fsSL https://get.docker.com | sh
     systemctl enable --now docker
-    print_ok "Docker نصب شد"
+    print_ok "Docker installed"
   else
-    print_ok "Docker از قبل نصب است"
+    print_ok "Docker already installed"
   fi
   if ! docker compose version &>/dev/null; then
     apt-get install -y docker-compose-plugin 2>/dev/null || \
-      { print_err "نصب Docker Compose ناموفق بود."; press_enter; return; }
+      { print_err "Failed to install Docker Compose."; press_enter; return; }
   fi
 
   # Clone
-  print_step "دریافت کد از GitHub..."
+  print_step "Cloning code from GitHub..."
   git clone "$REPO_URL" "$INSTALL_DIR"
-  print_ok "سورس کد آماده شد"
+  print_ok "Source code ready"
 
-  # فایل‌های داکر
-  print_step "دانلود فایل‌های داکر..."
+  # Docker files
+  print_step "Downloading Docker files..."
   for f in Dockerfile.bot Dockerfile.panel docker-compose.yml; do
     curl -fsSL "$RAW_URL/$f" -o "$INSTALL_DIR/$f"
-    print_ok "دانلود شد: $f"
+    print_ok "Downloaded: $f"
   done
 
-  # تنظیمات
-  print_step "تنظیم متغیرهای محیطی..."
+  # Settings
+  print_step "Configuring environment variables..."
   echo ""
-  read -rp "  توکن ربات تلگرام: " BOT_TOKEN
-  read -rp "  آیدی عددی ادمین: " ADMIN_ID
-  read -rp "  دامنه پنل (مثال: panel.example.com): " DOMAIN
-  read -rp "  ایمیل برای SSL: " SSL_EMAIL
-  read -rp "  Secret Key جنگو (Enter برای تولید خودکار): " DJANGO_SECRET
+  read -rp "  Telegram Bot Token: " BOT_TOKEN
+  read -rp "  Admin ID (Enter for auto-generate): " ADMIN_ID
+  read -rp "  Panel Domain (e.g., panel.example.com): " DOMAIN
+  read -rp "  Email for SSL: " SSL_EMAIL
+  read -rp "  Django Secret Key (Enter for auto-generate): " DJANGO_SECRET
   if [ -z "$DJANGO_SECRET" ]; then
     DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))" 2>/dev/null || \
                     cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 50)
   fi
 
+  # If ADMIN_ID is empty, use a default placeholder (user can edit later)
+  if [ -z "$ADMIN_ID" ]; then
+    ADMIN_ID="123456789"
+    print_warn "ADMIN_ID is empty, default value set. Please edit later."
+  fi
+
   cat > "$ENV_FILE" <<EOF
 BOT_TOKEN=${BOT_TOKEN}
-ADMIN_ID=${ADMIN_ID}
+ADMIN_IDS=${ADMIN_ID}
 DJANGO_SECRET_KEY=${DJANGO_SECRET}
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=${DOMAIN}
@@ -169,10 +175,14 @@ SSL_EMAIL=${SSL_EMAIL}
 DB_PATH=/app/db/db.sqlite3
 EOF
   chmod 600 "$ENV_FILE"
-  print_ok "فایل .env ساخته شد"
+  print_ok "Environment file created"
+
+  # Copy .env for bot
+  cp "$ENV_FILE" "$INSTALL_DIR/bot/.env"
+  print_ok "Bot .env file copied"
 
   # Nginx
-  print_step "پیکربندی Nginx..."
+  print_step "Configuring Nginx..."
   cat > /etc/nginx/sites-available/diako-panel <<EOF
 server {
     listen 80;
@@ -194,14 +204,14 @@ EOF
   nginx -t
   systemctl enable nginx
   systemctl start nginx || systemctl reload nginx
-  print_ok "Nginx راه‌اندازی شد"
+  print_ok "Nginx configured"
 
   # Build
-  print_step "ساخت و راه‌اندازی کانتینرها..."
+  print_step "Building and starting containers..."
   cd "$INSTALL_DIR"
   docker compose build --no-cache
   docker compose up -d
-  print_ok "کانتینرها راه‌اندازی شدند"
+  print_ok "Containers started"
 
   # SSL
   do_ssl
@@ -212,26 +222,26 @@ EOF
 do_update() {
   check_root
   if ! is_installed; then
-    print_err "پروژه نصب نیست. ابتدا گزینه ۱ رو انتخاب کن."
+    print_err "Project not installed. Choose option 1 first."
     press_enter; return
   fi
 
-  print_step "آپدیت کد از GitHub..."
+  print_step "Updating code from GitHub..."
   git -C "$INSTALL_DIR" pull
-  print_ok "کد آپدیت شد"
+  print_ok "Code updated"
 
-  print_step "دانلود فایل‌های داکر..."
+  print_step "Downloading Docker files..."
   for f in Dockerfile.bot Dockerfile.panel docker-compose.yml; do
     curl -fsSL "$RAW_URL/$f" -o "$INSTALL_DIR/$f"
-    print_ok "آپدیت شد: $f"
+    print_ok "Updated: $f"
   done
 
-  print_step "Rebuild کانتینرها..."
+  print_step "Rebuilding containers..."
   cd "$INSTALL_DIR"
   docker compose down
   docker compose build --no-cache
   docker compose up -d
-  print_ok "آپدیت کامل شد"
+  print_ok "Update complete"
 
   press_enter
 }
@@ -239,19 +249,19 @@ do_update() {
 do_restart() {
   check_root
   if ! is_installed; then
-    print_err "پروژه نصب نیست."
+    print_err "Project not installed."
     press_enter; return
   fi
-  print_step "ریستارت سرویس‌ها..."
+  print_step "Restarting services..."
   cd "$INSTALL_DIR"
   docker compose restart
-  print_ok "ریستارت شد"
+  print_ok "Restarted"
   press_enter
 }
 
 do_status() {
   if ! is_installed; then
-    print_err "پروژه نصب نیست."
+    print_err "Project not installed."
     press_enter; return
   fi
   echo ""
@@ -262,20 +272,20 @@ do_status() {
 
 do_logs_bot() {
   if ! is_installed; then
-    print_err "پروژه نصب نیست."
+    print_err "Project not installed."
     press_enter; return
   fi
-  echo -e "\n${YELLOW}Ctrl+C برای خروج از لاگ${NC}\n"
+  echo -e "\n${YELLOW}Ctrl+C to exit log${NC}\n"
   cd "$INSTALL_DIR"
   docker compose logs -f bot
 }
 
 do_logs_panel() {
   if ! is_installed; then
-    print_err "پروژه نصب نیست."
+    print_err "Project not installed."
     press_enter; return
   fi
-  echo -e "\n${YELLOW}Ctrl+C برای خروج از لاگ${NC}\n"
+  echo -e "\n${YELLOW}Ctrl+C to exit log${NC}\n"
   cd "$INSTALL_DIR"
   docker compose logs -f panel
 }
@@ -286,14 +296,14 @@ do_ssl() {
   SSL_EMAIL=$(grep ^SSL_EMAIL= "$ENV_FILE" 2>/dev/null | cut -d= -f2)
 
   if [ -z "$DOMAIN" ] || [ -z "$SSL_EMAIL" ]; then
-    print_err "دامنه یا ایمیل در .env پیدا نشد."
+    print_err "Domain or email not found in .env."
     press_enter; return
   fi
 
-  print_step "دریافت گواهی SSL برای $DOMAIN"
-  echo -e "${YELLOW}⚠ مطمئن شو DNS دامنه به IP این سرور اشاره می‌کند!${NC}"
+  print_step "Getting SSL certificate for $DOMAIN"
+  echo -e "${YELLOW}⚠ Make sure DNS points to this server's IP!${NC}"
   echo ""
-  read -rp "  آیا DNS ست شده؟ (y/n): " DNS_READY
+  read -rp "  DNS configured? (y/n): " DNS_READY
 
   if [ "$DNS_READY" = "y" ] || [ "$DNS_READY" = "Y" ]; then
     certbot --nginx \
@@ -302,11 +312,11 @@ do_ssl() {
       --agree-tos \
       --non-interactive \
       --redirect
-    print_ok "SSL گرفته شد ✓"
+    print_ok "SSL certificate obtained ✓"
     (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet && systemctl reload nginx") | crontab -
-    print_ok "تمدید خودکار SSL تنظیم شد"
+    print_ok "SSL auto-renewal configured"
   else
-    print_warn "لغو شد. هر وقت DNS آماده شد دوباره این گزینه رو بزن."
+    print_warn "Cancelled. Run this option again when DNS is ready."
   fi
 
   press_enter
@@ -314,16 +324,16 @@ do_ssl() {
 
 do_edit_env() {
   if ! is_installed; then
-    print_err "پروژه نصب نیست."
+    print_err "Project not installed."
     press_enter; return
   fi
   nano "$ENV_FILE"
   echo ""
-  read -rp "  ریستارت سرویس‌ها برای اعمال تغییرات؟ (y/n): " DO_RESTART
+  read -rp "  Restart services to apply changes? (y/n): " DO_RESTART
   if [ "$DO_RESTART" = "y" ] || [ "$DO_RESTART" = "Y" ]; then
     cd "$INSTALL_DIR"
     docker compose restart
-    print_ok "ریستارت شد"
+    print_ok "Restarted"
   fi
   press_enter
 }
@@ -331,33 +341,33 @@ do_edit_env() {
 do_uninstall() {
   check_root
   echo ""
-  echo -e "${RED}${BOLD}⚠ این عملیات همه چیز رو حذف می‌کند!${NC}"
-  echo -e "  شامل: کد، دیتابیس، تنظیمات، کانتینرها"
+  echo -e "${RED}${BOLD}⚠ This will delete everything!${NC}"
+  echo -e "  Includes: code, database, settings, containers"
   echo ""
-  read -rp "  مطمئنی؟ برای تایید بنویس DELETE: " CONFIRM
+  read -rp "  Confirm? Type DELETE: " CONFIRM
 
   if [ "$CONFIRM" = "DELETE" ]; then
-    print_step "حذف کانتینرها..."
+    print_step "Removing containers..."
     cd "$INSTALL_DIR" 2>/dev/null && docker compose down --volumes 2>/dev/null || true
 
-    print_step "حذف فایل‌ها..."
+    print_step "Removing files..."
     rm -rf "$INSTALL_DIR"
 
-    print_step "حذف Nginx config..."
+    print_step "Removing Nginx config..."
     rm -f /etc/nginx/sites-enabled/diako-panel
     rm -f /etc/nginx/sites-available/diako-panel
     systemctl reload nginx 2>/dev/null || true
 
-    print_ok "همه چیز حذف شد"
+    print_ok "Everything removed"
   else
-    print_warn "لغو شد"
+    print_warn "Cancelled"
   fi
 
   press_enter
 }
 
 # ─────────────────────────────────────────────
-#  حلقه اصلی
+#  Main Loop
 # ─────────────────────────────────────────────
 
 while true; do
@@ -372,7 +382,7 @@ while true; do
     7) do_ssl       ;;
     8) do_edit_env  ;;
     9) do_uninstall ;;
-    0) clear; echo -e "${GREEN}خداحافظ!${NC}\n"; exit 0 ;;
-    *) print_warn "گزینه نامعتبر" ; sleep 1 ;;
+    0) clear; echo -e "${GREEN}Goodbye!${NC}\n"; exit 0 ;;
+    *) print_warn "Invalid option" ; sleep 1 ;;
   esac
 done

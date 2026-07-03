@@ -13,5 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy bot source
 COPY bot/ .
+COPY shared_lib/ shared_lib/
 
-CMD ["python", "main.py"]
+CMD ["python", "bot.py"]
