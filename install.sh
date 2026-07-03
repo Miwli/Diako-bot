@@ -39,6 +39,12 @@ get_domain() {
   fi
 }
 
+get_panel_port() {
+  if [ -f "$ENV_FILE" ]; then
+    grep ^PANEL_PORT= "$ENV_FILE" | cut -d= -f2
+  fi
+}
+
 is_installed() {
   [ -d "$INSTALL_DIR" ] && [ -f "$ENV_FILE" ]
 }
@@ -74,7 +80,8 @@ show_menu() {
 
     if echo "$PANEL_STATUS" | grep -q "Up"; then
       DOMAIN=$(get_domain)
-      echo -e "  Panel: ${GREEN}● Active${NC}  —  https://${DOMAIN}"
+      PANEL_PORT=$(get_panel_port)
+      echo -e "  Panel: ${GREEN}● Active${NC}  —  https://${DOMAIN}:${PANEL_PORT}"
     else
       echo -e "  Panel: ${RED}● Inactive${NC}"
     fi
@@ -150,11 +157,17 @@ do_install() {
   read -rp "  Telegram Bot Token: " BOT_TOKEN
   read -rp "  Admin ID (Enter for auto-generate): " ADMIN_ID
   read -rp "  Panel Domain (e.g., panel.example.com): " DOMAIN
+  read -rp "  Panel Port (Enter for 8000): " PANEL_PORT
   read -rp "  Email for SSL: " SSL_EMAIL
   read -rp "  Django Secret Key (Enter for auto-generate): " DJANGO_SECRET
   if [ -z "$DJANGO_SECRET" ]; then
     DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))" 2>/dev/null || \
                     cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 50)
+  fi
+
+  # Default values
+  if [ -z "$PANEL_PORT" ]; then
+    PANEL_PORT="8000"
   fi
 
   # If ADMIN_ID is empty, use a default placeholder (user can edit later)
@@ -169,7 +182,7 @@ ADMIN_IDS=${ADMIN_ID}
 DJANGO_SECRET_KEY=${DJANGO_SECRET}
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=${DOMAIN}
-PANEL_PORT=8000
+PANEL_PORT=${PANEL_PORT}
 DOMAIN=${DOMAIN}
 SSL_EMAIL=${SSL_EMAIL}
 DB_PATH=/app/db/db.sqlite3
@@ -188,7 +201,7 @@ server {
     listen 80;
     server_name ${DOMAIN};
     location / {
-        proxy_pass         http://127.0.0.1:8000;
+        proxy_pass         http://127.0.0.1:${PANEL_PORT};
         proxy_set_header   Host \$host;
         proxy_set_header   X-Real-IP \$remote_addr;
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
