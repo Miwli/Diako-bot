@@ -195,7 +195,7 @@ UNFOLD = {
                     {
                         "title": "کاربران",
                         "icon": "group",
-                        "link": "/admin/dashboard/users/",
+                        "link": "/diako/users/",
                     },
                     {
                         "title": "تراکنش‌ها",

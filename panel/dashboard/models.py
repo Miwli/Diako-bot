@@ -280,7 +280,6 @@ class ExtraVolumeRequests(models.Model):
 
     def __str__(self):
         return f"درخواست #{self.pk} — کاربر {self.user_id} — وضعیت: {self.status}"
-        verbose_name_plural = 'کاربران'
 
 
 class ExtraTimePlans(models.Model):

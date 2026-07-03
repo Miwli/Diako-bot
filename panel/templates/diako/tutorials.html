@@ -1,0 +1,281 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}آموزش‌ها — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+.card-section { margin-bottom: 16px; }
+.section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.section-title i { color: var(--accent); }
+.mgmt-table-wrap { overflow-x: auto; }
+.mgmt-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
+.mgmt-table thead th { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 4px 14px 8px; text-align: right; white-space: nowrap; }
+.mgmt-table thead th.col-actions { text-align: left; }
+.mgmt-row td { padding: 12px 14px; vertical-align: middle; background: rgba(255,255,255,0.018); border-top: 1px solid rgba(255,255,255,0.038); border-bottom: 1px solid rgba(0,0,0,0.18); font-size: 12px; color: var(--text); white-space: nowrap; }
+.mgmt-row td:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid rgba(255,255,255,0.038); }
+.mgmt-row td:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid rgba(255,255,255,0.038); }
+.mgmt-row:hover td { background: rgba(var(--accent-rgb),0.045); }
+.cell-name { font-size: 12px; font-weight: 600; }
+.cell-muted { font-size: 10px; color: var(--text-muted); }
+.st-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.st-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.st-badge.st-active { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
+.st-badge.st-active::before { background: var(--green); }
+.st-badge.st-inactive { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
+.st-badge.st-inactive::before { background: var(--red); }
+.row-acts { display: flex; gap: 4px; justify-content: flex-end; }
+.row-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 150ms; }
+.row-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+.row-btn.danger:hover { background: rgba(248,113,113,0.15); color: var(--red); }
+.btn-primary { padding: 8px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: opacity 180ms; }
+.btn-primary:hover { opacity: 0.85; }
+.ord-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.ord-empty i { font-size: 36px; display: block; margin-bottom: 8px; opacity: 0.35; }
+.ord-empty p { font-size: 12px; }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.52); backdrop-filter: blur(10px); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal-box { width: min(440px, 100%); background: var(--bg-base); backdrop-filter: blur(60px) saturate(160%); -webkit-backdrop-filter: blur(60px) saturate(160%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05); transform: translateY(12px); transition: transform 220ms ease; }
+.modal-bg.open .modal-box { transform: translateY(0); }
+.modal-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.modal-title i { color: var(--accent); }
+.modal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+.modal-input, .modal-ta { width: 100%; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); color: var(--text); font-size: 13px; font-family: inherit; outline: none; margin-bottom: 12px; }
+.modal-input:focus, .modal-ta:focus { border-color: rgba(var(--accent-rgb),0.4); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08); }
+.modal-input::placeholder, .modal-ta::placeholder { color: var(--text-muted); }
+.modal-ta { min-height: 80px; resize: vertical; }
+.modal-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
+.modal-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.modal-btn.btn-confirm { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; border: none; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
+      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
+      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
+      <a href="/diako/servers/" class="nav-item" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
+      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
+      <a href="/diako/finance/" class="nav-item" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
+      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
+      <a href="/diako/tutorials/" class="nav-item active" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
+      <a href="/diako/extra-requests/" class="nav-item" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
+      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
+      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
+      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title">آموزش‌ها و سوالات متداول</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-container">
+      <!-- Tutorials -->
+      <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
+        <div style="padding:10px 16px 4px; display:flex; justify-content:space-between; align-items:center;">
+          <div class="section-title"><i class="ti ti-book"></i> آموزش‌ها</div>
+          <button class="btn-primary" onclick="openAddTutorialModal()"><i class="ti ti-plus"></i> آموزش جدید</button>
+        </div>
+        {% if tutorials %}
+        <div class="mgmt-table-wrap" style="padding:0 6px;">
+          <table class="mgmt-table">
+            <thead><tr><th>عنوان</th><th>نوع</th><th>ترتیب</th><th>وضعیت</th><th class="col-actions"></th></tr></thead>
+            <tbody>
+              {% for t in tutorials %}
+              <tr class="mgmt-row">
+                <td><span class="cell-name">{{ t.title }}</span></td>
+                <td><span class="cell-muted">{{ t.content_type }}</span></td>
+                <td><span class="cell-muted">{{ t.order_index }}</span></td>
+                <td>{% if t.is_active %}<span class="st-badge st-active">فعال</span>{% else %}<span class="st-badge st-inactive">غیرفعال</span>{% endif %}</td>
+                <td><div class="row-acts">
+                  <button class="row-btn" title="بالا" onclick="moveTutorial({{ t.id }}, 'up')"><i class="ti ti-chevron-up"></i></button>
+                  <button class="row-btn" title="پایین" onclick="moveTutorial({{ t.id }}, 'down')"><i class="ti ti-chevron-down"></i></button>
+                  <button class="row-btn" title="ویرایش" onclick="openEditTutorialModal({{ t.id }}, '{{ t.title }}', '{{ t.caption|default:'' }}')"><i class="ti ti-edit"></i></button>
+                  <button class="row-btn" title="تغییر وضعیت" onclick="toggleTutorial({{ t.id }})"><i class="ti ti-power"></i></button>
+                  <button class="row-btn danger" title="حذف" onclick="deleteTutorial({{ t.id }}, '{{ t.title }}')"><i class="ti ti-trash"></i></button>
+                </div></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ord-empty"><i class="ti ti-book-off"></i><p>آموزشی ثبت نشده</p></div>
+        {% endif %}
+      </div>
+
+      <!-- FAQs -->
+      <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
+        <div style="padding:10px 16px 4px; display:flex; justify-content:space-between; align-items:center;">
+          <div class="section-title"><i class="ti ti-help"></i> سوالات متداول</div>
+          <button class="btn-primary" onclick="openAddFaqModal()"><i class="ti ti-plus"></i> سوال جدید</button>
+        </div>
+        {% if faqs %}
+        <div class="mgmt-table-wrap" style="padding:0 6px;">
+          <table class="mgmt-table">
+            <thead><tr><th>سوال</th><th>ترتیب</th><th>وضعیت</th><th class="col-actions"></th></tr></thead>
+            <tbody>
+              {% for f in faqs %}
+              <tr class="mgmt-row">
+                <td><span class="cell-name">{{ f.question|slice:":50" }}</span></td>
+                <td><span class="cell-muted">{{ f.order_index }}</span></td>
+                <td>{% if f.is_active %}<span class="st-badge st-active">فعال</span>{% else %}<span class="st-badge st-inactive">غیرفعال</span>{% endif %}</td>
+                <td><div class="row-acts">
+                  <button class="row-btn" title="بالا" onclick="moveFaq({{ f.id }}, 'up')"><i class="ti ti-chevron-up"></i></button>
+                  <button class="row-btn" title="پایین" onclick="moveFaq({{ f.id }}, 'down')"><i class="ti ti-chevron-down"></i></button>
+                  <button class="row-btn" title="ویرایش" onclick="openEditFaqModal({{ f.id }}, '{{ f.question }}', '{{ f.answer|default:'' }}')"><i class="ti ti-edit"></i></button>
+                  <button class="row-btn" title="تغییر وضعیت" onclick="toggleFaq({{ f.id }})"><i class="ti ti-power"></i></button>
+                  <button class="row-btn danger" title="حذف" onclick="deleteFaq({{ f.id }}, '{{ f.question|slice:":20" }}')"><i class="ti ti-trash"></i></button>
+                </div></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ord-empty"><i class="ti ti-help-off"></i><p>سوالی ثبت نشده</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial Modal -->
+<div class="modal-bg" id="tutorialModal">
+  <div class="modal-box">
+    <div class="modal-title" id="tutModalTitle"><i class="ti ti-book"></i><span>آموزش جدید</span></div>
+    <label class="modal-label">عنوان</label>
+    <input class="modal-input" id="tutTitle" placeholder="مثلاً: راهنمای نصب">
+    <label class="modal-label">متن (caption)</label>
+    <textarea class="modal-ta" id="tutCaption" placeholder="متن آموزش..."></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeTutorialModal()">انصراف</button>
+      <button class="modal-btn btn-confirm" id="tutConfirmBtn" onclick="confirmTutorial()">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ Modal -->
+<div class="modal-bg" id="faqModal">
+  <div class="modal-box">
+    <div class="modal-title" id="faqModalTitle"><i class="ti ti-help"></i><span>سوال جدید</span></div>
+    <label class="modal-label">سوال</label>
+    <input class="modal-input" id="faqQuestion" placeholder="سوال...">
+    <label class="modal-label">جواب</label>
+    <textarea class="modal-ta" id="faqAnswer" placeholder="جواب..."></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeFaqModal()">انصراف</button>
+      <button class="modal-btn btn-confirm" id="faqConfirmBtn" onclick="confirmFaq()">ذخیره</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
+var editTutId = null;
+var editFaqId = null;
+
+function openAddTutorialModal() {
+  editTutId = null;
+  document.getElementById('tutModalTitle').innerHTML = '<i class="ti ti-book"></i><span>آموزش جدید</span>';
+  document.getElementById('tutTitle').value = '';
+  document.getElementById('tutCaption').value = '';
+  document.getElementById('tutorialModal').classList.add('open');
+}
+function openEditTutorialModal(id, title, caption) {
+  editTutId = id;
+  document.getElementById('tutModalTitle').innerHTML = '<i class="ti ti-edit"></i><span>ویرایش آموزش</span>';
+  document.getElementById('tutTitle').value = title;
+  document.getElementById('tutCaption').value = caption;
+  document.getElementById('tutorialModal').classList.add('open');
+}
+function closeTutorialModal() { document.getElementById('tutorialModal').classList.remove('open'); }
+
+function openAddFaqModal() {
+  editFaqId = null;
+  document.getElementById('faqModalTitle').innerHTML = '<i class="ti ti-help"></i><span>سوال جدید</span>';
+  document.getElementById('faqQuestion').value = '';
+  document.getElementById('faqAnswer').value = '';
+  document.getElementById('faqModal').classList.add('open');
+}
+function openEditFaqModal(id, question, answer) {
+  editFaqId = id;
+  document.getElementById('faqModalTitle').innerHTML = '<i class="ti ti-edit"></i><span>ویرایش سوال</span>';
+  document.getElementById('faqQuestion').value = question;
+  document.getElementById('faqAnswer').value = answer;
+  document.getElementById('faqModal').classList.add('open');
+}
+function closeFaqModal() { document.getElementById('faqModal').classList.remove('open'); }
+
+async function apiCall(body) {
+  var res = await fetch('/diako/api/tutorial-action/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+async function confirmTutorial() {
+  var btn = document.getElementById('tutConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var body = { action: editTutId ? 'update_tutorial' : 'add_tutorial', title: document.getElementById('tutTitle').value, caption: document.getElementById('tutCaption').value };
+  if (editTutId) body.id = editTutId;
+  var data = await apiCall(body);
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = 'ذخیره';
+}
+
+async function confirmFaq() {
+  var btn = document.getElementById('faqConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var body = { action: editFaqId ? 'update_faq' : 'add_faq', question: document.getElementById('faqQuestion').value, answer: document.getElementById('faqAnswer').value };
+  if (editFaqId) body.id = editFaqId;
+  var data = await apiCall(body);
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = 'ذخیره';
+}
+
+async function toggleTutorial(id) { var d = await apiCall({ action: 'toggle_tutorial', id: id }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+async function deleteTutorial(id, title) { if (!confirm('حذف «' + title + '»؟')) return; var d = await apiCall({ action: 'delete_tutorial', id: id }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+async function moveTutorial(id, dir) { var d = await apiCall({ action: 'move_tutorial', id: id, direction: dir }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+async function toggleFaq(id) { var d = await apiCall({ action: 'toggle_faq', id: id }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+async function deleteFaq(id, q) { if (!confirm('حذف «' + q + '»؟')) return; var d = await apiCall({ action: 'delete_faq', id: id }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+async function moveFaq(id, dir) { var d = await apiCall({ action: 'move_faq', id: id, direction: dir }); if (d.ok) location.reload(); else showNotif('خطا', d.error, 'error'); }
+
+function showNotif(title, body, type) {
+  var stack = document.getElementById('notif-stack');
+  var card = document.createElement('div');
+  card.className = 'notif-card';
+  var colors = { info: 'var(--accent)', error: 'var(--red)' };
+  card.innerHTML = '<div class="notif-header" style="color:' + (colors[type] || 'var(--accent)') + '">' + title + '</div><div class="notif-body">' + body + '</div>';
+  stack.appendChild(card);
+  setTimeout(function() { card.classList.add('hiding'); setTimeout(function() { card.remove(); }, 300); }, 3500);
+}
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeTutorialModal(); closeFaqModal(); } });
+</script>
+{% endblock %}

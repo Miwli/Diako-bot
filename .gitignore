@@ -1,4 +1,5 @@
 shared-data/*.db
 shared_lib/__pycache__/
+wiki/
 INVENTORY.md
 pre-push.*

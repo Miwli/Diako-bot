@@ -1,0 +1,320 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}سرورها — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+.mgmt-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.mgmt-table-wrap { overflow-x: auto; }
+.mgmt-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
+.mgmt-table thead th {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  padding: 4px 14px 8px; text-align: right; white-space: nowrap;
+}
+.mgmt-table thead th.col-actions { text-align: left; }
+.mgmt-row { transition: all 180ms ease; }
+.mgmt-row td {
+  padding: 12px 14px; vertical-align: middle;
+  background: rgba(255,255,255,0.018);
+  border-top: 1px solid rgba(255,255,255,0.038);
+  border-bottom: 1px solid rgba(0,0,0,0.18);
+  font-size: 12px; color: var(--text); white-space: nowrap;
+  transition: background 180ms, border-color 180ms;
+}
+.mgmt-row td:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid rgba(255,255,255,0.038); }
+.mgmt-row td:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid rgba(255,255,255,0.038); }
+.mgmt-row:hover td { background: rgba(var(--accent-rgb),0.045); border-color: rgba(var(--accent-rgb),0.12); }
+.cell-name { font-size: 12px; font-weight: 600; }
+.cell-url { font-size: 10px; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; direction: ltr; text-align: left; }
+.st-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.st-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.st-badge.st-active { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
+.st-badge.st-active::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.st-badge.st-inactive { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
+.st-badge.st-inactive::before { background: var(--red); }
+.row-acts { display: flex; gap: 4px; justify-content: flex-end; }
+.row-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 150ms;
+}
+.row-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+.row-btn.danger:hover { background: rgba(248,113,113,0.15); color: var(--red); }
+.btn-primary {
+  padding: 8px 16px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 6px; transition: opacity 180ms;
+}
+.btn-primary:hover { opacity: 0.85; }
+.ord-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.ord-empty i { font-size: 44px; display: block; margin-bottom: 10px; opacity: 0.35; }
+.ord-empty p { font-size: 13px; }
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.52); backdrop-filter: blur(10px);
+  z-index: 300; display: flex; align-items: center; justify-content: center;
+  padding: 20px; opacity: 0; pointer-events: none; transition: opacity 220ms ease;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal-box {
+  width: min(440px, 100%); background: var(--bg-base);
+  backdrop-filter: blur(60px) saturate(160%); -webkit-backdrop-filter: blur(60px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  transform: translateY(12px); transition: transform 220ms ease;
+}
+.modal-bg.open .modal-box { transform: translateY(0); }
+.modal-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.modal-title i { color: var(--accent); }
+.modal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+.modal-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text); font-size: 13px; font-family: inherit; outline: none; margin-bottom: 12px;
+  direction: ltr; text-align: left;
+}
+.modal-input:focus { border-color: rgba(var(--accent-rgb),0.4); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08); }
+.modal-input::placeholder { color: var(--text-muted); }
+.modal-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn {
+  padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms;
+}
+.modal-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.modal-btn.btn-confirm { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; border: none; }
+.modal-btn.btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border-color: rgba(248,113,113,0.28); }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
+      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
+      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
+      <a href="/diako/servers/" class="nav-item active" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
+      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
+      <a href="/diako/finance/" class="nav-item" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
+      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
+      <a href="/diako/tutorials/" class="nav-item" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
+      <a href="/diako/extra-requests/" class="nav-item" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
+      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
+      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
+      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title">سرورها</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-container">
+      <div class="inner-card mgmt-toolbar anim-card">
+        <h2 style="font-size:14px;font-weight:700">مدیریت سرورها</h2>
+        <button class="btn-primary" onclick="openAddModal()">
+          <i class="ti ti-plus"></i> سرور جدید
+        </button>
+      </div>
+
+      <div class="inner-card anim-card" style="padding:6px 0 8px;">
+        {% if servers %}
+        <div class="mgmt-table-wrap" style="padding:0 6px;">
+          <table class="mgmt-table">
+            <thead>
+              <tr>
+                <th>نام</th>
+                <th>آدرس پنل</th>
+                <th>تست رایگان</th>
+                <th>وضعیت</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in servers %}
+              <tr class="mgmt-row" data-id="{{ s.id }}" data-name="{{ s.name }}" data-url="{{ s.panel_url }}" data-token="{{ s.panel_token }}" data-active="{{ s.is_active }}" data-ft-enabled="{{ s.free_test_enabled }}" data-ft-duration="{{ s.free_test_duration }}" data-ft-traffic="{{ s.free_test_traffic }}">
+                <td><span class="cell-name">{{ s.name }}</span></td>
+                <td><span class="cell-url">{{ s.panel_url }}</span></td>
+                <td>
+                  {% if s.free_test_enabled %}
+                    <span class="st-badge st-active">فعال</span>
+                  {% else %}
+                    <span class="st-badge st-inactive">غیرفعال</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.is_active %}
+                    <span class="st-badge st-active">آنلاین</span>
+                  {% else %}
+                    <span class="st-badge st-inactive">آفلاین</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-acts">
+                    <button class="row-btn" title="ویرایش آدرس" onclick="openEditUrlModal({{ s.id }}, '{{ s.panel_url }}')"><i class="ti ti-link"></i></button>
+                    <button class="row-btn" title="ویرایش توکن" onclick="openEditTokenModal({{ s.id }})"><i class="ti ti-key"></i></button>
+                    <button class="row-btn" title="تغییر وضعیت" onclick="toggleServer({{ s.id }})"><i class="ti ti-power"></i></button>
+                    <button class="row-btn danger" title="حذف" onclick="deleteServer({{ s.id }}, '{{ s.name }}')"><i class="ti ti-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ord-empty">
+          <i class="ti ti-server-off"></i>
+          <p>سروری ثبت نشده</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Server Modal -->
+<div class="modal-bg" id="addModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-server"></i><span>سرور جدید</span></div>
+    <label class="modal-label">نام سرور</label>
+    <input class="modal-input" id="addName" placeholder="مثلاً: سرور آلمان 🇩🇪">
+    <label class="modal-label">آدرس پنل</label>
+    <input class="modal-input" id="addUrl" placeholder="https://rebeccapanel.com:8880">
+    <label class="modal-label">توکن API</label>
+    <input class="modal-input" id="addToken" placeholder="توکن پنل">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('addModal')">انصراف</button>
+      <button class="modal-btn btn-confirm" id="addConfirmBtn" onclick="confirmAdd()">افزودن</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit URL Modal -->
+<div class="modal-bg" id="editUrlModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-link"></i><span>ویرایش آدرس پنل</span></div>
+    <label class="modal-label">آدرس جدید</label>
+    <input class="modal-input" id="editUrlInput" placeholder="https://...">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('editUrlModal')">انصراف</button>
+      <button class="modal-btn btn-confirm" onclick="confirmEditUrl()">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Token Modal -->
+<div class="modal-bg" id="editTokenModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-key"></i><span>ویرایش توکن API</span></div>
+    <label class="modal-label">توکن جدید</label>
+    <input class="modal-input" id="editTokenInput" placeholder="توکن جدید">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('editTokenModal')">انصراف</button>
+      <button class="modal-btn btn-confirm" onclick="confirmEditToken()">ذخیره</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
+let editServerId = null;
+
+function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+function openEditUrlModal(id, url) {
+  editServerId = id;
+  document.getElementById('editUrlInput').value = url;
+  document.getElementById('editUrlModal').classList.add('open');
+}
+function openEditTokenModal(id) {
+  editServerId = id;
+  document.getElementById('editTokenInput').value = '';
+  document.getElementById('editTokenModal').classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function apiCall(body) {
+  const res = await fetch('/diako/api/server-action/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function confirmAdd() {
+  const btn = document.getElementById('addConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const data = await apiCall({
+    action: 'add',
+    name: document.getElementById('addName').value,
+    url: document.getElementById('addUrl').value,
+    token: document.getElementById('addToken').value,
+  });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = 'افزودن';
+}
+
+async function confirmEditUrl() {
+  const data = await apiCall({ action: 'update_url', server_id: editServerId, url: document.getElementById('editUrlInput').value });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function confirmEditToken() {
+  const data = await apiCall({ action: 'update_token', server_id: editServerId, token: document.getElementById('editTokenInput').value });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function toggleServer(id) {
+  const data = await apiCall({ action: 'toggle', server_id: id });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function deleteServer(id, name) {
+  if (!confirm(`مطمئنی می‌خوای سرور «${name}» رو حذف کنی؟`)) return;
+  const data = await apiCall({ action: 'delete', server_id: id });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+function showNotif(title, body, type) {
+  const stack = document.getElementById('notif-stack');
+  const card = document.createElement('div');
+  card.className = 'notif-card';
+  const colors = { info: 'var(--accent)', error: 'var(--red)' };
+  card.innerHTML = `<div class="notif-header" style="color:${colors[type] || 'var(--accent)'}">${title}</div><div class="notif-body">${body}</div>`;
+  stack.appendChild(card);
+  setTimeout(() => { card.classList.add('hiding'); setTimeout(() => card.remove(), 300); }, 3500);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['addModal', 'editUrlModal', 'editTokenModal'].forEach(id => document.getElementById(id).classList.remove('open'));
+  }
+});
+</script>
+{% endblock %}

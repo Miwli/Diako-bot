@@ -1,0 +1,767 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}کاربران — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+/* reuse orders glass patterns */
+.users-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.filter-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-tab {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.028);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  color: var(--text-muted); font-size: 12px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: all 200ms ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.filter-tab:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: var(--text); }
+.filter-tab.active {
+  background: rgba(var(--accent-rgb),0.09); border-color: rgba(var(--accent-rgb),0.32); color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(var(--accent-rgb),0.15), 0 0 18px rgba(var(--accent-rgb),0.1);
+}
+.filter-tab.tab-banned.active {
+  background: rgba(248,113,113,0.09); border-color: rgba(248,113,113,0.32); color: var(--red);
+  box-shadow: inset 0 1px 0 rgba(248,113,113,0.12), 0 0 18px rgba(248,113,113,0.08);
+}
+.filter-tab .tab-count { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; background: rgba(255,255,255,0.08); }
+.filter-tab.active .tab-count { background: var(--accent); color: #000; }
+.filter-tab.tab-banned.active .tab-count { background: var(--red); color: #fff; }
+
+.search-form { display: flex; align-items: center; gap: 6px; }
+.search-wrap { position: relative; }
+.search-wrap .search-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; pointer-events: none; }
+.search-input {
+  padding: 8px 32px 8px 12px; width: 240px;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+  color: var(--text); font-size: 12px; font-family: inherit; outline: none;
+  backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
+  transition: border-color 200ms, background 200ms, box-shadow 200ms;
+}
+.search-input:focus { border-color: rgba(var(--accent-rgb),0.4); background: rgba(0,0,0,0.35); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.users-table-wrap { overflow-x: auto; }
+.users-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
+.users-table thead th {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  padding: 4px 14px 8px; text-align: right; white-space: nowrap;
+}
+.users-table thead th.col-actions { text-align: left; }
+
+.user-row { cursor: pointer; transition: all 180ms ease; }
+.user-row td {
+  padding: 12px 14px; vertical-align: middle;
+  background: rgba(255,255,255,0.018);
+  border-top: 1px solid rgba(255,255,255,0.038);
+  border-bottom: 1px solid rgba(0,0,0,0.18);
+  font-size: 12px; color: var(--text); white-space: nowrap;
+  transition: background 180ms, border-color 180ms, box-shadow 180ms;
+}
+.user-row td:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid rgba(255,255,255,0.038); }
+.user-row td:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid rgba(255,255,255,0.038); }
+.user-row:hover td { background: rgba(var(--accent-rgb),0.045); border-color: rgba(var(--accent-rgb),0.12); }
+.user-row.selected td { background: rgba(var(--accent-rgb),0.065); border-color: rgba(var(--accent-rgb),0.2); }
+.user-row.selected td:first-child { border-right: 2px solid rgba(var(--accent-rgb),0.7); }
+
+.cell-user { display: flex; align-items: center; gap: 8px; }
+.user-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+}
+.user-av.banned { background: rgba(248,113,113,0.12); color: var(--red); border-color: rgba(248,113,113,0.25); }
+.user-name-main { font-size: 12px; font-weight: 600; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.user-id-sub { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.cell-uname { font-size: 11px; color: var(--text-muted); max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+.cell-balance { font-size: 12px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cell-date { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.st-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+}
+.st-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.st-badge.st-active {
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green);
+}
+.st-badge.st-active::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.st-badge.st-banned {
+  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red);
+}
+.st-badge.st-banned::before { background: var(--red); }
+
+.row-acts { display: flex; gap: 4px; justify-content: flex-end; opacity: 0; transition: opacity 180ms; }
+.user-row:hover .row-acts, .user-row.selected .row-acts { opacity: 1; }
+.row-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 150ms;
+}
+.row-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+
+.ord-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pag-info { font-size: 11px; color: var(--text-muted); }
+.pag-btns { display: flex; gap: 4px; }
+.pg-btn {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.04);
+  color: var(--text-muted); font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none; cursor: pointer; transition: all 150ms;
+}
+.pg-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.pg-btn.current { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.pg-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+.ord-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.ord-empty i { font-size: 44px; display: block; margin-bottom: 10px; opacity: 0.35; }
+.ord-empty p { font-size: 13px; }
+
+/* Drawer — wider for user profile */
+.drw-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.38); backdrop-filter: blur(5px);
+  z-index: 200; opacity: 0; pointer-events: none; transition: opacity 280ms ease;
+}
+.drw-overlay.open { opacity: 1; pointer-events: all; }
+.drw {
+  position: fixed; top: 0; left: 0; width: min(360px, 92vw); height: 100vh;
+  background: var(--bg-base); backdrop-filter: blur(60px) saturate(160%);
+  -webkit-backdrop-filter: blur(60px) saturate(160%);
+  border-right: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 32px 0 80px rgba(0,0,0,0.5), inset 1px 0 0 rgba(var(--accent-rgb),0.12);
+  z-index: 210; transform: translateX(-100%);
+  transition: transform 320ms cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.drw.open { transform: translateX(0); }
+.drw-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 18px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+}
+.drw-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 7px; }
+.drw-title i { color: var(--accent); font-size: 16px; }
+.drw-close {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text-muted); font-size: 14px; transition: all 140ms;
+}
+.drw-close:hover { background: rgba(248,113,113,0.15); color: var(--red); border-color: rgba(248,113,113,0.3); }
+.drw-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.drw-section {
+  background: rgba(255,255,255,0.026); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.drw-sec-title {
+  font-size: 9px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 8px;
+}
+.drw-row { display: flex; align-items: flex-start; justify-content: space-between; font-size: 12px; padding: 3px 0; gap: 8px; }
+.drw-lbl { color: var(--text-muted); flex-shrink: 0; }
+.drw-val { font-weight: 500; color: var(--text); text-align: left; word-break: break-all; max-width: 200px; }
+.drw-val.accent { color: var(--accent); }
+.drw-val.danger { color: var(--red); }
+
+.drw-hero {
+  display: flex; align-items: center; gap: 12px; padding: 4px 2px 8px;
+}
+.drw-hero-av {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(255,255,255,0.04));
+  border: 1.5px solid rgba(var(--accent-rgb),0.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+}
+.drw-hero-av.banned { border-color: rgba(248,113,113,0.4); color: var(--red); background: rgba(248,113,113,0.1); }
+.drw-hero-name { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.drw-hero-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.usr-act-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+}
+.usr-act-btn {
+  padding: 9px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04); color: var(--text); font-size: 11px; font-weight: 600;
+  font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: all 150ms;
+}
+.usr-act-btn:hover { background: var(--accent-dim); border-color: rgba(var(--accent-rgb),0.25); color: var(--accent); }
+.usr-act-btn.danger:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.3); color: var(--red); }
+.usr-act-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #000; border: none; grid-column: 1 / -1;
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb),0.22);
+}
+.usr-act-btn.primary:hover { opacity: 0.9; color: #000; }
+
+.svc-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11px;
+}
+.svc-item:last-child { border-bottom: none; padding-bottom: 0; }
+.svc-plan { font-weight: 600; color: var(--text); }
+.svc-vpn { font-size: 10px; color: var(--text-muted); font-family: monospace; direction: ltr; text-align: left; }
+
+.drw-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 40px 20px; color: var(--text-muted); font-size: 12px;
+}
+.spin {
+  width: 22px; height: 22px; border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.52); backdrop-filter: blur(10px);
+  z-index: 300; display: flex; align-items: center; justify-content: center;
+  padding: 20px; opacity: 0; pointer-events: none; transition: opacity 220ms ease;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal-box {
+  width: min(400px, 100%); background: var(--bg-base);
+  backdrop-filter: blur(60px) saturate(160%); -webkit-backdrop-filter: blur(60px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  transform: translateY(12px); transition: transform 220ms ease;
+}
+.modal-bg.open .modal-box { transform: translateY(0); }
+.modal-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.modal-title i { color: var(--accent); }
+.modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+.modal-input, .modal-ta {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text); font-size: 13px; font-family: inherit; outline: none; margin-bottom: 14px;
+}
+.modal-input:focus, .modal-ta:focus { border-color: rgba(var(--accent-rgb),0.4); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08); }
+.modal-ta { min-height: 90px; resize: vertical; }
+.modal-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.modal-btn {
+  padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms;
+}
+.modal-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+.modal-btn.btn-confirm {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; border: none;
+}
+.modal-btn.btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border-color: rgba(248,113,113,0.28); }
+
+@media (max-width: 768px) {
+  .search-input { width: 160px; }
+  .users-table thead th:nth-child(4), .users-table tbody td:nth-child(4) { display: none; }
+}
+</style>
+{% endblock %}
+
+
+{% block body %}
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+        <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
+        <i class="ti ti-layout-dashboard"></i>
+      </a>
+      <a href="/diako/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
+        <i class="ti ti-package"></i>
+      </a>
+      <a href="/diako/users/" class="nav-item active" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
+        <i class="ti ti-users"></i>
+      </a>
+      <a href="/diako/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
+        <i class="ti ti-server"></i>
+      </a>
+      <a href="/diako/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
+        <i class="ti ti-list"></i>
+      </a>
+      <a href="/diako/finance/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
+        <i class="ti ti-wallet"></i>
+      </a>
+      <a href="/diako/discounts/" class="nav-item" data-fa="تخفیف‌ها" data-en="Discounts" data-tooltip="تخفیف‌ها">
+        <i class="ti ti-ticket"></i>
+      </a>
+      <a href="/diako/tutorials/" class="nav-item" data-fa="آموزش‌ها" data-en="Tutorials" data-tooltip="آموزش‌ها">
+        <i class="ti ti-book"></i>
+      </a>
+      <a href="/diako/extra-requests/" class="nav-item" data-fa="درخواست‌ها" data-en="Requests" data-tooltip="درخواست‌ها">
+        <i class="ti ti-clock-plus"></i>
+      </a>
+      <a href="/diako/keyboard-editor/" class="nav-item" data-fa="کیبورد" data-en="Keyboard" data-tooltip="کیبورد">
+        <i class="ti ti-keyboard"></i>
+      </a>
+      <a href="/diako/texts-editor/" class="nav-item" data-fa="متن‌ها" data-en="Texts" data-tooltip="متن‌ها">
+        <i class="ti ti-text-size"></i>
+      </a>
+      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
+        <i class="ti ti-settings"></i>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title" data-fa="کاربران" data-en="Users">کاربران</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item">
+              <i class="ti ti-logout"></i>
+              <span data-fa="خروج" data-en="Logout">خروج</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-container">
+
+      <!-- Stats -->
+      <div class="stats-bar inner-card anim-card">
+        <div class="sbar-item">
+          <div class="sbar-icon users"><i class="ti ti-users"></i></div>
+          <div>
+            <div class="sbar-label" data-fa="کل کاربران" data-en="Total Users">کل کاربران</div>
+            <div class="sbar-value">{{ stats.all }}</div>
+            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+          </div>
+        </div>
+        <div class="sbar-sep"></div>
+        <div class="sbar-item">
+          <div class="sbar-icon online"><i class="ti ti-user-plus"></i></div>
+          <div>
+            <div class="sbar-label" data-fa="عضویت امروز" data-en="Joined Today">عضویت امروز</div>
+            <div class="sbar-value">{{ stats.today }}</div>
+            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+          </div>
+        </div>
+        <div class="sbar-sep"></div>
+        <div class="sbar-item">
+          <div class="sbar-icon pending"><i class="ti ti-ban"></i></div>
+          <div>
+            <div class="sbar-label" data-fa="بن‌شده" data-en="Banned">بن‌شده</div>
+            <div class="sbar-value">{{ stats.banned }}</div>
+            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+          </div>
+        </div>
+        <div class="sbar-sep"></div>
+        <div class="sbar-item">
+          <div class="sbar-icon users"><i class="ti ti-wallet"></i></div>
+          <div>
+            <div class="sbar-label" data-fa="موجودی کیف‌پول‌ها" data-en="Total Wallet">موجودی کیف‌پول‌ها</div>
+            <div class="sbar-value">{{ stats.wallet|floatformat:0 }}</div>
+            <div class="sbar-unit" data-fa="تومان" data-en="Toman">تومان</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="inner-card users-toolbar anim-card">
+        <div class="filter-tabs">
+          <a href="?filter=newest{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab {% if filter_type == 'newest' and not search %}active{% endif %}">
+            <i class="ti ti-clock-hour-4" style="font-size:12px"></i>
+            <span data-fa="جدیدترین" data-en="Newest">جدیدترین</span>
+            <span class="tab-count">{{ stats.all }}</span>
+          </a>
+          <a href="?filter=topbuyers{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab {% if filter_type == 'topbuyers' and not search %}active{% endif %}">
+            <i class="ti ti-trophy" style="font-size:12px"></i>
+            <span data-fa="بیشترین خرید" data-en="Top Buyers">بیشترین خرید</span>
+          </a>
+          <a href="?filter=banned{% if search %}&q={{ search }}{% endif %}"
+             class="filter-tab tab-banned {% if filter_type == 'banned' and not search %}active{% endif %}">
+            <i class="ti ti-ban" style="font-size:12px"></i>
+            <span data-fa="بن‌شده" data-en="Banned">بن‌شده</span>
+            <span class="tab-count">{{ stats.banned }}</span>
+          </a>
+        </div>
+
+        <form method="get" class="search-form">
+          {% if not search %}<input type="hidden" name="filter" value="{{ filter_type }}">{% endif %}
+          <div class="search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input class="search-input" type="text" name="q"
+                   placeholder="آیدی، نام یا @username..."
+                   value="{{ search }}">
+          </div>
+          <button type="submit" class="ctrl-btn" style="height:34px;padding:0 10px;">
+            <i class="ti ti-search" style="font-size:14px"></i>
+          </button>
+          {% if search %}
+          <a href="?filter={{ filter_type }}" class="ctrl-btn" style="height:34px;padding:0 10px;">
+            <i class="ti ti-x" style="font-size:14px"></i>
+          </a>
+          {% endif %}
+        </form>
+      </div>
+
+      <!-- Table -->
+      <div class="inner-card anim-card" style="padding:6px 0 8px;">
+        {% if users %}
+        <div class="users-table-wrap" style="padding:0 6px;">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th data-fa="کاربر" data-en="User">کاربر</th>
+                <th data-fa="یوزرنیم" data-en="Username">یوزرنیم</th>
+                <th data-fa="موجودی" data-en="Balance">موجودی</th>
+                <th data-fa="عضویت" data-en="Joined">عضویت</th>
+                <th data-fa="وضعیت" data-en="Status">وضعیت</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+              <tr class="user-row"
+                  data-uid="{{ u.user_id }}"
+                  onclick="openUserDrawer({{ u.user_id }}, this)">
+                <td>
+                  <div class="cell-user">
+                    <div class="user-av {% if u.is_banned %}banned{% endif %}">
+                      {{ u.first_name|default:u.username|default:u.user_id|slice:":1"|upper }}
+                    </div>
+                    <div>
+                      <div class="user-name-main">{{ u.first_name|default:"—" }}</div>
+                      <div class="user-id-sub">{{ u.user_id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="cell-uname">{% if u.username %}@{{ u.username }}{% else %}—{% endif %}</span></td>
+                <td><span class="cell-balance">{{ u.balance|default:0|floatformat:0 }}</span></td>
+                <td><span class="cell-date">{{ u.created_at|default:"—"|slice:":16" }}</span></td>
+                <td>
+                  {% if u.is_banned %}
+                    <span class="st-badge st-banned" data-fa="بن" data-en="Banned">بن</span>
+                  {% else %}
+                    <span class="st-badge st-active" data-fa="فعال" data-en="Active">فعال</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="row-acts">
+                    <button class="row-btn" title="جزئیات" onclick="event.stopPropagation(); openUserDrawer({{ u.user_id }}, this.closest('.user-row'))">
+                      <i class="ti ti-chevron-left"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if not search and total_pages > 1 %}
+        <div class="ord-pagination" style="padding:10px 16px 4px;">
+          <span class="pag-info">نمایش {{ users|length }} از {{ total }}</span>
+          <div class="pag-btns">
+            {% if page > 1 %}
+            <a class="pg-btn" href="?filter={{ filter_type }}&q={{ search }}&page={{ page|add:'-1' }}"><i class="ti ti-chevron-right"></i></a>
+            {% else %}
+            <span class="pg-btn disabled"><i class="ti ti-chevron-right"></i></span>
+            {% endif %}
+            {% for p in page_range %}
+              {% if p == page %}<span class="pg-btn current">{{ p }}</span>
+              {% else %}<a class="pg-btn" href="?filter={{ filter_type }}&q={{ search }}&page={{ p }}">{{ p }}</a>{% endif %}
+            {% endfor %}
+            {% if page < total_pages %}
+            <a class="pg-btn" href="?filter={{ filter_type }}&q={{ search }}&page={{ page|add:'1' }}"><i class="ti ti-chevron-left"></i></a>
+            {% else %}
+            <span class="pg-btn disabled"><i class="ti ti-chevron-left"></i></span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="ord-empty">
+          <i class="ti ti-users-minus"></i>
+          <p data-fa="کاربری یافت نشد" data-en="No users found">کاربری یافت نشد</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="drw-overlay" id="drwOverlay" onclick="closeDrawer()"></div>
+<div class="drw" id="drw">
+  <div class="drw-head">
+    <div class="drw-title"><i class="ti ti-user"></i><span id="drwTitle">پروفایل کاربر</span></div>
+    <button class="drw-close" onclick="closeDrawer()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="drw-body" id="drwBody">
+    <div class="drw-loading"><span class="spin"></span><span>در حال بارگذاری...</span></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="actionModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"><i class="ti ti-wallet"></i><span>عملیات</span></div>
+    <div class="modal-sub" id="modalSub"></div>
+    <input class="modal-input" id="modalInput" type="text" inputmode="numeric" style="display:none">
+    <textarea class="modal-ta" id="modalText" style="display:none"></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeActionModal()"><i class="ti ti-arrow-right"></i> انصراف</button>
+      <button class="modal-btn btn-confirm" id="modalConfirmBtn" onclick="confirmAction()">تایید</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
+let activeUserId = null;
+let activeUserRow = null;
+let activeUserData = null;
+let pendingAction = null;
+
+function fmt(n) { return Number(n || 0).toLocaleString('fa-IR'); }
+
+function openUserDrawer(uid, row) {
+  if (activeUserRow) activeUserRow.classList.remove('selected');
+  activeUserRow = row;
+  if (row) row.classList.add('selected');
+  activeUserId = uid;
+
+  document.getElementById('drwTitle').textContent = 'کاربر ' + uid;
+  document.getElementById('drwBody').innerHTML = '<div class="drw-loading"><span class="spin"></span><span>در حال بارگذاری...</span></div>';
+  document.getElementById('drwOverlay').classList.add('open');
+  document.getElementById('drw').classList.add('open');
+
+  fetch('/diako/api/user-detail/' + uid + '/')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) throw new Error(data.error || 'خطا');
+      activeUserData = data.user;
+      renderUserDrawer(data.user);
+    })
+    .catch(err => {
+      document.getElementById('drwBody').innerHTML = '<div class="drw-section" style="color:var(--red)">' + err.message + '</div>';
+    });
+}
+
+function renderUserDrawer(u) {
+  const initial = (u.first_name || u.username || String(u.user_id)).charAt(0).toUpperCase();
+  const uname = u.username ? '@' + u.username : 'ندارد';
+  const statusBadge = u.is_banned
+    ? '<span class="st-badge st-banned">بن‌شده</span>'
+    : '<span class="st-badge st-active">فعال</span>';
+
+  let referrerHtml = 'ندارد';
+  if (u.referrer) {
+    const rn = u.referrer.first_name || u.referrer.user_id;
+    const ru = u.referrer.username ? ' (@' + u.referrer.username + ')' : '';
+    referrerHtml = rn + ru;
+  }
+
+  let servicesHtml = '';
+  if (u.services && u.services.length) {
+    servicesHtml = u.services.map(s =>
+      `<div class="svc-item">
+        <div><div class="svc-plan">${s.plan_name}</div><div class="svc-vpn">${s.vpn_username}</div></div>
+        <span class="st-badge st-active" style="font-size:9px;padding:2px 7px">فعال</span>
+      </div>`
+    ).join('');
+  } else {
+    servicesHtml = '<div style="font-size:11px;color:var(--text-muted)">سرویسی ثبت نشده</div>';
+  }
+
+  const banBtn = u.is_banned
+    ? `<button class="usr-act-btn primary" onclick="doQuickAction('unban')"><i class="ti ti-lock-open"></i> آنبن کردن</button>`
+    : `<button class="usr-act-btn danger" onclick="openActionModal('ban')"><i class="ti ti-ban"></i> بن کردن</button>`;
+
+  document.getElementById('drwTitle').textContent = u.first_name || 'کاربر ' + u.user_id;
+  document.getElementById('drwBody').innerHTML = `
+    <div class="drw-section">
+      <div class="drw-hero">
+        <div class="drw-hero-av ${u.is_banned ? 'banned' : ''}">${initial}</div>
+        <div>
+          <div class="drw-hero-name">${u.first_name || '—'}</div>
+          <div class="drw-hero-sub">${uname} · ${u.user_id}</div>
+        </div>
+      </div>
+      <div class="drw-row"><span class="drw-lbl">وضعیت</span><span class="drw-val">${statusBadge}</span></div>
+      <div class="drw-row"><span class="drw-lbl">عضویت</span><span class="drw-val">${u.created_at}</span></div>
+      <div class="drw-row"><span class="drw-lbl">کد دعوت</span><span class="drw-val">${u.referral_code || '—'}</span></div>
+    </div>
+
+    <div class="drw-section">
+      <div class="drw-sec-title">مالی</div>
+      <div class="drw-row"><span class="drw-lbl">موجودی</span><span class="drw-val accent">${fmt(u.balance)} تومان</span></div>
+      <div class="drw-row"><span class="drw-lbl">تراکنش‌ها</span><span class="drw-val">${u.tx_count} مورد</span></div>
+    </div>
+
+    <div class="drw-section">
+      <div class="drw-sec-title">فعالیت</div>
+      <div class="drw-row"><span class="drw-lbl">سفارش‌ها</span><span class="drw-val">${u.orders.approved} تایید · ${u.orders.pending} انتظار · ${u.orders.rejected} رد</span></div>
+      <div class="drw-row"><span class="drw-lbl">تیکت‌ها</span><span class="drw-val">${u.tickets.open} باز · ${u.tickets.closed} بسته</span></div>
+      <div class="drw-row"><span class="drw-lbl">تست رایگان</span><span class="drw-val">${u.free_test_uses} بار استفاده</span></div>
+    </div>
+
+    <div class="drw-section">
+      <div class="drw-sec-title">رفرال</div>
+      <div class="drw-row"><span class="drw-lbl">معرف</span><span class="drw-val">${referrerHtml}</span></div>
+      <div class="drw-row"><span class="drw-lbl">دعوت‌شدگان</span><span class="drw-val">${u.referral_stats.count} نفر</span></div>
+      <div class="drw-row"><span class="drw-lbl">درآمد رفرال</span><span class="drw-val accent">${fmt(u.referral_stats.total)} تومان</span></div>
+    </div>
+
+    <div class="drw-section">
+      <div class="drw-sec-title">سرویس‌ها</div>
+      ${servicesHtml}
+    </div>
+
+    <div class="drw-section">
+      <div class="drw-sec-title">عملیات</div>
+      <div class="usr-act-grid">
+        <button class="usr-act-btn" onclick="openActionModal('add_balance')"><i class="ti ti-plus"></i> افزودن موجودی</button>
+        <button class="usr-act-btn" onclick="openActionModal('deduct_balance')"><i class="ti ti-minus"></i> کسر موجودی</button>
+        <button class="usr-act-btn" onclick="openActionModal('send_message')"><i class="ti ti-send"></i> پیام تلگرام</button>
+        <button class="usr-act-btn" onclick="doQuickAction('grant_free_test')"><i class="ti ti-gift"></i> تست رایگان +۱</button>
+        ${banBtn}
+      </div>
+    </div>`;
+}
+
+function closeDrawer() {
+  document.getElementById('drwOverlay').classList.remove('open');
+  document.getElementById('drw').classList.remove('open');
+  if (activeUserRow) { activeUserRow.classList.remove('selected'); activeUserRow = null; }
+}
+
+const MODAL_CFG = {
+  add_balance:    { title: 'افزودن موجودی', sub: 'مبلغ را به تومان وارد کنید:', icon: 'ti-plus', input: true, confirm: 'افزودن' },
+  deduct_balance: { title: 'کسر موجودی', sub: 'مبلغ کسر را به تومان وارد کنید:', icon: 'ti-minus', input: true, confirm: 'کسر' },
+  send_message:   { title: 'ارسال پیام', sub: 'پیام برای کاربر در تلگرام:', icon: 'ti-send', text: true, confirm: 'ارسال' },
+  ban:            { title: 'بن کردن', sub: 'دلیل بن (اختیاری) — برای «—» خالی بگذارید:', icon: 'ti-ban', text: true, confirm: 'بن کردن', danger: true },
+};
+
+function openActionModal(action) {
+  pendingAction = action;
+  const cfg = MODAL_CFG[action];
+  document.getElementById('modalTitle').innerHTML = `<i class="ti ${cfg.icon}"></i><span>${cfg.title}</span>`;
+  document.getElementById('modalSub').textContent = cfg.sub;
+  document.getElementById('modalInput').style.display = cfg.input ? 'block' : 'none';
+  document.getElementById('modalText').style.display = cfg.text ? 'block' : 'none';
+  document.getElementById('modalInput').value = '';
+  document.getElementById('modalText').value = '';
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.textContent = cfg.confirm;
+  btn.className = 'modal-btn ' + (cfg.danger ? 'btn-danger' : 'btn-confirm');
+  document.getElementById('actionModal').classList.add('open');
+  setTimeout(() => (cfg.input ? document.getElementById('modalInput') : document.getElementById('modalText')).focus(), 100);
+}
+
+function closeActionModal() {
+  document.getElementById('actionModal').classList.remove('open');
+  pendingAction = null;
+}
+
+async function confirmAction() {
+  if (!pendingAction || !activeUserId) return;
+  const action = pendingAction;
+  const btn = document.getElementById('modalConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+
+  const body = { user_id: activeUserId, action };
+  if (action === 'add_balance' || action === 'deduct_balance') {
+    body.amount = document.getElementById('modalInput').value.trim();
+  } else if (action === 'send_message') {
+    body.message = document.getElementById('modalText').value.trim();
+  } else if (action === 'ban') {
+    body.reason = document.getElementById('modalText').value.trim();
+  }
+
+  try {
+    const res = await fetch('/diako/api/user-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'خطا');
+    closeActionModal();
+    showNotif('انجام شد', cfgMsg(action), 'info');
+    if (data.user) {
+      activeUserData = data.user;
+      renderUserDrawer(data.user);
+    }
+    if (action === 'ban' || action === 'unban') {
+      setTimeout(() => location.reload(), 1200);
+    }
+  } catch (e) {
+    showNotif('خطا', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = MODAL_CFG[action]?.confirm || 'تایید';
+  }
+}
+
+function cfgMsg(action) {
+  return {
+    add_balance: 'موجودی افزوده شد.',
+    deduct_balance: 'موجودی کسر شد.',
+    send_message: 'پیام ارسال شد.',
+    ban: 'کاربر بن شد.',
+    unban: 'کاربر آنبن شد.',
+    grant_free_test: 'یک تست رایگان اضافه شد.',
+  }[action] || 'عملیات انجام شد.';
+}
+
+async function doQuickAction(action) {
+  if (!activeUserId) return;
+  try {
+    const res = await fetch('/diako/api/user-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ user_id: activeUserId, action }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'خطا');
+    showNotif('انجام شد', cfgMsg(action), 'info');
+    if (data.user) { activeUserData = data.user; renderUserDrawer(data.user); }
+    if (action === 'unban') setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    showNotif('خطا', e.message, 'error');
+  }
+}
+
+function showNotif(title, body, type) {
+  const stack = document.getElementById('notif-stack');
+  const card = document.createElement('div');
+  card.className = 'notif-card';
+  const colors = { info: 'var(--accent)', error: 'var(--red)', approve: 'var(--green)' };
+  card.innerHTML = `<div class="notif-header" style="color:${colors[type] || 'var(--accent)'}">${title}</div><div class="notif-body">${body}</div>`;
+  stack.appendChild(card);
+  setTimeout(() => { card.classList.add('hiding'); setTimeout(() => card.remove(), 300); }, 3500);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('actionModal').classList.contains('open')) closeActionModal();
+    else closeDrawer();
+  }
+});
+</script>
+{% endblock %}

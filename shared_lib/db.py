@@ -1270,6 +1270,36 @@ async def approve_top_up_atomic(request_id: int) -> bool:
 
 # ─── توابع آموزش ─────────────────────────────
 
+
+async def move_faq(faq_id: int, direction: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT id, order_index FROM faqs WHERE id = ?", (faq_id,))
+        row = await cursor.fetchone()
+        if not row:
+            return
+        
+        current_order = row["order_index"]
+        
+        if direction == "up":
+            cursor = await db.execute(
+                "SELECT id, order_index FROM faqs WHERE order_index < ? ORDER BY order_index DESC LIMIT 1",
+                (current_order,)
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT id, order_index FROM faqs WHERE order_index > ? ORDER BY order_index ASC LIMIT 1",
+                (current_order,)
+            )
+        
+        neighbor = await cursor.fetchone()
+        if not neighbor:
+            return
+        
+        await db.execute("UPDATE faqs SET order_index = ? WHERE id = ?", (neighbor["order_index"], faq_id))
+        await db.execute("UPDATE faqs SET order_index = ? WHERE id = ?", (current_order, neighbor["id"]))
+        await db.commit()
+
 async def get_tutorials(active_only: bool = False):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row

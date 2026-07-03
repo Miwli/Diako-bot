@@ -17,7 +17,23 @@ from shared_lib.db import (
     get_admin_tutorials_as_buttons, get_admin_faqs_as_buttons, get_admin_users_as_buttons,
 )
 from shared_lib.db import update_order_status
-from .models import Orders
+from shared_lib.db import (
+    get_user, ban_user, unban_user, admin_adjust_balance,
+    get_transactions, get_free_test_uses,
+    get_user_ticket_counts, get_user_order_counts, get_referral_stats,
+    get_referral_by_referred, get_user_services, decrement_free_test_uses,
+    get_setting, set_setting,
+    add_server, delete_server, toggle_server_status, update_server_url, update_server_token,
+    update_server_free_test, get_servers,
+    add_plan, delete_plan, toggle_plan_status, update_plan, get_plan,
+    create_discount_code, toggle_discount_code, delete_discount_code,
+    create_tutorial, update_tutorial, toggle_tutorial, delete_tutorial, move_tutorial,
+    create_faq, update_faq, toggle_faq, delete_faq, move_faq,
+    get_extra_time_request, update_extra_time_request,
+    get_extra_volume_request, update_extra_volume_request,
+    approve_top_up_atomic, update_top_up_status,
+)
+from .models import Orders, Servers, Plans, DiscountCodes, TopUpRequests
 
 
 def _get_bot_token():
@@ -33,6 +49,170 @@ def _get_bot_token():
         except Exception:
             pass
     return token
+
+
+def _send_telegram(chat_id: int, text: str, parse_mode: str = 'HTML'):
+    token = _get_bot_token()
+    if not token:
+        return False, 'BOT_TOKEN یافت نشد — پیام تلگرام ارسال نشد'
+    payload = json.dumps({
+        'chat_id': chat_id,
+        'text': text,
+        'parse_mode': parse_mode,
+    }).encode('utf-8')
+    try:
+        req = urllib.request.Request(
+            f'https://api.telegram.org/bot{token}/sendMessage',
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        if not data.get('ok'):
+            return False, data.get('description', 'خطای تلگرام')
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def _format_date(dt_str):
+    if not dt_str:
+        return '—'
+    try:
+        dt = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+        return dt.strftime('%Y/%m/%d %H:%M')
+    except Exception:
+        return dt_str[:16] if len(dt_str) >= 16 else dt_str
+
+
+def _user_detail_payload(user_id: int):
+    user = async_to_sync(get_user)(user_id)
+    if not user:
+        return None
+
+    uid = user['user_id']
+    order_counts = async_to_sync(get_user_order_counts)(uid)
+    tickets_open, tickets_closed = async_to_sync(get_user_ticket_counts)(uid)
+    free_uses = async_to_sync(get_free_test_uses)(uid)
+    ref_stats = async_to_sync(get_referral_stats)(uid)
+    referral = async_to_sync(get_referral_by_referred)(uid)
+    tx_count = len(async_to_sync(get_transactions)(uid, limit=100))
+    services_raw = async_to_sync(get_user_services)(uid)
+
+    referrer = None
+    if referral:
+        ref_user = async_to_sync(get_user)(referral['referrer_id'])
+        if ref_user:
+            referrer = {
+                'user_id': ref_user['user_id'],
+                'first_name': ref_user.get('first_name') or '',
+                'username': ref_user.get('username') or '',
+            }
+
+    services = []
+    for s in services_raw:
+        d = dict(s)
+        services.append({
+            'id': d['id'],
+            'plan_name': d.get('plan_name') or '—',
+            'vpn_username': d.get('vpn_username') or '—',
+            'status': d.get('status') or '',
+            'created_at': _format_date(d.get('created_at')),
+        })
+
+    return {
+        'user_id': uid,
+        'first_name': user.get('first_name') or '',
+        'username': user.get('username') or '',
+        'balance': user.get('balance') or 0,
+        'created_at': _format_date(user.get('created_at')),
+        'is_banned': bool(user.get('is_banned')),
+        'referral_code': user.get('referral_code') or '',
+        'free_test_uses': free_uses,
+        'orders': {
+            'approved': order_counts.get('approved', 0),
+            'pending': order_counts.get('pending', 0),
+            'rejected': order_counts.get('rejected', 0),
+        },
+        'tickets': {'open': tickets_open, 'closed': tickets_closed},
+        'tx_count': tx_count,
+        'referrer': referrer,
+        'referral_stats': {
+            'count': ref_stats.get('count', 0),
+            'total': ref_stats.get('total', 0),
+        },
+        'services': services,
+    }
+
+
+@login_required
+def user_detail(request, user_id):
+    payload = _user_detail_payload(user_id)
+    if not payload:
+        return JsonResponse({'ok': False, 'error': 'کاربر یافت نشد'}, status=404)
+    return JsonResponse({'ok': True, 'user': payload})
+
+
+@login_required
+@require_http_methods(["POST"])
+def user_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    user_id = data.get('user_id')
+    action = data.get('action')
+
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'user_id نامعتبر'}, status=400)
+
+    user = async_to_sync(get_user)(user_id)
+    if not user:
+        return JsonResponse({'ok': False, 'error': 'کاربر یافت نشد'}, status=404)
+
+    if action == 'ban':
+        async_to_sync(ban_user)(user_id)
+        reason = (data.get('reason') or '').strip()
+        msg = '⛔️ دسترسی شما به ربات محدود شده است.'
+        if reason:
+            msg += f'\n\n{reason}'
+        _send_telegram(user_id, msg)
+        return JsonResponse({'ok': True, 'user': _user_detail_payload(user_id)})
+
+    if action == 'unban':
+        async_to_sync(unban_user)(user_id)
+        _send_telegram(user_id, '✅ دسترسی شما به ربات بازگردانده شد.')
+        return JsonResponse({'ok': True, 'user': _user_detail_payload(user_id)})
+
+    if action in ('add_balance', 'deduct_balance'):
+        raw = str(data.get('amount', '')).strip().replace(',', '')
+        if not raw.isdigit() or int(raw) <= 0:
+            return JsonResponse({'ok': False, 'error': 'مبلغ نامعتبر است'})
+        amount = int(raw)
+        if action == 'add_balance':
+            async_to_sync(admin_adjust_balance)(user_id, amount, 'افزودن دستی از پنل وب')
+        else:
+            async_to_sync(admin_adjust_balance)(user_id, -amount, 'کسر دستی از پنل وب')
+        return JsonResponse({'ok': True, 'user': _user_detail_payload(user_id)})
+
+    if action == 'send_message':
+        text = (data.get('message') or '').strip()
+        if not text:
+            return JsonResponse({'ok': False, 'error': 'پیام خالی است'})
+        ok, err = _send_telegram(user_id, f'📨 <b>پیام از پشتیبانی:</b>\n\n{text}')
+        if not ok:
+            return JsonResponse({'ok': False, 'error': err or 'ارسال ناموفق'})
+        return JsonResponse({'ok': True})
+
+    if action == 'grant_free_test':
+        async_to_sync(decrement_free_test_uses)(user_id)
+        return JsonResponse({'ok': True, 'user': _user_detail_payload(user_id)})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 
 @login_required
@@ -185,7 +365,6 @@ def save_keyboard(request):
             async_to_sync(save_server_order)(dynamic)
             async_to_sync(save_keyboard_layout)('buy_vpn', static)
         elif keyboard_name in _DYNAMIC_LOADERS:
-            # داینامیک‌های دیگه: فقط دکمه‌های ثابت ذخیره می‌شن
             async_to_sync(save_keyboard_layout)(keyboard_name, static)
         else:
             async_to_sync(save_keyboard_layout)(keyboard_name, buttons)
@@ -219,3 +398,430 @@ def order_action(request):
 
     async_to_sync(update_order_status)(order_id, 'rejected', reason)
     return JsonResponse({'ok': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت سرورها
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def server_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    if action == 'add':
+        name = (data.get('name') or '').strip()
+        url = (data.get('url') or '').strip()
+        token = (data.get('token') or '').strip()
+        if not name or not url or not token:
+            return JsonResponse({'ok': False, 'error': 'نام، آدرس و توکن الزامی است'})
+        if not url.startswith('https://') or url.endswith('/'):
+            return JsonResponse({'ok': False, 'error': 'آدرس باید با https:// شروع و بدون / در انتها باشد'})
+        async_to_sync(add_server)(name, url, token, [])
+        return JsonResponse({'ok': True})
+
+    if action == 'delete':
+        server_id = data.get('server_id')
+        if not server_id:
+            return JsonResponse({'ok': False, 'error': 'server_id الزامی است'}, status=400)
+        async_to_sync(delete_server)(int(server_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle':
+        server_id = data.get('server_id')
+        if not server_id:
+            return JsonResponse({'ok': False, 'error': 'server_id الزامی است'}, status=400)
+        async_to_sync(toggle_server_status)(int(server_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'update_url':
+        server_id = data.get('server_id')
+        url = (data.get('url') or '').strip()
+        if not server_id or not url:
+            return JsonResponse({'ok': False, 'error': 'server_id و url الزامی است'})
+        if not url.startswith('https://') or url.endswith('/'):
+            return JsonResponse({'ok': False, 'error': 'آدرس نامعتبر'})
+        async_to_sync(update_server_url)(int(server_id), url)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_token':
+        server_id = data.get('server_id')
+        token = (data.get('token') or '').strip()
+        if not server_id or not token:
+            return JsonResponse({'ok': False, 'error': 'server_id و token الزامی است'})
+        async_to_sync(update_server_token)(int(server_id), token)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_free_test':
+        server_id = data.get('server_id')
+        if not server_id:
+            return JsonResponse({'ok': False, 'error': 'server_id الزامی است'}, status=400)
+        enabled = data.get('enabled')
+        duration = data.get('duration')
+        traffic = data.get('traffic')
+        kwargs = {}
+        if enabled is not None:
+            kwargs['enabled'] = int(enabled)
+        if duration is not None:
+            kwargs['duration'] = float(duration)
+        if traffic is not None:
+            kwargs['traffic'] = float(traffic)
+        async_to_sync(update_server_free_test)(int(server_id), **kwargs)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت پلن‌ها
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def plan_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    if action == 'add':
+        server_id = data.get('server_id')
+        name = (data.get('name') or '').strip()
+        price = data.get('price')
+        duration = data.get('duration')
+        traffic = data.get('traffic')
+        if not name or price is None or duration is None or traffic is None:
+            return JsonResponse({'ok': False, 'error': 'همه فیلدها الزامی است'})
+        try:
+            price = int(price)
+            duration = int(duration)
+            traffic = int(traffic)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'قیمت، مدت و حجم باید عدد باشند'})
+        async_to_sync(add_plan)(int(server_id) if server_id else None, name, price, duration, traffic)
+        return JsonResponse({'ok': True})
+
+    if action == 'delete':
+        plan_id = data.get('plan_id')
+        if not plan_id:
+            return JsonResponse({'ok': False, 'error': 'plan_id الزامی است'}, status=400)
+        async_to_sync(delete_plan)(int(plan_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle':
+        plan_id = data.get('plan_id')
+        if not plan_id:
+            return JsonResponse({'ok': False, 'error': 'plan_id الزامی است'}, status=400)
+        async_to_sync(toggle_plan_status)(int(plan_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'update':
+        plan_id = data.get('plan_id')
+        name = (data.get('name') or '').strip()
+        price = data.get('price')
+        duration = data.get('duration')
+        traffic = data.get('traffic')
+        if not plan_id or not name or price is None or duration is None or traffic is None:
+            return JsonResponse({'ok': False, 'error': 'همه فیلدها الزامی است'})
+        try:
+            price = int(price)
+            duration = int(duration)
+            traffic = int(traffic)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'قیمت، مدت و حجم باید عدد باشند'})
+        async_to_sync(update_plan)(int(plan_id), name, price, duration, traffic)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت مالی
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def finance_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    if action == 'set_card':
+        number = (data.get('number') or '').strip().replace(' ', '')
+        owner = (data.get('owner') or '').strip()
+        if not number or not owner:
+            return JsonResponse({'ok': False, 'error': 'شماره کارت و نام صاحب الزامی است'})
+        if len(number) != 16 or not number.isdigit():
+            return JsonResponse({'ok': False, 'error': 'شماره کارت باید ۱۶ رقم باشد'})
+        async_to_sync(set_setting)('card_number', number)
+        async_to_sync(set_setting)('card_owner', owner)
+        return JsonResponse({'ok': True})
+
+    if action == 'approve_topup':
+        topup_id = data.get('topup_id')
+        if not topup_id:
+            return JsonResponse({'ok': False, 'error': 'topup_id الزامی است'}, status=400)
+        ok = async_to_sync(approve_top_up_atomic)(int(topup_id))
+        if not ok:
+            return JsonResponse({'ok': False, 'error': 'این درخواست قبلاً پردازش شده'})
+        from shared_lib.db import get_top_up_request, add_balance_and_transaction
+        req = async_to_sync(get_top_up_request)(int(topup_id))
+        if req:
+            async_to_sync(add_balance_and_transaction)(
+                req['user_id'], req['amount'], 'topup', f'شارژ حساب — تایید از پنل وب #{topup_id}'
+            )
+            _send_telegram(req['user_id'], f'✅ <b>شارژ حساب تایید شد!</b>\n\n💰 مبلغ <b>{req["amount"]:,}</b> تومان به کیف پول شما اضافه شد.')
+        return JsonResponse({'ok': True})
+
+    if action == 'reject_topup':
+        topup_id = data.get('topup_id')
+        if not topup_id:
+            return JsonResponse({'ok': False, 'error': 'topup_id الزامی است'}, status=400)
+        async_to_sync(update_top_up_status)(int(topup_id), 'rejected')
+        from shared_lib.db import get_top_up_request
+        req = async_to_sync(get_top_up_request)(int(topup_id))
+        if req:
+            _send_telegram(req['user_id'], '❌ متأسفانه درخواست شارژ حساب شما تایید نشد.')
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت کدهای تخفیف
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def discount_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    if action == 'add':
+        code = (data.get('code') or '').strip().upper()
+        type_ = data.get('type', 'percent')
+        value = data.get('value')
+        max_uses = data.get('max_uses', 0)
+        expires_at = (data.get('expires_at') or '').strip() or None
+        if not code or value is None:
+            return JsonResponse({'ok': False, 'error': 'کد و مقدار الزامی است'})
+        if not (2 <= len(code) <= 20) or not code.isalnum():
+            return JsonResponse({'ok': False, 'error': 'کد باید ۲ تا ۲۰ کاراکتر انگلیسی یا عدد باشد'})
+        try:
+            value = int(value)
+            max_uses = int(max_uses)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': 'مقدار و محدودیت باید عدد باشند'})
+        if type_ == 'percent' and not (1 <= value <= 100):
+            return JsonResponse({'ok': False, 'error': 'درصد باید بین ۱ تا ۱۰۰ باشد'})
+        async_to_sync(create_discount_code)(code, type_, value, max_uses, expires_at)
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle':
+        code_id = data.get('code_id')
+        if not code_id:
+            return JsonResponse({'ok': False, 'error': 'code_id الزامی است'}, status=400)
+        async_to_sync(toggle_discount_code)(int(code_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete':
+        code_id = data.get('code_id')
+        if not code_id:
+            return JsonResponse({'ok': False, 'error': 'code_id الزامی است'}, status=400)
+        async_to_sync(delete_discount_code)(int(code_id))
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت آموزش‌ها و سوالات متداول
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def tutorial_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    if action == 'add_tutorial':
+        title = (data.get('title') or '').strip()
+        caption = (data.get('caption') or '').strip()
+        if not title:
+            return JsonResponse({'ok': False, 'error': 'عنوان الزامی است'})
+        async_to_sync(create_tutorial)(title, 'text', None, caption or None)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_tutorial':
+        tid = data.get('id')
+        title = (data.get('title') or '').strip()
+        caption = (data.get('caption') or '').strip()
+        if not tid or not title:
+            return JsonResponse({'ok': False, 'error': 'id و عنوان الزامی است'})
+        async_to_sync(update_tutorial)(int(tid), title, 'text', None, caption or None)
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle_tutorial':
+        tid = data.get('id')
+        if not tid:
+            return JsonResponse({'ok': False, 'error': 'id الزامی است'}, status=400)
+        async_to_sync(toggle_tutorial)(int(tid))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete_tutorial':
+        tid = data.get('id')
+        if not tid:
+            return JsonResponse({'ok': False, 'error': 'id الزامی است'}, status=400)
+        async_to_sync(delete_tutorial)(int(tid))
+        return JsonResponse({'ok': True})
+
+    if action == 'move_tutorial':
+        tid = data.get('id')
+        direction = data.get('direction')
+        if not tid or direction not in ('up', 'down'):
+            return JsonResponse({'ok': False, 'error': 'id و direction الزامی است'})
+        async_to_sync(move_tutorial)(int(tid), direction)
+        return JsonResponse({'ok': True})
+
+    if action == 'add_faq':
+        question = (data.get('question') or '').strip()
+        answer = (data.get('answer') or '').strip()
+        if not question or not answer:
+            return JsonResponse({'ok': False, 'error': 'سوال و جواب الزامی است'})
+        async_to_sync(create_faq)(question, answer)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_faq':
+        fid = data.get('id')
+        question = (data.get('question') or '').strip()
+        answer = (data.get('answer') or '').strip()
+        if not fid or not question or not answer:
+            return JsonResponse({'ok': False, 'error': 'id، سوال و جواب الزامی است'})
+        async_to_sync(update_faq)(int(fid), question, answer)
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle_faq':
+        fid = data.get('id')
+        if not fid:
+            return JsonResponse({'ok': False, 'error': 'id الزامی است'}, status=400)
+        async_to_sync(toggle_faq)(int(fid))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete_faq':
+        fid = data.get('id')
+        if not fid:
+            return JsonResponse({'ok': False, 'error': 'id الزامی است'}, status=400)
+        async_to_sync(delete_faq)(int(fid))
+        return JsonResponse({'ok': True})
+
+    if action == 'move_faq':
+        fid = data.get('id')
+        direction = data.get('direction')
+        if not fid or direction not in ('up', 'down'):
+            return JsonResponse({'ok': False, 'error': 'id و direction الزامی است'})
+        async_to_sync(move_faq)(int(fid), direction)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — مدیریت درخواست‌های افزودن حجم/زمان
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def extra_request_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+    req_id = data.get('req_id')
+
+    if action == 'approve_ev':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        req = async_to_sync(get_extra_volume_request)(int(req_id))
+        if not req:
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if req['status'] == 'approved':
+            return JsonResponse({'ok': False, 'error': 'قبلاً تایید شده'})
+        from shared_lib.db import get_plan_with_server
+        plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
+        if not plan_data:
+            return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
+        from rebecca_api import RebeccaAPI
+        api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
+        try:
+            async_to_sync(api.add_volume)(req['vpn_username'], req['traffic_gb'])
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
+        async_to_sync(update_extra_volume_request)(int(req_id), 'approved')
+        _send_telegram(req['user_id'], f'✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{req["traffic_gb"]} گیگابایت</b> به سرویس شما اضافه شد.')
+        return JsonResponse({'ok': True})
+
+    if action == 'reject_ev':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        async_to_sync(update_extra_volume_request)(int(req_id), 'rejected')
+        req = async_to_sync(get_extra_volume_request)(int(req_id))
+        if req:
+            _send_telegram(req['user_id'], '❌ درخواست افزودن حجم رد شد.')
+        return JsonResponse({'ok': True})
+
+    if action == 'approve_et':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        req = async_to_sync(get_extra_time_request)(int(req_id))
+        if not req:
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if req['status'] == 'approved':
+            return JsonResponse({'ok': False, 'error': 'قبلاً تایید شده'})
+        from shared_lib.db import get_plan_with_server
+        plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
+        if not plan_data:
+            return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
+        from rebecca_api import RebeccaAPI
+        api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
+        try:
+            async_to_sync(api.add_time)(req['vpn_username'], req['days'])
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
+        async_to_sync(update_extra_time_request)(int(req_id), 'approved')
+        _send_telegram(req['user_id'], f'✅ <b>افزودن زمان تایید شد!</b>\n\n📅 <b>{req["days"]} روز</b> به سرویس شما اضافه شد.')
+        return JsonResponse({'ok': True})
+
+    if action == 'reject_et':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        async_to_sync(update_extra_time_request)(int(req_id), 'rejected')
+        req = async_to_sync(get_extra_time_request)(int(req_id))
+        if req:
+            _send_telegram(req['user_id'], '❌ درخواست افزودن زمان رد شد.')
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
