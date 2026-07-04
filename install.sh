@@ -319,15 +319,23 @@ do_ssl() {
   read -rp "  DNS configured? (y/n): " DNS_READY
 
   if [ "$DNS_READY" = "y" ] || [ "$DNS_READY" = "Y" ]; then
-    certbot --nginx \
-      -d "$DOMAIN" \
-      --email "$SSL_EMAIL" \
-      --agree-tos \
-      --non-interactive \
-      --redirect
-    print_ok "SSL certificate obtained ✓"
-    (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet && systemctl reload nginx") | crontab -
-    print_ok "SSL auto-renewal configured"
+    # Check port 80
+    PORT80=$(ss -tlnp | grep ':80 ' | awk '{print $NF}' | head -1)
+    if [ -n "$PORT80" ]; then
+      print_warn "Port 80 is in use by: $PORT80"
+      print_warn "If Apache: systemctl stop apache2 && systemctl disable apache2"
+      print_warn "Free up port 80 then try option 7 again."
+      press_enter; return
+    fi
+
+    if certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+      print_ok "SSL certificate obtained ✓"
+      (crontab -l 2>/dev/null | grep -v certbot; echo "0 3 * * * certbot renew --quiet && systemctl reload nginx") | crontab -
+      print_ok "SSL auto-renewal configured"
+    else
+      print_err "SSL failed — log: /var/log/letsencrypt/letsencrypt.log"
+      print_warn "Fix the issue then try option 7 again."
+    fi
   else
     print_warn "Cancelled. Run this option again when DNS is ready."
   fi
