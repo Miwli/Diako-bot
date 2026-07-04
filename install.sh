@@ -99,6 +99,8 @@ show_menu() {
   echo -e "  ${CYAN}6)${NC}  Panel Logs"
   echo -e "  ${CYAN}7)${NC}  Get/Renew SSL"
   echo -e "  ${CYAN}8)${NC}  Edit Settings (.env)"
+  echo -e "  ${CYAN}a)${NC}  Change Panel Port"
+  echo -e "  ${CYAN}b)${NC}  Create Admin User"
   echo -e "  ${RED}9)${NC}  Full Uninstall"
   echo -e "  ${BOLD}─────────────────────────────────────${NC}"
   echo -e "  ${CYAN}0)${NC}  Exit"
@@ -305,21 +307,61 @@ do_logs_panel() {
 
 do_ssl() {
   check_root
-  DOMAIN=$(get_domain)
+  CURRENT_DOMAIN=$(get_domain)
   SSL_EMAIL=$(grep ^SSL_EMAIL= "$ENV_FILE" 2>/dev/null | cut -d= -f2)
 
-  if [ -z "$DOMAIN" ] || [ -z "$SSL_EMAIL" ]; then
+  if [ -z "$CURRENT_DOMAIN" ] || [ -z "$SSL_EMAIL" ]; then
     print_err "Domain or email not found in .env."
     press_enter; return
   fi
 
+  echo ""
+  echo -e "  Current domain: ${CYAN}${CURRENT_DOMAIN}${NC}"
+  read -rp "  New domain? (Enter to keep current): " NEW_DOMAIN
+
+  if [ -n "$NEW_DOMAIN" ] && [ "$NEW_DOMAIN" != "$CURRENT_DOMAIN" ]; then
+    DOMAIN="$NEW_DOMAIN"
+
+    # Update .env
+    sed -i "s/^DOMAIN=.*/DOMAIN=${DOMAIN}/" "$ENV_FILE"
+    sed -i "s/^DJANGO_ALLOWED_HOSTS=.*/DJANGO_ALLOWED_HOSTS=${DOMAIN}/" "$ENV_FILE"
+    print_ok ".env updated with new domain"
+
+    # Update Nginx config
+    PANEL_PORT=$(get_panel_port)
+    cat > /etc/nginx/sites-available/diako-panel <<EOF
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    location / {
+        proxy_pass         http://127.0.0.1:${PANEL_PORT};
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+    }
+    location /static/ {
+        alias /opt/diako-bot/staticfiles/;
+    }
+}
+EOF
+    nginx -t && systemctl reload nginx
+    print_ok "Nginx updated with new domain"
+
+    # Restart containers to apply new ALLOWED_HOSTS
+    cd "$INSTALL_DIR"
+    docker compose restart panel
+    print_ok "Panel restarted"
+  else
+    DOMAIN="$CURRENT_DOMAIN"
+  fi
+
   print_step "Getting SSL certificate for $DOMAIN"
-  echo -e "${YELLOW}⚠ Make sure DNS points to this server's IP!${NC}"
+  echo -e "${YELLOW}⚠ Make sure DNS for ${DOMAIN} points to this server's IP!${NC}"
   echo ""
   read -rp "  DNS configured? (y/n): " DNS_READY
 
   if [ "$DNS_READY" = "y" ] || [ "$DNS_READY" = "Y" ]; then
-    # Check port 80
     PORT80=$(ss -tlnp | grep ':80 ' | awk '{print $NF}' | head -1)
     if [ -n "$PORT80" ]; then
       print_warn "Port 80 is in use by: $PORT80"
@@ -387,6 +429,95 @@ do_uninstall() {
   press_enter
 }
 
+do_change_port() {
+  check_root
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  CURRENT_PORT=$(get_panel_port)
+  echo ""
+  echo -e "  Current port: ${CYAN}${CURRENT_PORT}${NC}"
+  read -rp "  New port: " NEW_PORT
+
+  if [ -z "$NEW_PORT" ]; then
+    print_warn "No port entered. Cancelled."
+    press_enter; return
+  fi
+
+  # Update .env
+  sed -i "s/^PANEL_PORT=.*/PANEL_PORT=${NEW_PORT}/" "$ENV_FILE"
+  print_ok ".env updated"
+
+  # Update Nginx config
+  DOMAIN=$(get_domain)
+  cat > /etc/nginx/sites-available/diako-panel <<EOF
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    location / {
+        proxy_pass         http://127.0.0.1:${NEW_PORT};
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+    }
+    location /static/ {
+        alias /opt/diako-bot/staticfiles/;
+    }
+}
+EOF
+  nginx -t && systemctl reload nginx
+  print_ok "Nginx updated"
+
+  # Restart containers
+  print_step "Restarting containers..."
+  cd "$INSTALL_DIR"
+  docker compose down
+  docker compose up -d
+  print_ok "Port changed to ${NEW_PORT} ✓"
+
+  press_enter
+}
+
+do_create_admin() {
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  # Check panel is running
+  PANEL_STATUS=$(docker compose -f "$INSTALL_DIR/docker-compose.yml" ps panel --format "{{.Status}}" 2>/dev/null | head -1)
+  if ! echo "$PANEL_STATUS" | grep -q "Up"; then
+    print_err "Panel container is not running."
+    press_enter; return
+  fi
+
+  echo ""
+  read -rp "  Username: " ADMIN_USER
+  read -rp "  Email: " ADMIN_EMAIL
+  read -rsp "  Password: " ADMIN_PASS
+  echo ""
+
+  if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASS" ]; then
+    print_err "Username and password cannot be empty."
+    press_enter; return
+  fi
+
+  docker exec diako-panel python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if User.objects.filter(username='${ADMIN_USER}').exists():
+    print('ERROR: Username already exists')
+else:
+    User.objects.create_superuser('${ADMIN_USER}', '${ADMIN_EMAIL}', '${ADMIN_PASS}')
+    print('SUCCESS')
+" | grep -q "SUCCESS" && print_ok "Admin user '${ADMIN_USER}' created ✓" || print_err "Failed — username may already exist."
+
+  press_enter
+}
+
 # ─────────────────────────────────────────────
 #  Main Loop
 # ─────────────────────────────────────────────
@@ -401,8 +532,10 @@ while true; do
     5) do_logs_bot  ;;
     6) do_logs_panel;;
     7) do_ssl       ;;
-    8) do_edit_env  ;;
-    9) do_uninstall ;;
+    8) do_edit_env    ;;
+    a) do_change_port ;;
+    b) do_create_admin;;
+    9) do_uninstall   ;;
     0) clear; echo -e "${GREEN}Goodbye!${NC}\n"; exit 0 ;;
     *) print_warn "Invalid option" ; sleep 1 ;;
   esac
