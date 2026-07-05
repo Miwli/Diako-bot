@@ -54,6 +54,42 @@ press_enter() {
   read -rp "  Press Enter to return to menu..."
 }
 
+setup_global_command() {
+  chmod +x "$INSTALL_DIR/install.sh" 2>/dev/null
+  ln -sf "$INSTALL_DIR/install.sh" /usr/local/bin/diako
+  print_ok "Global command ready — type 'diako' anywhere to open this menu"
+}
+
+# Updates DOMAIN in .env + Nginx config + restarts the panel container.
+# Does not touch SSL — do_ssl() calls this then issues/renews the certificate.
+apply_domain() {
+  local NEW_DOMAIN="$1"
+  local PANEL_PORT
+  PANEL_PORT=$(get_panel_port)
+
+  sed -i "s/^DOMAIN=.*/DOMAIN=${NEW_DOMAIN}/" "$ENV_FILE"
+  sed -i "s/^DJANGO_ALLOWED_HOSTS=.*/DJANGO_ALLOWED_HOSTS=${NEW_DOMAIN}/" "$ENV_FILE"
+
+  cat > /etc/nginx/sites-available/diako-panel <<EOF
+server {
+    listen 80;
+    server_name ${NEW_DOMAIN};
+    location / {
+        proxy_pass         http://127.0.0.1:${PANEL_PORT};
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+    }
+    # استاتیک‌ها توسط WhiteNoise از طریق خود پنل سرو می‌شوند (proxy_pass بالا)
+}
+EOF
+  nginx -t && systemctl reload nginx
+
+  cd "$INSTALL_DIR"
+  docker compose restart panel
+}
+
 # ─────────────────────────────────────────────
 #  Main Menu
 # ─────────────────────────────────────────────
@@ -101,6 +137,9 @@ show_menu() {
   echo -e "  ${CYAN}8)${NC}  Edit Settings (.env)"
   echo -e "  ${CYAN}a)${NC}  Change Panel Port"
   echo -e "  ${CYAN}b)${NC}  Create Admin User"
+  echo -e "  ${CYAN}c)${NC}  Change Domain"
+  echo -e "  ${CYAN}d)${NC}  Backup Database"
+  echo -e "  ${CYAN}e)${NC}  Restore Database"
   echo -e "  ${RED}9)${NC}  Full Uninstall"
   echo -e "  ${BOLD}─────────────────────────────────────${NC}"
   echo -e "  ${CYAN}0)${NC}  Exit"
@@ -226,6 +265,9 @@ EOF
   docker compose up -d
   print_ok "Containers started"
 
+  # Global command
+  setup_global_command
+
   # SSL
   do_ssl
 
@@ -255,6 +297,8 @@ do_update() {
   docker compose build --no-cache
   docker compose up -d
   print_ok "Update complete"
+
+  setup_global_command
 
   press_enter
 }
@@ -303,54 +347,46 @@ do_logs_panel() {
   docker compose logs -f panel
 }
 
+do_change_domain() {
+  check_root
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  CURRENT_DOMAIN=$(get_domain)
+  echo ""
+  echo -e "  Current domain: ${CYAN}${CURRENT_DOMAIN}${NC}"
+  read -rp "  New domain: " NEW_DOMAIN
+
+  if [ -z "$NEW_DOMAIN" ] || [ "$NEW_DOMAIN" = "$CURRENT_DOMAIN" ]; then
+    print_warn "No change. Cancelled."
+    press_enter; return
+  fi
+
+  apply_domain "$NEW_DOMAIN"
+  print_ok "Domain changed to ${NEW_DOMAIN}"
+  print_warn "If you use SSL, run option 7 to issue/renew the certificate for the new domain."
+  press_enter
+}
+
 do_ssl() {
   check_root
-  CURRENT_DOMAIN=$(get_domain)
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  DOMAIN=$(get_domain)
   SSL_EMAIL=$(grep ^SSL_EMAIL= "$ENV_FILE" 2>/dev/null | cut -d= -f2)
 
-  if [ -z "$CURRENT_DOMAIN" ] || [ -z "$SSL_EMAIL" ]; then
+  if [ -z "$DOMAIN" ] || [ -z "$SSL_EMAIL" ]; then
     print_err "Domain or email not found in .env."
     press_enter; return
   fi
 
   echo ""
-  echo -e "  Current domain: ${CYAN}${CURRENT_DOMAIN}${NC}"
-  read -rp "  New domain? (Enter to keep current): " NEW_DOMAIN
-
-  if [ -n "$NEW_DOMAIN" ] && [ "$NEW_DOMAIN" != "$CURRENT_DOMAIN" ]; then
-    DOMAIN="$NEW_DOMAIN"
-
-    # Update .env
-    sed -i "s/^DOMAIN=.*/DOMAIN=${DOMAIN}/" "$ENV_FILE"
-    sed -i "s/^DJANGO_ALLOWED_HOSTS=.*/DJANGO_ALLOWED_HOSTS=${DOMAIN}/" "$ENV_FILE"
-    print_ok ".env updated with new domain"
-
-    # Update Nginx config
-    PANEL_PORT=$(get_panel_port)
-    cat > /etc/nginx/sites-available/diako-panel <<EOF
-server {
-    listen 80;
-    server_name ${DOMAIN};
-    location / {
-        proxy_pass         http://127.0.0.1:${PANEL_PORT};
-        proxy_set_header   Host \$host;
-        proxy_set_header   X-Real-IP \$remote_addr;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
-    }
-    # استاتیک‌ها توسط WhiteNoise از طریق خود پنل سرو می‌شوند (proxy_pass بالا)
-}
-EOF
-    nginx -t && systemctl reload nginx
-    print_ok "Nginx updated with new domain"
-
-    # Restart containers to apply new ALLOWED_HOSTS
-    cd "$INSTALL_DIR"
-    docker compose restart panel
-    print_ok "Panel restarted"
-  else
-    DOMAIN="$CURRENT_DOMAIN"
-  fi
+  echo -e "  Domain: ${CYAN}${DOMAIN}${NC}"
 
   print_step "Getting SSL certificate for $DOMAIN"
   echo -e "${YELLOW}⚠ Make sure DNS for ${DOMAIN} points to this server's IP!${NC}"
@@ -513,6 +549,87 @@ else:
   press_enter
 }
 
+do_backup() {
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  DB_FILE="$INSTALL_DIR/shared-data/bot.db"
+  if [ ! -f "$DB_FILE" ]; then
+    print_err "Database file not found: $DB_FILE"
+    press_enter; return
+  fi
+
+  mkdir -p "$INSTALL_DIR/backups"
+  STAMP=$(date +%Y%m%d_%H%M%S)
+  DEST="$INSTALL_DIR/backups/bot_${STAMP}.db.gz"
+
+  print_step "Backing up database..."
+  gzip -c "$DB_FILE" > "$DEST"
+  print_ok "Backup saved: $DEST"
+
+  press_enter
+}
+
+do_restore() {
+  check_root
+  if ! is_installed; then
+    print_err "Project not installed."
+    press_enter; return
+  fi
+
+  BACKUP_DIR="$INSTALL_DIR/backups"
+  if [ ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]; then
+    print_err "No backups found in $BACKUP_DIR"
+    press_enter; return
+  fi
+
+  echo ""
+  echo -e "  ${BOLD}Available backups:${NC}"
+  mapfile -t FILES < <(ls -1t "$BACKUP_DIR")
+  i=1
+  for f in "${FILES[@]}"; do
+    echo "  $i) $f"
+    i=$((i + 1))
+  done
+
+  echo ""
+  read -rp "  Select backup number to restore (0 to cancel): " SEL
+  if ! [[ "$SEL" =~ ^[0-9]+$ ]] || [ "$SEL" -lt 1 ] || [ "$SEL" -gt "${#FILES[@]}" ]; then
+    print_warn "Cancelled."
+    press_enter; return
+  fi
+
+  CHOSEN="${FILES[$((SEL - 1))]}"
+  echo ""
+  echo -e "${RED}${BOLD}⚠ This will overwrite the current database with: ${CHOSEN}${NC}"
+  read -rp "  Confirm? Type YES: " CONFIRM
+  if [ "$CONFIRM" != "YES" ]; then
+    print_warn "Cancelled."
+    press_enter; return
+  fi
+
+  print_step "Stopping services..."
+  cd "$INSTALL_DIR"
+  docker compose stop bot panel
+
+  print_step "Restoring database..."
+  DB_FILE="$INSTALL_DIR/shared-data/bot.db"
+  if [[ "$CHOSEN" == *.gz ]]; then
+    gunzip -c "$BACKUP_DIR/$CHOSEN" > "$DB_FILE"
+  else
+    cp "$BACKUP_DIR/$CHOSEN" "$DB_FILE"
+  fi
+  print_ok "Database restored"
+
+  print_step "Starting services..."
+  docker compose up -d
+  print_ok "Restore complete ✓"
+
+  press_enter
+}
+
 # ─────────────────────────────────────────────
 #  Main Loop
 # ─────────────────────────────────────────────
@@ -530,6 +647,9 @@ while true; do
     8) do_edit_env    ;;
     a) do_change_port ;;
     b) do_create_admin;;
+    c) do_change_domain;;
+    d) do_backup      ;;
+    e) do_restore     ;;
     9) do_uninstall   ;;
     0) clear; echo -e "${GREEN}Goodbye!${NC}\n"; exit 0 ;;
     *) print_warn "Invalid option" ; sleep 1 ;;
