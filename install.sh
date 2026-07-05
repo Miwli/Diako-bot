@@ -294,7 +294,7 @@ do_update() {
   print_step "Rebuilding containers..."
   cd "$INSTALL_DIR"
   docker compose down
-  docker compose build --no-cache
+  docker compose build
   docker compose up -d
   print_ok "Update complete"
 
