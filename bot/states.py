@@ -103,3 +103,6 @@ class ExtraVolume(StatesGroup):
 class ExtraTime(StatesGroup):
     waiting_for_receipt = State()
 
+class ChangeNote(StatesGroup):
+    waiting_for_note = State()
+

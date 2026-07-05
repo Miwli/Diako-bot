@@ -455,6 +455,21 @@ def confirm_delete_service_keyboard(order_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def confirm_changestatus_keyboard(order_id: int, target_active: bool) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ بله", callback_data=f"confirmed_changestatus_{order_id}_{int(target_active)}"),
+            InlineKeyboardButton(text="❌ انصراف", callback_data=f"my_service_{order_id}"),
+        ],
+    ])
+
+
+def cancel_changenote_keyboard(order_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ انصراف", callback_data=f"my_service_{order_id}")],
+    ])
+
+
 # ─── سفارش‌ها ──────────────────────────────────────────────────────────────────
 
 def admin_order_keyboard(order_id) -> InlineKeyboardMarkup:

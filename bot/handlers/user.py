@@ -2,11 +2,12 @@ from datetime import datetime, timezone, timedelta
 import jdatetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
-from states import BuyVPN, TopUp
+from states import BuyVPN, TopUp, ChangeNote
 from keyboards import (
     user_main_menu, user_servers_keyboard, user_services_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
     user_service_detail_keyboard, confirm_delete_service_keyboard,
+    confirm_changestatus_keyboard, cancel_changenote_keyboard,
     wallet_keyboard, admin_topup_keyboard,
     free_test_servers_keyboard, free_test_confirm_keyboard
 )
@@ -18,7 +19,7 @@ from shared_lib.db import (
     create_top_up_request, get_top_up_request, update_top_up_status,
     get_free_test_servers, create_free_test_order,
     get_free_test_uses, increment_free_test_uses,
-    get_text, get_keyboard_buttons,
+    get_text, get_keyboard_buttons, set_service_note,
 )
 from rebecca_api import RebeccaAPI
 
@@ -512,6 +513,78 @@ def register_user_handlers(dp):
             await _edit_or_replace(callback, get_text("delete_done_has_more"), user_services_keyboard(orders))
         else:
             await _edit_or_replace(callback, get_text("delete_done_empty"), user_services_keyboard([]))
+
+    @dp.callback_query(F.data.startswith("changestatus_"))
+    async def ask_toggle_status(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("changestatus_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        try:
+            api = RebeccaAPI(order["panel_url"], order["panel_token"])
+            live = await api.get_user(order["vpn_username"])
+        except Exception as e:
+            await callback.answer(get_text("changestatus_error", error=str(e)), show_alert=True)
+            return
+        target_active = live.get("status") != "active"
+        text = get_text(
+            "changestatus_confirm_enable" if target_active else "changestatus_confirm_disable",
+            name=order["vpn_username"]
+        )
+        await _edit_or_replace(callback, text, confirm_changestatus_keyboard(order_id, target_active))
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("confirmed_changestatus_"))
+    async def do_toggle_status(callback: types.CallbackQuery):
+        order_id_s, target_s = callback.data.replace("confirmed_changestatus_", "").rsplit("_", 1)
+        order_id, target_active = int(order_id_s), bool(int(target_s))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        try:
+            api = RebeccaAPI(order["panel_url"], order["panel_token"])
+            await api.toggle_status(order["vpn_username"], target_active)
+        except Exception as e:
+            await callback.answer(get_text("changestatus_error", error=str(e)), show_alert=True)
+            return
+        await callback.answer(get_text("changestatus_active" if target_active else "changestatus_disabled"))
+        live = None
+        try:
+            live = await api.get_user(order["vpn_username"])
+        except Exception as e:
+            from bot import logger
+            logger.error(f"خطا در دریافت اطلاعات سرویس {order['vpn_username']}: {e}")
+        await _edit_or_replace(
+            callback,
+            _service_text(order, live),
+            user_service_detail_keyboard(order_id, order["subscription_url"])
+        )
+
+    @dp.callback_query(F.data.startswith("changenote_"))
+    async def ask_note(callback: types.CallbackQuery, state: FSMContext):
+        order_id = int(callback.data.replace("changenote_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        await state.set_state(ChangeNote.waiting_for_note)
+        await state.update_data(order_id=order_id)
+        await _edit_or_replace(callback, get_text("changenote_prompt"), cancel_changenote_keyboard(order_id))
+        await callback.answer()
+
+    @dp.message(ChangeNote.waiting_for_note, F.text)
+    async def save_note(message: types.Message, state: FSMContext):
+        data = await state.get_data()
+        order_id = data["order_id"]
+        note = message.text.strip()
+        if len(note) > 500:
+            await message.answer(get_text("changenote_too_long"))
+            return
+        await set_service_note(order_id, note)
+        await state.clear()
+        await message.answer(get_text("changenote_success"))
 
     @dp.callback_query(F.data.startswith("sub_link_"))
     async def send_sub_link(callback: types.CallbackQuery):

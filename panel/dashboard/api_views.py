@@ -400,6 +400,47 @@ def order_action(request):
     return JsonResponse({'ok': True})
 
 
+@login_required
+@require_http_methods(["POST"])
+def service_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+    order_id = data.get('order_id')
+    if not order_id:
+        return JsonResponse({'ok': False, 'error': 'order_id الزامی است'}, status=400)
+
+    from shared_lib.db import get_service_by_order, set_service_note
+    order = async_to_sync(get_service_by_order)(int(order_id))
+    if not order:
+        return JsonResponse({'ok': False, 'error': 'سرویس یافت نشد'}, status=404)
+
+    if action == 'changestatus':
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
+        from rebecca_api import RebeccaAPI
+        api = RebeccaAPI(order['panel_url'], order['panel_token'])
+        try:
+            live = async_to_sync(api.get_user)(order['vpn_username'])
+            target_active = live.get('status') != 'active'
+            async_to_sync(api.toggle_status)(order['vpn_username'], target_active)
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
+        return JsonResponse({'ok': True, 'active': target_active})
+
+    if action == 'set_note':
+        note = (data.get('note') or '').strip()
+        if len(note) > 500:
+            return JsonResponse({'ok': False, 'error': 'یادداشت حداکثر ۵۰۰ نویسه می‌تواند باشد'})
+        async_to_sync(set_service_note)(int(order_id), note)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'اکشن نامعتبر'}, status=400)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  API — مدیریت سرورها
 # ═══════════════════════════════════════════════════════════════════════════

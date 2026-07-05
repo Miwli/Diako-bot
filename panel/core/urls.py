@@ -38,4 +38,5 @@ urlpatterns = [
     path('diako/api/discount-action/', api_views.discount_action, name='diako_discount_action'),
     path('diako/api/tutorial-action/', api_views.tutorial_action, name='diako_tutorial_action'),
     path('diako/api/extra-request-action/', api_views.extra_request_action, name='diako_extra_request_action'),
+    path('diako/api/service-action/', api_views.service_action, name='diako_service_action'),
 ]

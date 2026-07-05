@@ -104,6 +104,7 @@ async def init_db():
             "subscription_url":   "TEXT",
             "order_type":         "TEXT DEFAULT 'purchase'",
             "free_test_server_id":"INTEGER",
+            "note":               "TEXT",
         }.items():
             try:
                 await db.execute(f"ALTER TABLE orders ADD COLUMN {col} {col_type}")
@@ -806,6 +807,16 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "extra_volume_rejected":       "❌ درخواست افزودن حجم رد شد.",
     "extra_volume_error":          "❌ خطا در افزودن حجم. با پشتیبانی تماس بگیرید.",
     "admin_ev_notify":             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n💰 مبلغ: <b>{price} تومان</b>",
+    # ─── فعال/غیرفعال کردن سرویس (user.py) ────────────────────────────────
+    "changestatus_confirm_disable": "⏸️ آیا مطمئن هستید سرویس <b>{name}</b> غیرفعال شود؟",
+    "changestatus_confirm_enable":  "✅ آیا مطمئن هستید سرویس <b>{name}</b> فعال شود؟",
+    "changestatus_disabled":        "⏸️ سرویس با موفقیت غیرفعال شد.",
+    "changestatus_active":          "✅ سرویس با موفقیت فعال شد.",
+    "changestatus_error":           "❌ خطا در تغییر وضعیت سرویس: {error}",
+    # ─── یادداشت سرویس (user.py) ──────────────────────────────────────────
+    "changenote_prompt":            "✏️ یادداشت خود را برای این سرویس ارسال کنید (حداکثر ۵۰۰ نویسه):",
+    "changenote_success":           "✅ یادداشت ذخیره شد.",
+    "changenote_too_long":          "❌ متن یادداشت خیلی طولانی است (حداکثر ۵۰۰ نویسه). دوباره ارسال کنید:",
     # ─── پنل ادمین (admin.py) ─────────────────────────────────────────────
     "admin_panel_title":              "⚙️ پنل ادمین",
     "admin_general_title":            "⚙️ تنظیمات عمومی",
@@ -1115,6 +1126,22 @@ async def get_user_service(order_id: int, user_id: int):
             (order_id, user_id)
         )
         return await cursor.fetchone()
+
+async def get_service_by_order(order_id: int):
+    """گرفتن یک سرویس بدون چک مالکیت — برای پنل ادمین"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            _SERVICE_SELECT + "WHERE o.id = ? AND o.status = 'approved'",
+            (order_id,)
+        )
+        return await cursor.fetchone()
+
+async def set_service_note(order_id: int, note: str) -> None:
+    """ذخیره‌ی یادداشت یک سرویس (سفارش)"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE orders SET note = ? WHERE id = ?", (note, order_id))
+        await db.commit()
 
 async def update_order_status(order_id: int, status: str, rejection_reason: str = None):
     """آپدیت وضعیت سفارش"""
@@ -2154,6 +2181,8 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     # ── سرویس‌محور (داخل user_service_detail) ──────────────────────────────
     ("extra_volume",                 "➕ افزودن حجم",                   "extra_volume_{id}",             "service"),
     ("extra_time",                   "⏱ افزودن زمان",                  "extra_time_{id}",               "service"),
+    ("changestatus",                 "⏸️ توقف/فعال‌سازی",              "changestatus_{id}",             "service"),
+    ("changenote",                   "✏️ یادداشت",                     "changenote_{id}",               "service"),
 ]
 
 

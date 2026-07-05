@@ -811,6 +811,7 @@
                   data-vpn="{{ order.vpn_username|default:'' }}"
                   data-sub="{{ order.subscription_url|default:'' }}"
                   data-reason="{{ order.rejection_reason|default:'' }}"
+                  data-note="{{ order.note|default:'' }}"
                   onclick="openDrawer(this)">
 
                 <td><span class="cell-id">#{{ order.id }}</span></td>
@@ -1002,6 +1003,19 @@ function openDrawer(row) {
       <div class="drw-sec-title">اطلاعات VPN</div>
       <div class="drw-row"><span class="drw-lbl">یوزر VPN</span><span class="drw-val" style="font-size:11px">${d.vpn}</span></div>
       ${d.sub ? `<div class="drw-row"><span class="drw-lbl">لینک</span><a href="${d.sub}" target="_blank" class="drw-val accent" style="font-size:10px;text-decoration:none;">مشاهده ↗</a></div>` : ''}
+      <div class="drw-row">
+        <button class="drw-btn" style="width:100%;justify-content:center" onclick="toggleServiceStatus(${d.id})">
+          <i class="ti ti-power"></i> فعال/غیرفعال کردن سرویس
+        </button>
+      </div>
+    </div>
+    <div class="drw-section">
+      <div class="drw-sec-title">یادداشت</div>
+      <textarea id="noteInput${d.id}" maxlength="500" rows="3"
+                style="width:100%;resize:vertical;font-family:inherit;font-size:12px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text)">${d.note || ''}</textarea>
+      <button class="drw-btn" style="width:100%;justify-content:center;margin-top:8px" onclick="saveServiceNote(${d.id})">
+        <i class="ti ti-device-floppy"></i> ذخیره یادداشت
+      </button>
     </div>`;
   }
 
@@ -1043,6 +1057,44 @@ function showBotApproveNote() {
   showNotif('راهنما',
     'تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود.',
     'info');
+}
+
+async function toggleServiceStatus(orderId) {
+  try {
+    const res = await fetch('/diako/api/service-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ action: 'changestatus', order_id: orderId }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showNotif('انجام شد', data.active ? 'سرویس فعال شد' : 'سرویس غیرفعال شد', 'success');
+    } else {
+      showNotif('خطا', data.error || '?', 'error');
+    }
+  } catch {
+    showNotif('خطا', 'ارتباط با سرور برقرار نشد', 'error');
+  }
+}
+
+async function saveServiceNote(orderId) {
+  const note = document.getElementById('noteInput' + orderId).value;
+  try {
+    const res = await fetch('/diako/api/service-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ action: 'set_note', order_id: orderId, note }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showNotif('ذخیره شد', 'یادداشت با موفقیت ذخیره شد', 'success');
+      if (activeOrderRow) activeOrderRow.dataset.note = note;
+    } else {
+      showNotif('خطا', data.error || '?', 'error');
+    }
+  } catch {
+    showNotif('خطا', 'ارتباط با سرور برقرار نشد', 'error');
+  }
 }
 
 /* ── Reject ── */
