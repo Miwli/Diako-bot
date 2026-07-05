@@ -111,7 +111,6 @@ class Servers(models.Model):
     is_active = models.IntegerField(blank=True, null=True)
     service_id = models.TextField(blank=True, null=True)
     service_ids = models.TextField(blank=True, null=True)
-    api_version = models.TextField(blank=True, null=True)
     free_test_enabled = models.IntegerField(blank=True, null=True)
     free_test_duration = models.IntegerField(blank=True, null=True)
     free_test_traffic = models.IntegerField(blank=True, null=True)
