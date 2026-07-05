@@ -108,6 +108,25 @@ DATABASES = {
     }
 }
 
+# با DEBUG=False، جنگو به‌صورت پیش‌فرض ارور ۵۰۰ رو فقط با ایمیل گزارش می‌ده (که تنظیم نشده)
+# و هیچی توی کنسول چاپ نمی‌شه. این تنظیم traceback کامل رو به لاگ کانتینر می‌فرسته.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
