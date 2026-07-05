@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "${PANEL_PORT:-8000}:8000"
+      - "127.0.0.1:${PANEL_PORT:-8000}:8000"
     volumes:
       - ./shared-data:/shared-data
       - static_data:/app/staticfiles
