@@ -187,7 +187,7 @@ DJANGO_ALLOWED_HOSTS=${DOMAIN}
 PANEL_PORT=${PANEL_PORT}
 DOMAIN=${DOMAIN}
 SSL_EMAIL=${SSL_EMAIL}
-DB_PATH=/app/db/db.sqlite3
+DB_PATH=/shared-data/bot.db
 EOF
   chmod 600 "$ENV_FILE"
   print_ok "Environment file created"
@@ -209,9 +209,7 @@ server {
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
     }
-    location /static/ {
-        alias /opt/diako-bot/staticfiles/;
-    }
+    # استاتیک‌ها توسط WhiteNoise از طریق خود پنل سرو می‌شوند (proxy_pass بالا)
 }
 EOF
   ln -sf /etc/nginx/sites-available/diako-panel /etc/nginx/sites-enabled/diako-panel
@@ -340,9 +338,7 @@ server {
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
     }
-    location /static/ {
-        alias /opt/diako-bot/staticfiles/;
-    }
+    # استاتیک‌ها توسط WhiteNoise از طریق خود پنل سرو می‌شوند (proxy_pass بالا)
 }
 EOF
     nginx -t && systemctl reload nginx
@@ -463,9 +459,7 @@ server {
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
     }
-    location /static/ {
-        alias /opt/diako-bot/staticfiles/;
-    }
+    # استاتیک‌ها توسط WhiteNoise از طریق خود پنل سرو می‌شوند (proxy_pass بالا)
 }
 EOF
   nginx -t && systemctl reload nginx

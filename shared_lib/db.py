@@ -1,7 +1,17 @@
 import aiosqlite
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data", "bot.db")
+# در محیط Docker، DB_PATH از متغیر محیطی خوانده می‌شود تا بات و پنل
+# به یک دیتابیس مشترک روی volume دسترسی داشته باشند.
+# در حالت local، مسیر پیش‌فرض داخل خود پروژه استفاده می‌شود.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+_DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared-data", "bot.db")
+DB_PATH = os.environ.get("DB_PATH") or _DEFAULT_DB_PATH
 
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 

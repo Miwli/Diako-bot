@@ -10,8 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 import sys
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR.parent / '.env' if 'BASE_DIR' in dir() else None)
+except Exception:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,17 +26,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # اضافه کردن ریشه‌ی پروژه به sys.path تا shared_lib قابل import باشه
 sys.path.insert(0, str(BASE_DIR.parent))
 
+# بارگذاری .env (پروژه‌ی monorepo — فایل در ریشه‌ی پروژه است)
+try:
+    from dotenv import load_dotenv as _ld
+    _ld(BASE_DIR.parent / '.env')
+except Exception:
+    pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7espy+8c8zk9l_+$om6h^!43i-ncp$s4mjtf0=fu@x#%f5x_i_'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-7espy+8c8zk9l_+$om6h^!43i-ncp$s4mjtf0=fu@x#%f5x_i_',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['*']
+_allowed = os.environ.get('DJANGO_ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] or ['*']
 
 
 # Application definition
