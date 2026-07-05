@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - shared_data:/shared-data
+      - ./shared-data:/shared-data
     depends_on:
       - panel
 
@@ -22,9 +22,8 @@ services:
     ports:
       - "${PANEL_PORT:-8000}:8000"
     volumes:
-      - shared_data:/shared-data
+      - ./shared-data:/shared-data
       - static_data:/app/staticfiles
 
 volumes:
-  shared_data:
   static_data:

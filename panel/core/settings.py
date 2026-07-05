@@ -104,7 +104,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR.parent / 'shared-data' / 'bot.db',
+        'NAME': os.environ.get('DB_PATH') or (BASE_DIR.parent / 'shared-data' / 'bot.db'),
     }
 }
 
