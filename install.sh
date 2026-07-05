@@ -358,9 +358,10 @@ EOF
   read -rp "  DNS configured? (y/n): " DNS_READY
 
   if [ "$DNS_READY" = "y" ] || [ "$DNS_READY" = "Y" ]; then
-    PORT80=$(ss -tlnp | grep ':80 ' | awk '{print $NF}' | head -1)
+    # چک می‌کنیم فقط اگر سرویسی غیر از nginx روی پورت ۸۰ باشه (مثل Apache)
+    PORT80=$(ss -tlnp | grep ':80 ' | grep -v nginx | awk '{print $NF}' | head -1)
     if [ -n "$PORT80" ]; then
-      print_warn "Port 80 is in use by: $PORT80"
+      print_err "Port 80 is in use by another service: $PORT80"
       print_warn "If Apache: systemctl stop apache2 && systemctl disable apache2"
       print_warn "Free up port 80 then try option 7 again."
       press_enter; return
