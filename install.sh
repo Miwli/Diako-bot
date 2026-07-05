@@ -183,6 +183,9 @@ do_install() {
   # Clone
   print_step "Cloning code from GitHub..."
   git clone "$REPO_URL" "$INSTALL_DIR" || { print_err "git clone failed — check repo URL and internet."; press_enter; return; }
+  # chmod +x on install.sh later (setup_global_command) would otherwise show up
+  # as a dirty file to git and block future `git pull` in do_update
+  git -C "$INSTALL_DIR" config core.fileMode false
   print_ok "Source code ready"
 
   # Docker files
@@ -282,7 +285,14 @@ do_update() {
   fi
 
   print_step "Updating code from GitHub..."
-  git -C "$INSTALL_DIR" pull
+  # self-heal old installs where chmod +x on install.sh (setup_global_command)
+  # left a dirty file-mode diff that would otherwise block this pull
+  git -C "$INSTALL_DIR" config core.fileMode false
+  if ! git -C "$INSTALL_DIR" pull; then
+    print_err "git pull failed — server has local changes or a conflict. Not rebuilding with stale code."
+    print_warn "Check manually: cd $INSTALL_DIR && git status"
+    press_enter; return
+  fi
   print_ok "Code updated"
 
   print_step "Downloading Docker files..."
