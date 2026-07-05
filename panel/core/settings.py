@@ -49,6 +49,12 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 _allowed = os.environ.get('DJANGO_ALLOWED_HOSTS', '*')
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] or ['*']
 
+# پنل پشت nginx (reverse proxy) با HTTPS اجرا می‌شه. بدون این تنظیم جنگو
+# درخواست‌ها رو HTTP می‌بینه و چک CSRF برای فرم‌ها/API های POST (مثل ذخیره‌ی
+# ادیتور کیبورد) با خطای ۴۰۳ رد می‌شه.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h and h != '*']
+
 
 # Application definition
 
