@@ -143,13 +143,13 @@ do_install() {
 
   # Clone
   print_step "Cloning code from GitHub..."
-  git clone "$REPO_URL" "$INSTALL_DIR"
+  git clone "$REPO_URL" "$INSTALL_DIR" || { print_err "git clone failed — check repo URL and internet."; press_enter; return; }
   print_ok "Source code ready"
 
   # Docker files
   print_step "Downloading Docker files..."
-  for f in Dockerfile.bot Dockerfile.panel docker-compose.yml; do
-    curl -fsSL "$RAW_URL/$f" -o "$INSTALL_DIR/$f"
+  for f in Dockerfile.bot Dockerfile.panel docker-compose.yml install.sh; do
+    curl -fsSL "$RAW_URL/$f" -o "$INSTALL_DIR/$f" || { print_err "Failed to download: $f"; press_enter; return; }
     print_ok "Downloaded: $f"
   done
 
