@@ -542,7 +542,7 @@ def register_user_handlers(dp):
         plan_id = int(callback.data.replace("user_plan_", ""))
         plan = await get_plan(plan_id)
         if not plan:
-            await callback.answer("پلن مورد نظر یافت نشد.", show_alert=True)
+            await callback.answer(get_text("plan_not_found"), show_alert=True)
             return
 
         stats = await get_user_wallet_stats(callback.from_user.id)
@@ -656,7 +656,7 @@ def register_user_handlers(dp):
         plan_id = int(callback.data.replace("pay_wallet_", ""))
         plan = await get_plan_with_server(plan_id)
         if not plan:
-            await callback.answer("پلن یافت نشد.", show_alert=True)
+            await callback.answer(get_text("plan_not_found"), show_alert=True)
             return
 
         fsm_data         = await state.get_data()

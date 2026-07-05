@@ -13,7 +13,7 @@ from shared_lib.db import (
     get_user_wallet_stats, get_transactions, get_free_test_uses,
     get_user_ticket_counts, get_user_order_counts, get_referral_stats,
     get_referral_by_referred, get_user_by_referral_code,
-    get_user_services, decrement_free_test_uses,
+    get_user_services, decrement_free_test_uses, get_text,
 )
 
 _FILTER_LABELS = {
@@ -297,7 +297,7 @@ def register_admin_users_handlers(dp):
         await state.clear()
         await message.answer(f"✅ کاربر بن شد." + (f"\nدلیل: {reason}" if reason else ""), parse_mode="HTML")
         try:
-            await message.bot.send_message(uid, "⛔️ دسترسی شما به ربات محدود شده است.")
+            await message.bot.send_message(uid, get_text("start_banned"))
         except (TelegramForbiddenError, TelegramBadRequest):
             pass
         await _show_profile(message, uid)
