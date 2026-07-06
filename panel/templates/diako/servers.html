@@ -208,9 +208,16 @@
     <input class="modal-input" id="addUrl" placeholder="https://rebeccapanel.com:8880">
     <label class="modal-label">توکن API</label>
     <input class="modal-input" id="addToken" placeholder="توکن پنل">
+    <button class="modal-btn" id="fetchSvcBtn" style="width:100%;justify-content:center;margin-bottom:12px" onclick="fetchServices()">
+      <i class="ti ti-plug-connected"></i> دریافت لیست سرویس‌ها
+    </button>
+    <div id="svcList" style="display:none;margin-bottom:12px">
+      <label class="modal-label">سرویس‌ها (حداقل یکی را انتخاب کنید)</label>
+      <div id="svcItems" style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px 10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.07);border-radius:10px"></div>
+    </div>
     <div class="modal-acts">
       <button class="modal-btn" onclick="closeModal('addModal')">انصراف</button>
-      <button class="modal-btn btn-confirm" id="addConfirmBtn" onclick="confirmAdd()">افزودن</button>
+      <button class="modal-btn btn-confirm" id="addConfirmBtn" onclick="confirmAdd()" disabled>افزودن</button>
     </div>
   </div>
 </div>
@@ -269,7 +276,30 @@ async function apiCall(body) {
   return res.json();
 }
 
+async function fetchServices() {
+  const btn = document.getElementById('fetchSvcBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> در حال اتصال…';
+  const data = await apiCall({
+    action: 'fetch_services',
+    url: document.getElementById('addUrl').value,
+    token: document.getElementById('addToken').value,
+  });
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-plug-connected"></i> دریافت لیست سرویس‌ها';
+  if (!data.ok) { showNotif('خطا', data.error, 'error'); return; }
+  if (!data.services.length) { showNotif('خطا', 'هیچ سرویسی در این پنل تعریف نشده', 'error'); return; }
+  document.getElementById('svcItems').innerHTML = data.services.map(s =>
+    `<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+       <input type="checkbox" class="svc-check" value="${s.id}" style="width:15px;height:15px;accent-color:var(--accent)"> ${s.name}
+     </label>`
+  ).join('');
+  document.getElementById('svcList').style.display = 'block';
+  document.getElementById('addConfirmBtn').disabled = false;
+  showNotif('اتصال موفق', `${data.services.length} سرویس پیدا شد ✅`, 'info');
+}
+
 async function confirmAdd() {
+  const serviceIds = Array.from(document.querySelectorAll('.svc-check:checked')).map(c => Number(c.value));
+  if (!serviceIds.length) { showNotif('خطا', 'حداقل یک سرویس را انتخاب کنید', 'error'); return; }
   const btn = document.getElementById('addConfirmBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
   const data = await apiCall({
@@ -277,6 +307,7 @@ async function confirmAdd() {
     name: document.getElementById('addName').value,
     url: document.getElementById('addUrl').value,
     token: document.getElementById('addToken').value,
+    service_ids: serviceIds,
   });
   if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
   btn.disabled = false; btn.innerHTML = 'افزودن';

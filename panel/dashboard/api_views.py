@@ -564,15 +564,37 @@ def server_action(request):
 
     action = data.get('action')
 
+    if action == 'fetch_services':
+        url = (data.get('url') or '').strip()
+        token = (data.get('token') or '').strip()
+        if not url or not token:
+            return JsonResponse({'ok': False, 'error': 'آدرس و توکن الزامی است'})
+        if not url.startswith('https://') or url.endswith('/'):
+            return JsonResponse({'ok': False, 'error': 'آدرس باید با https:// شروع و بدون / در انتها باشد'})
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
+        from rebecca_api import RebeccaAPI
+        api = RebeccaAPI(url, token)
+        try:
+            services = async_to_sync(api.get_services)()
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': f'اتصال به پنل ناموفق بود: {e}'})
+        return JsonResponse({'ok': True, 'services': [
+            {'id': s.get('id'), 'name': s.get('name', f"سرویس {s.get('id')}")} for s in services
+        ]})
+
     if action == 'add':
         name = (data.get('name') or '').strip()
         url = (data.get('url') or '').strip()
         token = (data.get('token') or '').strip()
+        service_ids = data.get('service_ids') or []
         if not name or not url or not token:
             return JsonResponse({'ok': False, 'error': 'نام، آدرس و توکن الزامی است'})
         if not url.startswith('https://') or url.endswith('/'):
             return JsonResponse({'ok': False, 'error': 'آدرس باید با https:// شروع و بدون / در انتها باشد'})
-        async_to_sync(add_server)(name, url, token, [])
+        if not service_ids:
+            return JsonResponse({'ok': False, 'error': 'حداقل یک سرویس را انتخاب کنید'})
+        async_to_sync(add_server)(name, url, token, [int(i) for i in service_ids])
         return JsonResponse({'ok': True})
 
     if action == 'delete':
