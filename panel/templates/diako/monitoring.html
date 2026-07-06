@@ -1,0 +1,290 @@
+{% extends 'diako/base.html' %}
+{% load static %}
+
+{% block title %}مانیتورینگ نودها — دیاکو{% endblock %}
+
+{% block extra_head %}
+<style>
+.mon-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: stretch; }
+@media (max-width: 1000px) { .mon-grid { grid-template-columns: 1fr; } }
+
+/* ── کارت کره ── */
+.globe-card { position: relative; overflow: hidden; padding: 0 !important; min-height: 560px; background: radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb),0.07), transparent 55%), #04070d; border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; }
+#globeWrap { position: absolute; inset: 0; cursor: grab; }
+#globeWrap:active { cursor: grabbing; }
+.globe-overlay { position: absolute; top: 14px; right: 16px; z-index: 5; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.globe-title { font-size: 14px; font-weight: 800; color: #e7edf7; display: flex; align-items: center; gap: 8px; }
+.globe-title i { color: var(--accent); }
+.globe-sub { font-size: 10px; color: rgba(231,237,247,0.45); }
+.globe-legend { position: absolute; bottom: 14px; right: 16px; z-index: 5; display: flex; gap: 14px; pointer-events: none; }
+.lg-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: rgba(231,237,247,0.6); }
+.lg-dot { width: 8px; height: 8px; border-radius: 50%; }
+.lg-dot.on { background: #22e58f; box-shadow: 0 0 8px rgba(34,229,143,0.8); }
+.lg-dot.off { background: #ff5470; box-shadow: 0 0 8px rgba(255,84,112,0.8); }
+.lg-dot.na { background: #8b93a7; }
+.globe-stats { position: absolute; top: 14px; left: 16px; z-index: 5; display: flex; gap: 10px; }
+.gstat { background: rgba(8,12,20,0.55); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 8px 14px; text-align: center; }
+.gstat-num { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.gstat-num.on  { color: #22e58f; }
+.gstat-num.off { color: #ff5470; }
+.gstat-num.all { color: #e7edf7; }
+.gstat-lbl { font-size: 9px; color: rgba(231,237,247,0.5); margin-top: 2px; }
+
+/* ── لیست نودها ── */
+.node-list { display: flex; flex-direction: column; gap: 10px; max-height: 560px; overflow-y: auto; padding-left: 4px; }
+.node-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 13px 15px; cursor: pointer; transition: all 160ms; }
+.node-card:hover { border-color: rgba(var(--accent-rgb),0.35); background: rgba(var(--accent-rgb),0.04); transform: translateY(-1px); }
+.node-card.focused { border-color: rgba(var(--accent-rgb),0.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.1); }
+.nc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.nc-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.nc-pulse { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.nc-pulse.on { background: #22e58f; }
+.nc-pulse.on::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(34,229,143,0.5); animation: pulse-ring 1.6s ease-out infinite; }
+.nc-pulse.off { background: #ff5470; }
+.nc-pulse.na { background: #8b93a7; }
+@keyframes pulse-ring { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+.nc-latency { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 3px 9px; border-radius: 16px; }
+.nc-latency.fast { color: #22e58f; background: rgba(34,229,143,0.09); }
+.nc-latency.mid  { color: #ffc24b; background: rgba(255,194,75,0.09); }
+.nc-latency.slow { color: #ff5470; background: rgba(255,84,112,0.09); }
+.nc-rows { display: flex; flex-direction: column; gap: 4px; }
+.nc-row { display: flex; justify-content: space-between; font-size: 10.5px; }
+.nc-lbl { color: var(--text-muted); }
+.nc-val { color: var(--text); font-variant-numeric: tabular-nums; direction: ltr; }
+.mon-refresh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mon-refresh-lbl { font-size: 11px; color: var(--text-muted); }
+.refresh-btn { padding: 7px 13px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
+.refresh-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.refresh-btn i.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.mon-empty { text-align: center; padding: 50px 16px; color: var(--text-muted); font-size: 12px; }
+.mon-empty i { font-size: 38px; display: block; margin-bottom: 10px; opacity: 0.35; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
+      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
+      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
+      <a href="/diako/servers/" class="nav-item" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
+      <a href="/diako/monitoring/" class="nav-item active" data-tooltip="مانیتورینگ"><i class="ti ti-world"></i></a>
+      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
+      <a href="/diako/finance/" class="nav-item" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
+      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
+      <a href="/diako/tutorials/" class="nav-item" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
+      <a href="/diako/extra-requests/" class="nav-item" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
+      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
+      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
+      <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
+      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title">مانیتورینگ نودها</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
+        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-container">
+      <div class="mon-grid">
+
+        <!-- کره زمین -->
+        <div class="inner-card globe-card anim-card">
+          <div id="globeWrap"></div>
+          <div class="globe-overlay">
+            <div class="globe-title"><i class="ti ti-world"></i> نقشه‌ی زنده‌ی نودها</div>
+            <div class="globe-sub">بکش و بچرخون — روی نود کلیک کن</div>
+          </div>
+          <div class="globe-stats" id="globeStats"></div>
+          <div class="globe-legend">
+            <div class="lg-item"><span class="lg-dot on"></span> آنلاین</div>
+            <div class="lg-item"><span class="lg-dot off"></span> آفلاین</div>
+            <div class="lg-item"><span class="lg-dot na"></span> غیرفعال</div>
+          </div>
+        </div>
+
+        <!-- لیست نودها -->
+        <div>
+          <div class="mon-refresh">
+            <span class="mon-refresh-lbl" id="lastUpdate">در حال بارگذاری…</span>
+            <button class="refresh-btn" id="refreshBtn" onclick="loadNodes(true)">
+              <i class="ti ti-refresh" id="refreshIcon"></i> بروزرسانی
+            </button>
+          </div>
+          <div class="node-list" id="nodeList">
+            <div class="mon-empty"><i class="ti ti-loader-2"></i><br>در حال دریافت وضعیت نودها…</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.2/dist/globe.gl.min.js"></script>
+<script>
+let globe = null;
+let nodes = [];
+let focusedId = null;
+
+const COLOR = { online: '#22e58f', offline: '#ff5470', error: '#ffc24b', inactive: '#8b93a7' };
+
+function nodeColor(n) {
+  if (!n.is_active) return COLOR.inactive;
+  return COLOR[n.status] || COLOR.offline;
+}
+
+/* ── ساخت کره ── */
+function initGlobe() {
+  const wrap = document.getElementById('globeWrap');
+  globe = Globe()(wrap)
+    .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg')
+    .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
+    .backgroundColor('rgba(0,0,0,0)')
+    .showAtmosphere(true)
+    .atmosphereColor('#3a7bd5')
+    .atmosphereAltitude(0.18)
+    .pointAltitude(0.02)
+    .pointRadius(0.7)
+    .pointColor(nodeColor)
+    .pointsMerge(false)
+    .ringColor(n => t => {
+      const c = nodeColor(n);
+      const alpha = 1 - t;
+      return c + Math.round(alpha * 160).toString(16).padStart(2, '0');
+    })
+    .ringMaxRadius(4)
+    .ringPropagationSpeed(2)
+    .ringRepeatPeriod(1400)
+    .labelText('name')
+    .labelSize(1.15)
+    .labelDotRadius(0)
+    .labelColor(() => 'rgba(231,237,247,0.85)')
+    .labelAltitude(0.025)
+    .onPointClick(n => focusNode(n.id, true));
+
+  globe.controls().autoRotate = true;
+  globe.controls().autoRotateSpeed = 0.55;
+  globe.controls().enablePan = false;
+  globe.controls().minDistance = 140;
+  globe.controls().maxDistance = 480;
+  // با اولین درگ، چرخش خودکار قطع می‌شه
+  wrap.addEventListener('pointerdown', () => { globe.controls().autoRotate = false; }, { once: true });
+
+  const resize = () => { globe.width(wrap.clientWidth); globe.height(wrap.clientHeight); };
+  new ResizeObserver(resize).observe(wrap);
+  resize();
+}
+
+/* ── دریافت وضعیت نودها ── */
+async function loadNodes(manual) {
+  const icon = document.getElementById('refreshIcon');
+  icon.classList.add('spinning');
+  try {
+    const res = await fetch('/diako/api/nodes-status/');
+    const data = await res.json();
+    nodes = data.nodes || [];
+    renderGlobe();
+    renderList();
+    renderStats();
+    const t = new Date().toLocaleTimeString('fa-IR');
+    document.getElementById('lastUpdate').textContent = 'آخرین بروزرسانی: ' + t;
+  } catch {
+    document.getElementById('lastUpdate').textContent = 'خطا در دریافت وضعیت ❌';
+  }
+  icon.classList.remove('spinning');
+}
+
+function renderGlobe() {
+  if (!globe) return;
+  const placed = nodes.filter(n => n.lat != null && n.lon != null);
+  const ringed = placed.filter(n => n.is_active && n.status === 'online');
+  globe.pointsData(placed).ringsData(ringed).labelsData(placed);
+}
+
+function renderStats() {
+  const on  = nodes.filter(n => n.status === 'online').length;
+  const off = nodes.filter(n => n.status !== 'online').length;
+  document.getElementById('globeStats').innerHTML = `
+    <div class="gstat"><div class="gstat-num all">${nodes.length}</div><div class="gstat-lbl">کل نودها</div></div>
+    <div class="gstat"><div class="gstat-num on">${on}</div><div class="gstat-lbl">آنلاین</div></div>
+    <div class="gstat"><div class="gstat-num off">${off}</div><div class="gstat-lbl">آفلاین</div></div>`;
+}
+
+function latencyClass(ms) {
+  if (ms == null) return '';
+  if (ms < 400) return 'fast';
+  if (ms < 1200) return 'mid';
+  return 'slow';
+}
+
+function renderList() {
+  const list = document.getElementById('nodeList');
+  if (!nodes.length) {
+    list.innerHTML = '<div class="mon-empty"><i class="ti ti-server-off"></i><br>هنوز سروری ثبت نشده</div>';
+    return;
+  }
+  list.innerHTML = nodes.map(n => {
+    const pulse = !n.is_active ? 'na' : (n.status === 'online' ? 'on' : 'off');
+    const stTxt = !n.is_active ? 'غیرفعال' : (n.status === 'online' ? 'آنلاین' : (n.status === 'error' ? 'خطا (' + (n.http_status || '?') + ')' : 'آفلاین'));
+    const loc = [n.city, n.country].filter(Boolean).join('، ') || 'نامشخص';
+    const lat = n.latency != null
+      ? `<span class="nc-latency ${latencyClass(n.latency)}">${n.latency} ms</span>`
+      : '<span class="nc-latency slow">—</span>';
+    return `
+    <div class="node-card ${focusedId === n.id ? 'focused' : ''}" onclick="focusNode(${n.id}, false)">
+      <div class="nc-head">
+        <div class="nc-name"><span class="nc-pulse ${pulse}"></span>${n.name}</div>
+        ${lat}
+      </div>
+      <div class="nc-rows">
+        <div class="nc-row"><span class="nc-lbl">وضعیت</span><span class="nc-val" style="direction:rtl">${stTxt}</span></div>
+        <div class="nc-row"><span class="nc-lbl">موقعیت</span><span class="nc-val" style="direction:rtl">${loc}</span></div>
+        <div class="nc-row"><span class="nc-lbl">هاست</span><span class="nc-val">${n.host || '—'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── فوکوس روی یک نود (چرخش کره به سمتش) ── */
+function focusNode(id, fromGlobe) {
+  focusedId = id;
+  renderList();
+  const n = nodes.find(x => x.id === id);
+  if (n && n.lat != null && globe) {
+    globe.controls().autoRotate = false;
+    globe.pointOfView({ lat: n.lat, lng: n.lon, altitude: 1.6 }, 900);
+  }
+  if (!fromGlobe) {
+    // اسکرول کارت توی دید بمونه
+    document.querySelector('.node-card.focused')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+initGlobe();
+loadNodes(false);
+setInterval(() => loadNodes(false), 30000);
+</script>
+{% endblock %}

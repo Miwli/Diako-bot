@@ -226,6 +226,13 @@ def keyboard_editor_view(request):
 
 
 @login_required
+def monitoring_view(request):
+    return render(request, 'diako/monitoring.html', {
+        'admin_username': request.user.username,
+    })
+
+
+@login_required
 def import_export_view(request):
     all_texts_rows = async_to_sync(get_all_texts)()
     bot_texts = {row['key']: row['value'] for row in all_texts_rows}

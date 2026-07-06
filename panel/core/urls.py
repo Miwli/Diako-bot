@@ -14,6 +14,7 @@ urlpatterns = [
     path('diako/keyboard-editor/', v.keyboard_editor_view, name='diako_keyboard_editor'),
     path('diako/texts-editor/', v.texts_editor_view, name='diako_texts_editor'),
     path('diako/import-export/', v.import_export_view, name='diako_import_export'),
+    path('diako/monitoring/', v.monitoring_view, name='diako_monitoring'),
     path('diako/api/pending-orders/', api_views.pending_orders, name='diako_pending_orders'),
     path('diako/api/chart-data/', api_views.chart_data, name='diako_chart_data'),
     path('diako/api/save-keyboard/', api_views.save_keyboard, name='diako_save_keyboard'),
@@ -41,4 +42,5 @@ urlpatterns = [
     path('diako/api/extra-request-action/', api_views.extra_request_action, name='diako_extra_request_action'),
     path('diako/api/service-action/', api_views.service_action, name='diako_service_action'),
     path('diako/api/import-config/', api_views.import_config, name='diako_import_config'),
+    path('diako/api/nodes-status/', api_views.nodes_status, name='diako_nodes_status'),
 ]

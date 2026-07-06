@@ -37,6 +37,11 @@ async def init_db():
             "free_test_duration": "INTEGER DEFAULT 1",
             "free_test_traffic":  "INTEGER DEFAULT 1",
             "order_index":        "INTEGER DEFAULT 0",
+            "geo_ip":             "TEXT",
+            "geo_lat":            "REAL",
+            "geo_lon":            "REAL",
+            "geo_city":           "TEXT",
+            "geo_country":        "TEXT",
         }
         for col, col_type in server_migrations.items():
             try:
@@ -468,6 +473,15 @@ async def get_server(server_id: int):
         db.row_factory = aiosqlite.Row
         cursor = await db.execute("SELECT * FROM servers WHERE id = ?", (server_id,))
         return await cursor.fetchone()
+
+async def set_server_geo(server_id: int, ip: str, lat: float, lon: float, city: str, country: str):
+    """کش کردن موقعیت جغرافیایی سرور — برای صفحه‌ی مانیتورینگ"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE servers SET geo_ip = ?, geo_lat = ?, geo_lon = ?, geo_city = ?, geo_country = ? WHERE id = ?",
+            (ip, lat, lon, city, country, server_id)
+        )
+        await db.commit()
 
 async def delete_server(server_id: int):
     """حذف سرور و یتیم کردن پلن‌هاش"""

@@ -474,6 +474,83 @@ def service_action(request):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  API — مانیتورینگ نودها
+# ═══════════════════════════════════════════════════════════════════════════
+
+async def _check_all_nodes(servers: list) -> list:
+    """چک موازی وضعیت همه‌ی سرورها + geoIP با کش در DB"""
+    import asyncio
+    import time
+    from urllib.parse import urlparse
+    import aiohttp
+    from shared_lib.db import set_server_geo
+
+    async def check(s: dict) -> dict:
+        node = {
+            'id':       s['id'],
+            'name':     s['name'],
+            'is_active': s.get('is_active', 1),
+            'lat':      s.get('geo_lat'),
+            'lon':      s.get('geo_lon'),
+            'city':     s.get('geo_city') or '',
+            'country':  s.get('geo_country') or '',
+            'status':   'offline',
+            'latency':  None,
+        }
+        host = urlparse(s['panel_url']).hostname or ''
+        node['host'] = host
+
+        # geo — فقط بار اول (کش در DB)، تا صفحه سریع بمونه
+        if node['lat'] is None and host:
+            try:
+                loop = asyncio.get_event_loop()
+                infos = await loop.getaddrinfo(host, None)
+                ip = infos[0][4][0]
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        f'http://ip-api.com/json/{ip}?fields=status,lat,lon,city,country',
+                        timeout=aiohttp.ClientTimeout(total=5)
+                    ) as resp:
+                        geo = await resp.json()
+                if geo.get('status') == 'success':
+                    await set_server_geo(s['id'], ip, geo['lat'], geo['lon'],
+                                         geo.get('city', ''), geo.get('country', ''))
+                    node.update(lat=geo['lat'], lon=geo['lon'],
+                                city=geo.get('city', ''), country=geo.get('country', ''))
+            except Exception:
+                pass
+
+        # وضعیت پنل Rebecca — یک درخواست احراز هویت‌شده + اندازه‌گیری تاخیر
+        try:
+            headers = {'Authorization': f"Bearer {s['panel_token']}"}
+            start = time.monotonic()
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.get(
+                    s['panel_url'].rstrip('/') + '/api/admin',
+                    ssl=False,
+                    timeout=aiohttp.ClientTimeout(total=6)
+                ) as resp:
+                    await resp.read()
+                    node['latency'] = int((time.monotonic() - start) * 1000)
+                    node['status'] = 'online' if resp.status == 200 else 'error'
+                    node['http_status'] = resp.status
+        except Exception:
+            node['status'] = 'offline'
+
+        return node
+
+    return list(await asyncio.gather(*[check(dict(s)) for s in servers]))
+
+
+@login_required
+def nodes_status(request):
+    from shared_lib.db import get_servers
+    servers = async_to_sync(get_servers)(False)
+    nodes = async_to_sync(_check_all_nodes)([dict(s) for s in servers])
+    return JsonResponse({'nodes': nodes})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  API — مدیریت سرورها
 # ═══════════════════════════════════════════════════════════════════════════
 
