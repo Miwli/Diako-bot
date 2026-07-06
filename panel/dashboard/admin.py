@@ -8,7 +8,7 @@ from .models import (
     Referrals, Tickets, Tutorials, Faqs, Settings,
     ExtraVolumePlans, ExtraVolumeRequests,
     ExtraTimePlans, ExtraTimeRequests,
-    KeyboardButtons, KeyboardActions,
+    KeyboardButtons, KeyboardActions, PaymentCards, RequiredChannels,
 )
 
 
@@ -117,6 +117,20 @@ class ExtraVolumePlansAdmin(admin.ModelAdmin):
     list_filter   = ("is_active",)
     ordering      = ("order_index", "price")
     list_editable = ("is_active", "order_index")
+
+
+@admin.register(PaymentCards)
+class PaymentCardsAdmin(admin.ModelAdmin):
+    list_display = ("number", "owner", "is_active", "order_index")
+    list_filter  = ("is_active",)
+    ordering     = ("order_index", "id")
+
+
+@admin.register(RequiredChannels)
+class RequiredChannelsAdmin(admin.ModelAdmin):
+    list_display = ("title", "chat_id", "is_active", "order_index")
+    list_filter  = ("is_active",)
+    ordering     = ("order_index", "id")
 
 
 def _approve_ev_request(request, req_obj):

@@ -135,6 +135,28 @@ class RebeccaAPI:
                     raise Exception(f"HTTP {resp.status}: {body}")
                 return await resp.json()
 
+    async def get_nodes(self) -> list:
+        """لیست نودهای پنل با وضعیت اتصال هرکدوم"""
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(
+                f"{self.base_url}/api/nodes",
+                ssl=False,
+                timeout=aiohttp.ClientTimeout(total=8)
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+
+    async def get_system_stats(self) -> dict:
+        """آمار کلی پنل — کاربران، پهنای باند، CPU و RAM"""
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(
+                f"{self.base_url}/api/system",
+                ssl=False,
+                timeout=aiohttp.ClientTimeout(total=8)
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+
     def _random_username(self) -> str:
         chars = string.ascii_lowercase + string.digits
         return "bp_" + "".join(random.choices(chars, k=8))

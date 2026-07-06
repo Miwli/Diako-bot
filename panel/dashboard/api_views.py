@@ -475,67 +475,135 @@ def service_action(request):
 #  API — مانیتورینگ نودها
 # ═══════════════════════════════════════════════════════════════════════════
 
-async def _check_all_nodes(servers: list) -> list:
-    """چک موازی وضعیت همه‌ی سرورها + geoIP با کش در DB"""
+async def _geo_lookup(host: str) -> dict:
+    """موقعیت جغرافیایی یک هاست — با کش در DB تا هر بار سراغ ip-api نریم"""
+    import asyncio
+    import aiohttp
+    from shared_lib.db import get_geo_cache, set_geo_cache
+
+    if not host:
+        return {}
+    cached = await get_geo_cache(host)
+    if cached and cached['lat'] is not None:
+        return dict(cached)
+    try:
+        loop = asyncio.get_event_loop()
+        infos = await loop.getaddrinfo(host, None)
+        ip = infos[0][4][0]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f'http://ip-api.com/json/{ip}?fields=status,lat,lon,city,country',
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp:
+                geo = await resp.json()
+        if geo.get('status') == 'success':
+            await set_geo_cache(host, ip, geo['lat'], geo['lon'],
+                                geo.get('city', ''), geo.get('country', ''))
+            return {'ip': ip, 'lat': geo['lat'], 'lon': geo['lon'],
+                    'city': geo.get('city', ''), 'country': geo.get('country', '')}
+    except Exception:
+        pass
+    return {}
+
+
+# وضعیت نود در Rebecca → وضعیتی که کره نشون می‌ده
+_NODE_STATUS_MAP = {
+    'connected':  'online',
+    'connecting': 'connecting',
+    'error':      'error',
+    'disabled':   'disabled',
+}
+
+
+async def _check_all_servers(servers: list) -> list:
+    """چک موازی همه‌ی سرورها: تاخیر، آمار سیستم و نودهای داخل هر پنل"""
     import asyncio
     import time
     from urllib.parse import urlparse
-    import aiohttp
-    from shared_lib.db import set_server_geo
+    from shared_lib.rebecca_api import RebeccaAPI
 
     async def check(s: dict) -> dict:
-        node = {
-            'id':       s['id'],
-            'name':     s['name'],
-            'is_active': s.get('is_active', 1),
-            'lat':      s.get('geo_lat'),
-            'lon':      s.get('geo_lon'),
-            'city':     s.get('geo_city') or '',
-            'country':  s.get('geo_country') or '',
-            'status':   'offline',
-            'latency':  None,
-        }
         host = urlparse(s['panel_url']).hostname or ''
-        node['host'] = host
+        info = {
+            'id':        s['id'],
+            'name':      s['name'],
+            'host':      host,
+            'is_active': s.get('is_active', 1),
+            'status':    'offline',
+            'latency':   None,
+            'lat': None, 'lon': None, 'city': '', 'country': '',
+            'stats':     None,
+            'nodes':     [],
+        }
 
-        # geo — فقط بار اول (کش در DB)، تا صفحه سریع بمونه
-        if node['lat'] is None and host:
+        geo = await _geo_lookup(host)
+        if geo:
+            info.update(lat=geo['lat'], lon=geo['lon'],
+                        city=geo.get('city', ''), country=geo.get('country', ''))
+
+        api = RebeccaAPI(s['panel_url'], s['panel_token'])
+
+        try:
+            start = time.monotonic()
+            stats = await api.get_system_stats()
+            info['latency'] = int((time.monotonic() - start) * 1000)
+            info['status'] = 'online'
+            info['stats'] = {
+                'version':            stats.get('version'),
+                'users_active':       stats.get('users_active'),
+                'users_total':        stats.get('total_user'),
+                'cpu_usage':          stats.get('cpu_usage'),
+                'cpu_cores':          stats.get('cpu_cores'),
+                'mem_used':           stats.get('mem_used'),
+                'mem_total':          stats.get('mem_total'),
+                'incoming_bandwidth': stats.get('incoming_bandwidth'),
+                'outgoing_bandwidth': stats.get('outgoing_bandwidth'),
+            }
+        except Exception:
+            # شاید پنل /api/system نداشته باشه — با /api/admin چک می‌کنیم
+            import aiohttp
             try:
-                loop = asyncio.get_event_loop()
-                infos = await loop.getaddrinfo(host, None)
-                ip = infos[0][4][0]
-                async with aiohttp.ClientSession() as session:
+                headers = {'Authorization': f"Bearer {s['panel_token']}"}
+                start = time.monotonic()
+                async with aiohttp.ClientSession(headers=headers) as session:
                     async with session.get(
-                        f'http://ip-api.com/json/{ip}?fields=status,lat,lon,city,country',
-                        timeout=aiohttp.ClientTimeout(total=5)
+                        s['panel_url'].rstrip('/') + '/api/admin',
+                        ssl=False,
+                        timeout=aiohttp.ClientTimeout(total=6)
                     ) as resp:
-                        geo = await resp.json()
-                if geo.get('status') == 'success':
-                    await set_server_geo(s['id'], ip, geo['lat'], geo['lon'],
-                                         geo.get('city', ''), geo.get('country', ''))
-                    node.update(lat=geo['lat'], lon=geo['lon'],
-                                city=geo.get('city', ''), country=geo.get('country', ''))
+                        await resp.read()
+                        info['latency'] = int((time.monotonic() - start) * 1000)
+                        info['status'] = 'online' if resp.status == 200 else 'error'
             except Exception:
                 pass
+            if info['status'] != 'online':
+                return info
 
-        # وضعیت پنل Rebecca — یک درخواست احراز هویت‌شده + اندازه‌گیری تاخیر
         try:
-            headers = {'Authorization': f"Bearer {s['panel_token']}"}
-            start = time.monotonic()
-            async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(
-                    s['panel_url'].rstrip('/') + '/api/admin',
-                    ssl=False,
-                    timeout=aiohttp.ClientTimeout(total=6)
-                ) as resp:
-                    await resp.read()
-                    node['latency'] = int((time.monotonic() - start) * 1000)
-                    node['status'] = 'online' if resp.status == 200 else 'error'
-                    node['http_status'] = resp.status
+            raw_nodes = await api.get_nodes()
         except Exception:
-            node['status'] = 'offline'
+            raw_nodes = []
 
-        return node
+        async def node_info(n: dict) -> dict:
+            raw_status = n.get('status', '')
+            node = {
+                'id':           n.get('id'),
+                'name':         n.get('name', ''),
+                'address':      n.get('address', ''),
+                'status':       _NODE_STATUS_MAP.get(raw_status, 'error'),
+                'raw_status':   raw_status,
+                'xray_version': n.get('xray_version'),
+                'message':      n.get('message'),
+                'lat': None, 'lon': None, 'city': '', 'country': '',
+            }
+            g = await _geo_lookup(n.get('address', ''))
+            if g:
+                node.update(lat=g['lat'], lon=g['lon'],
+                            city=g.get('city', ''), country=g.get('country', ''))
+            return node
+
+        info['nodes'] = list(await asyncio.gather(*[node_info(dict(n)) for n in raw_nodes]))
+        return info
 
     return list(await asyncio.gather(*[check(dict(s)) for s in servers]))
 
@@ -544,8 +612,8 @@ async def _check_all_nodes(servers: list) -> list:
 def nodes_status(request):
     from shared_lib.db import get_servers
     servers = async_to_sync(get_servers)(False)
-    nodes = async_to_sync(_check_all_nodes)([dict(s) for s in servers])
-    return JsonResponse({'nodes': nodes})
+    result = async_to_sync(_check_all_servers)([dict(s) for s in servers])
+    return JsonResponse({'servers': result})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -724,15 +792,64 @@ def finance_action(request):
 
     action = data.get('action')
 
-    if action == 'set_card':
+    if action == 'toggle_card_active':
+        card_active = async_to_sync(get_setting)('card_active')
+        async_to_sync(set_setting)('card_active', '0' if card_active == '1' else '1')
+        return JsonResponse({'ok': True})
+
+    if action == 'set_card_mode':
+        mode = data.get('mode')
+        if mode not in ('round_robin', 'random', 'fixed'):
+            return JsonResponse({'ok': False, 'error': 'حالت نامعتبر است'})
+        async_to_sync(set_setting)('card_select_mode', mode)
+        return JsonResponse({'ok': True})
+
+    if action == 'set_fixed_card':
+        card_id = data.get('card_id')
+        if not card_id:
+            return JsonResponse({'ok': False, 'error': 'card_id الزامی است'}, status=400)
+        async_to_sync(set_setting)('card_fixed_id', str(card_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'add_card':
+        from shared_lib.db import add_payment_card
         number = (data.get('number') or '').strip().replace(' ', '')
         owner = (data.get('owner') or '').strip()
-        if not number or not owner:
-            return JsonResponse({'ok': False, 'error': 'شماره کارت و نام صاحب الزامی است'})
+        if not number:
+            return JsonResponse({'ok': False, 'error': 'شماره کارت الزامی است'})
         if len(number) != 16 or not number.isdigit():
             return JsonResponse({'ok': False, 'error': 'شماره کارت باید ۱۶ رقم باشد'})
-        async_to_sync(set_setting)('card_number', number)
-        async_to_sync(set_setting)('card_owner', owner)
+        async_to_sync(add_payment_card)(number, owner or None)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_card':
+        from shared_lib.db import update_payment_card
+        card_id = data.get('card_id')
+        if not card_id:
+            return JsonResponse({'ok': False, 'error': 'card_id الزامی است'}, status=400)
+        number = (data.get('number') or '').strip().replace(' ', '')
+        owner = (data.get('owner') or '').strip()
+        if not number:
+            return JsonResponse({'ok': False, 'error': 'شماره کارت الزامی است'})
+        if len(number) != 16 or not number.isdigit():
+            return JsonResponse({'ok': False, 'error': 'شماره کارت باید ۱۶ رقم باشد'})
+        async_to_sync(update_payment_card)(int(card_id), number=number, owner=owner)
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle_card_item':
+        from shared_lib.db import toggle_payment_card
+        card_id = data.get('card_id')
+        if not card_id:
+            return JsonResponse({'ok': False, 'error': 'card_id الزامی است'}, status=400)
+        async_to_sync(toggle_payment_card)(int(card_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete_card':
+        from shared_lib.db import delete_payment_card
+        card_id = data.get('card_id')
+        if not card_id:
+            return JsonResponse({'ok': False, 'error': 'card_id الزامی است'}, status=400)
+        async_to_sync(delete_payment_card)(int(card_id))
         return JsonResponse({'ok': True})
 
     if action == 'approve_topup':
@@ -986,6 +1103,65 @@ def extra_request_action(request):
         req = async_to_sync(get_extra_time_request)(int(req_id))
         if req:
             _send_telegram(req['user_id'], '❌ درخواست افزودن زمان رد شد.')
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — جوین اجباری کانال
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["POST"])
+def force_join_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+    channel_id = data.get('channel_id')
+
+    if action == 'toggle_enabled':
+        enabled = async_to_sync(get_setting)('force_join_enabled')
+        async_to_sync(set_setting)('force_join_enabled', '0' if enabled == '1' else '1')
+        return JsonResponse({'ok': True})
+
+    if action == 'add':
+        from shared_lib.db import add_required_channel
+        chat_id = (data.get('chat_id') or '').strip()
+        title = (data.get('title') or '').strip()
+        link = (data.get('invite_link') or '').strip()
+        if not chat_id.startswith('@') and not chat_id.startswith('-100'):
+            return JsonResponse({'ok': False, 'error': 'آیدی باید با @ یا -100 شروع بشه'})
+        async_to_sync(add_required_channel)(chat_id, title or None, link or None)
+        return JsonResponse({'ok': True})
+
+    if action == 'update':
+        from shared_lib.db import update_required_channel
+        if not channel_id:
+            return JsonResponse({'ok': False, 'error': 'channel_id الزامی است'}, status=400)
+        chat_id = (data.get('chat_id') or '').strip()
+        title = (data.get('title') or '').strip()
+        link = (data.get('invite_link') or '').strip()
+        if not chat_id.startswith('@') and not chat_id.startswith('-100'):
+            return JsonResponse({'ok': False, 'error': 'آیدی باید با @ یا -100 شروع بشه'})
+        async_to_sync(update_required_channel)(int(channel_id), chat_id=chat_id, title=title, invite_link=link)
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle':
+        from shared_lib.db import toggle_required_channel
+        if not channel_id:
+            return JsonResponse({'ok': False, 'error': 'channel_id الزامی است'}, status=400)
+        async_to_sync(toggle_required_channel)(int(channel_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete':
+        from shared_lib.db import delete_required_channel
+        if not channel_id:
+            return JsonResponse({'ok': False, 'error': 'channel_id الزامی است'}, status=400)
+        async_to_sync(delete_required_channel)(int(channel_id))
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)

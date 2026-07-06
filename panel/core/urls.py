@@ -33,6 +33,7 @@ urlpatterns = [
     path('diako/discounts/', v.discounts_view, name='diako_discounts'),
     path('diako/tutorials/', v.tutorials_view, name='diako_tutorials'),
     path('diako/extra-requests/', v.extra_requests_view, name='diako_extra_requests'),
+    path('diako/force-join/', v.force_join_view, name='diako_force_join'),
     # New API endpoints
     path('diako/api/server-action/', api_views.server_action, name='diako_server_action'),
     path('diako/api/plan-action/', api_views.plan_action, name='diako_plan_action'),
@@ -43,4 +44,5 @@ urlpatterns = [
     path('diako/api/service-action/', api_views.service_action, name='diako_service_action'),
     path('diako/api/import-config/', api_views.import_config, name='diako_import_config'),
     path('diako/api/nodes-status/', api_views.nodes_status, name='diako_nodes_status'),
+    path('diako/api/force-join-action/', api_views.force_join_action, name='diako_force_join_action'),
 ]

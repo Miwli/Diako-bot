@@ -85,6 +85,7 @@ def admin_panel_menu() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📢 پیام همگانی",             callback_data="admin_broadcast")],
         [InlineKeyboardButton(text="📊 آمار و گزارش",           callback_data="admin_stats")],
         [InlineKeyboardButton(text="⚙️ تنظیمات عمومی",         callback_data="admin_general")],
+        [InlineKeyboardButton(text="🔒 جوین اجباری",            callback_data="admin_force_join")],
         [InlineKeyboardButton(text="🔙 بازگشت",                 callback_data="back_to_start")],
     ])
 
@@ -324,23 +325,63 @@ def confirm_delete_plan_keyboard(plan_id: int, server_id: int) -> InlineKeyboard
 
 def admin_finance_menu(card_active: bool) -> InlineKeyboardMarkup:
     status = "✅ روشن" if card_active else "❌ خاموش"
-    rows = get_keyboard_rows("card_settings")
-    settings_label = next((r["label"] for r in rows if r["callback_data"] == "card_settings"), "⚙️ تنظیمات") if not rows else "⚙️ تنظیمات"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="💳 کارت به کارت", callback_data="noop"),
             InlineKeyboardButton(text=status,             callback_data="toggle_card"),
         ],
-        [InlineKeyboardButton(text=settings_label,        callback_data="card_settings")],
+        [InlineKeyboardButton(text="⚙️ تنظیمات کارت‌ها",  callback_data="card_settings")],
         [InlineKeyboardButton(text="🔙 بازگشت",          callback_data="admin_panel")],
     ])
 
 
-def card_settings_keyboard() -> InlineKeyboardMarkup:
-    return _kb("card_settings") or InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 تغییر شماره کارت",    callback_data="set_card_number")],
-        [InlineKeyboardButton(text="👤 تغییر نام صاحب کارت", callback_data="set_card_owner")],
-        [InlineKeyboardButton(text="🔙 بازگشت",              callback_data="admin_finance")],
+def cards_table_keyboard(cards: list, mode: str) -> InlineKeyboardMarkup:
+    buttons = [[
+        InlineKeyboardButton(text="💳 کارت",  callback_data="noop"),
+        InlineKeyboardButton(text="وضعیت",   callback_data="noop"),
+        InlineKeyboardButton(text="تنظیمات", callback_data="noop"),
+    ]]
+    for c in cards:
+        status = "✅ فعال" if c["is_active"] else "❌ غیرفعال"
+        tail = c["number"][-4:] if c["number"] else "----"
+        buttons.append([
+            InlineKeyboardButton(text=f"💳 …{tail}", callback_data=f"card_settings_{c['id']}"),
+            InlineKeyboardButton(text=status,         callback_data=f"toggle_card_item_{c['id']}"),
+            InlineKeyboardButton(text="⚙️",           callback_data=f"card_settings_{c['id']}"),
+        ])
+    buttons.append([
+        InlineKeyboardButton(text=("✅ " if mode == "round_robin" else "") + "🔁 نوبتی", callback_data="set_card_mode_round_robin"),
+        InlineKeyboardButton(text=("✅ " if mode == "random" else "") + "🎲 تصادفی",     callback_data="set_card_mode_random"),
+        InlineKeyboardButton(text=("✅ " if mode == "fixed" else "") + "📌 ثابت",        callback_data="set_card_mode_fixed"),
+    ])
+    buttons.append([InlineKeyboardButton(text="➕ کارت جدید", callback_data="add_card")])
+    buttons.append([InlineKeyboardButton(text="🔙 بازگشت",   callback_data="admin_finance")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def card_item_keyboard(card_id: int, is_active: bool, is_fixed: bool, mode: str) -> InlineKeyboardMarkup:
+    toggle_text = "❌ غیرفعال کردن" if is_active else "✅ فعال کردن"
+    rows = [
+        [
+            InlineKeyboardButton(text="💳 ویرایش شماره", callback_data=f"edit_card_number_{card_id}"),
+            InlineKeyboardButton(text="👤 ویرایش نام",   callback_data=f"edit_card_owner_{card_id}"),
+        ],
+        [InlineKeyboardButton(text=toggle_text, callback_data=f"toggle_card_item_{card_id}")],
+    ]
+    if mode == "fixed":
+        fixed_text = "⭐️ کارت پیش‌فرض" if is_fixed else "☆ تنظیم به‌عنوان پیش‌فرض"
+        rows.append([InlineKeyboardButton(text=fixed_text, callback_data=f"set_fixed_card_{card_id}")])
+    rows.append([InlineKeyboardButton(text="🗑 حذف کارت", callback_data=f"delete_card_{card_id}")])
+    rows.append([InlineKeyboardButton(text="🔙 بازگشت",   callback_data="card_settings")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def confirm_delete_card_keyboard(card_id: int) -> InlineKeyboardMarkup:
+    return _kb("confirm_delete_card", card_id) or InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🗑 بله، حذف کن", callback_data=f"confirmed_delete_card_{card_id}"),
+            InlineKeyboardButton(text="❌ انصراف",       callback_data=f"card_settings_{card_id}"),
+        ],
     ])
 
 
@@ -834,3 +875,67 @@ def admin_user_profile_keyboard(user_id: int, is_banned: bool) -> InlineKeyboard
         ],
         [InlineKeyboardButton(text=back_label,            callback_data="admin_users")],
     ])
+
+
+# ─── جوین اجباری ────────────────────────────────────────────────────────────
+
+def admin_force_join_menu(enabled: bool) -> InlineKeyboardMarkup:
+    status = "✅ روشن" if enabled else "❌ خاموش"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🔒 جوین اجباری", callback_data="noop"),
+            InlineKeyboardButton(text=status,            callback_data="toggle_force_join"),
+        ],
+        [InlineKeyboardButton(text="📋 لیست کانال‌ها",  callback_data="list_channels")],
+        [InlineKeyboardButton(text="🔙 بازگشت",         callback_data="admin_panel")],
+    ])
+
+
+def channels_table_keyboard(channels: list) -> InlineKeyboardMarkup:
+    buttons = [[
+        InlineKeyboardButton(text="📢 کانال", callback_data="noop"),
+        InlineKeyboardButton(text="وضعیت",   callback_data="noop"),
+        InlineKeyboardButton(text="تنظیمات", callback_data="noop"),
+    ]]
+    for c in channels:
+        status = "✅ فعال" if c["is_active"] else "❌ غیرفعال"
+        buttons.append([
+            InlineKeyboardButton(text=c["title"] or c["chat_id"], callback_data=f"channel_settings_{c['id']}"),
+            InlineKeyboardButton(text=status,                      callback_data=f"toggle_channel_{c['id']}"),
+            InlineKeyboardButton(text="⚙️",                        callback_data=f"channel_settings_{c['id']}"),
+        ])
+    buttons.append([InlineKeyboardButton(text="➕ کانال جدید", callback_data="add_channel")])
+    buttons.append([InlineKeyboardButton(text="🔙 بازگشت",     callback_data="admin_force_join")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def channel_item_keyboard(channel_id: int, is_active: bool) -> InlineKeyboardMarkup:
+    toggle_text = "❌ غیرفعال کردن" if is_active else "✅ فعال کردن"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🆔 ویرایش آیدی/یوزرنیم", callback_data=f"edit_channel_id_{channel_id}")],
+        [InlineKeyboardButton(text="📝 ویرایش عنوان",         callback_data=f"edit_channel_title_{channel_id}")],
+        [InlineKeyboardButton(text="🔗 ویرایش لینک دعوت",     callback_data=f"edit_channel_link_{channel_id}")],
+        [InlineKeyboardButton(text=toggle_text,               callback_data=f"toggle_channel_{channel_id}")],
+        [InlineKeyboardButton(text="🗑 حذف کانال",            callback_data=f"delete_channel_{channel_id}")],
+        [InlineKeyboardButton(text="🔙 بازگشت",               callback_data="list_channels")],
+    ])
+
+
+def confirm_delete_channel_keyboard(channel_id: int) -> InlineKeyboardMarkup:
+    return _kb("confirm_delete_channel", channel_id) or InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🗑 بله، حذف کن", callback_data=f"confirmed_delete_channel_{channel_id}"),
+            InlineKeyboardButton(text="❌ انصراف",       callback_data=f"channel_settings_{channel_id}"),
+        ],
+    ])
+
+
+def force_join_keyboard(channels: list) -> InlineKeyboardMarkup:
+    buttons = []
+    for c in channels:
+        chat_id = c["chat_id"]
+        link = c["invite_link"] or (f"https://t.me/{chat_id.lstrip('@')}" if chat_id.startswith("@") else None)
+        if link:
+            buttons.append([InlineKeyboardButton(text=f"📢 {c['title'] or chat_id}", url=link)])
+    buttons.append([InlineKeyboardButton(text="✅ عضو شدم", callback_data="check_force_join")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

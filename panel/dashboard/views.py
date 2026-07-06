@@ -12,7 +12,7 @@ from shared_lib.db import (
 from .models import (
     Orders, Servers, Users, Plans, DiscountCodes, TopUpRequests, Transactions,
     Tutorials, Faqs, ExtraVolumePlans, ExtraVolumeRequests,
-    ExtraTimePlans, ExtraTimeRequests,
+    ExtraTimePlans, ExtraTimeRequests, PaymentCards, RequiredChannels,
 )
 
 
@@ -274,13 +274,17 @@ def plans_view(request):
 
 @login_required
 def finance_view(request):
-    card_number = async_to_sync(get_setting)('card_number') or ''
-    card_owner = async_to_sync(get_setting)('card_owner') or ''
+    cards = list(PaymentCards.objects.all())
+    card_active = async_to_sync(get_setting)('card_active') == '1'
+    card_mode = async_to_sync(get_setting)('card_select_mode') or 'round_robin'
+    card_fixed_id = async_to_sync(get_setting)('card_fixed_id')
     topups = list(TopUpRequests.objects.all().order_by('-id')[:20])
     transactions = list(Transactions.objects.select_related('user').order_by('-id')[:20])
     return render(request, 'diako/finance.html', {
-        'card_number': card_number,
-        'card_owner': card_owner,
+        'cards': cards,
+        'card_active': card_active,
+        'card_mode': card_mode,
+        'card_fixed_id': int(card_fixed_id) if card_fixed_id else None,
         'topups': topups,
         'transactions': transactions,
         'admin_username': request.user.username,
@@ -324,5 +328,18 @@ def extra_requests_view(request):
         'et_requests': et_requests,
         'ev_plans': ev_plans,
         'et_plans': et_plans,
+        'admin_username': request.user.username,
+    })
+
+
+# ─── جوین اجباری ──────────────────────────────────────────────────────────────
+
+@login_required
+def force_join_view(request):
+    channels = list(RequiredChannels.objects.all())
+    force_join_enabled = async_to_sync(get_setting)('force_join_enabled') == '1'
+    return render(request, 'diako/force_join.html', {
+        'channels': channels,
+        'force_join_enabled': force_join_enabled,
         'admin_username': request.user.username,
     })

@@ -20,6 +20,7 @@ from shared_lib.db import (
     get_free_test_servers, create_free_test_order,
     get_free_test_uses, increment_free_test_uses,
     get_text, get_keyboard_buttons, set_service_note,
+    get_selected_payment_card,
 )
 from shared_lib.rebecca_api import RebeccaAPI
 
@@ -311,13 +312,12 @@ def register_user_handlers(dp):
             return
         amount = int(raw)
         await state.update_data(amount=amount)
-        card_number = await get_setting("card_number")
-        card_owner  = await get_setting("card_owner")
+        card = await get_selected_payment_card()
         await message.answer(
             get_text("payment_card_info",
                      amount=f"{amount:,}",
-                     card_number=card_number or "—",
-                     card_owner=card_owner or "—"),
+                     card_number=card["number"] if card else "—",
+                     card_owner=(card["owner"] if card else None) or "—"),
             parse_mode="HTML"
         )
         await state.set_state(TopUp.waiting_for_receipt)
@@ -643,12 +643,13 @@ def register_user_handlers(dp):
         plan_id = int(callback.data.replace("pay_", ""))
 
         card_active = await get_setting("card_active")
-        card_number = await get_setting("card_number")
-        card_owner = await get_setting("card_owner")
+        card = await get_selected_payment_card()
 
-        if card_active != "1" or not card_number:
+        if card_active != "1" or not card:
             await callback.answer(get_text("payment_card_unavailable"), show_alert=True)
             return
+        card_number = card["number"]
+        card_owner = card["owner"]
 
         plan     = await get_plan_with_server(plan_id)
         fsm_data = await state.get_data()

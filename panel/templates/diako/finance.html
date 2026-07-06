@@ -27,6 +27,10 @@
 .st-badge.st-approved::before { background: var(--green); }
 .st-badge.st-rejected { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
 .st-badge.st-rejected::before { background: var(--red); }
+.st-badge.st-active { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
+.st-badge.st-active::before { background: var(--green); }
+.st-badge.st-inactive { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
+.st-badge.st-inactive::before { background: var(--red); }
 .row-acts { display: flex; gap: 4px; justify-content: flex-end; }
 .row-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 150ms; }
 .row-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
@@ -38,6 +42,14 @@
 .ord-empty i { font-size: 36px; display: block; margin-bottom: 8px; opacity: 0.35; }
 .ord-empty p { font-size: 12px; }
 .card-info { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(var(--accent-rgb),0.04); border: 1px solid rgba(var(--accent-rgb),0.12); border-radius: 12px; margin-bottom: 12px; }
+.mode-row { display: flex; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.mode-seg { display: inline-flex; gap: 4px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 4px; }
+.mode-btn { padding: 7px 13px; border-radius: 9px; border: none; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; }
+.card-num-cell { font-family: monospace; direction: ltr; display: inline-block; }
+.star-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 15px; display: flex; align-items: center; }
+.star-btn.filled { color: var(--accent); }
 .card-info-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent); flex-shrink: 0; }
 .card-info-text { font-size: 13px; }
 .card-info-text .num { font-family: monospace; font-size: 14px; font-weight: 700; color: var(--accent); }
@@ -80,6 +92,7 @@
       <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
       <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
       <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
+      <a href="/diako/force-join/" class="nav-item" data-tooltip="جوین اجباری"><i class="ti ti-lock"></i></a>
       <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
     </nav>
   </aside>
@@ -105,15 +118,66 @@
 
     <div class="dash-container">
       <div class="inner-card anim-card card-section">
-        <div class="section-title"><i class="ti ti-credit-card"></i> تنظیمات کارت به کارت</div>
+        <div class="section-title"><i class="ti ti-credit-card"></i> کارت به کارت</div>
         <div class="card-info">
           <div class="card-info-icon"><i class="ti ti-credit-card"></i></div>
-          <div class="card-info-text">
-            <div>شماره کارت: <span class="num">{{ card_number|default:"تنظیم نشده" }}</span></div>
-            <div style="margin-top:4px">صاحب کارت: <strong>{{ card_owner|default:"—" }}</strong></div>
+          <div class="card-info-text" style="flex:1">وضعیت پرداخت کارت به کارت</div>
+          {% if card_active %}
+          <span class="st-badge st-approved" style="cursor:pointer" onclick="toggleCardActive()"><i class="ti ti-check"></i> روشن</span>
+          {% else %}
+          <span class="st-badge st-rejected" style="cursor:pointer" onclick="toggleCardActive()"><i class="ti ti-x"></i> خاموش</span>
+          {% endif %}
+        </div>
+
+        <div class="mode-row">
+          <span class="cell-muted">حالت انتخاب کارت:</span>
+          <div class="mode-seg">
+            <button class="mode-btn {% if card_mode == 'round_robin' %}active{% endif %}" onclick="setCardMode('round_robin')"><i class="ti ti-repeat"></i> نوبتی</button>
+            <button class="mode-btn {% if card_mode == 'random' %}active{% endif %}" onclick="setCardMode('random')"><i class="ti ti-dice-5"></i> تصادفی</button>
+            <button class="mode-btn {% if card_mode == 'fixed' %}active{% endif %}" onclick="setCardMode('fixed')"><i class="ti ti-pin"></i> ثابت</button>
           </div>
         </div>
-        <button class="btn-primary" onclick="openCardModal()"><i class="ti ti-edit"></i> ویرایش کارت</button>
+
+        {% if cards %}
+        <div class="mgmt-table-wrap">
+          <table class="mgmt-table">
+            <thead><tr>
+              <th>#</th><th>شماره کارت</th><th>صاحب کارت</th><th>وضعیت</th>
+              {% if card_mode == 'fixed' %}<th>پیش‌فرض</th>{% endif %}
+              <th class="col-actions"></th>
+            </tr></thead>
+            <tbody>
+              {% for c in cards %}
+              <tr class="mgmt-row">
+                <td><span class="cell-muted">#{{ c.id }}</span></td>
+                <td><span class="card-num-cell">{{ c.number }}</span></td>
+                <td><span class="cell-muted">{{ c.owner|default:"—" }}</span></td>
+                <td>
+                  {% if c.is_active %}<span class="st-badge st-active" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">فعال</span>
+                  {% else %}<span class="st-badge st-inactive" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">غیرفعال</span>{% endif %}
+                </td>
+                {% if card_mode == 'fixed' %}
+                <td>
+                  {% if c.id == card_fixed_id %}<span class="star-btn filled"><i class="ti ti-star-filled"></i></span>
+                  {% else %}<button class="star-btn" title="تنظیم به‌عنوان کارت پیش‌فرض" onclick="setFixedCard({{ c.id }})"><i class="ti ti-star"></i></button>{% endif %}
+                </td>
+                {% endif %}
+                <td>
+                  <div class="row-acts">
+                    <button class="row-btn" title="ویرایش" onclick="openEditCardModal({{ c.id }}, '{{ c.number|escapejs }}', '{{ c.owner|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
+                    <button class="row-btn reject" title="حذف" onclick="deleteCard({{ c.id }})"><i class="ti ti-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ord-empty"><i class="ti ti-credit-card-off"></i><p>هنوز کارتی ثبت نشده</p></div>
+        {% endif %}
+
+        <button class="btn-primary" style="margin-top:12px" onclick="openAddCardModal()"><i class="ti ti-plus"></i> کارت جدید</button>
       </div>
 
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
@@ -171,13 +235,13 @@
 
 <div class="modal-bg" id="cardModal">
   <div class="modal-box">
-    <div class="modal-title"><i class="ti ti-credit-card"></i><span>تنظیمات کارت به کارت</span></div>
+    <div class="modal-title"><i class="ti ti-credit-card"></i><span id="cardModalTitle">کارت جدید</span></div>
     <label class="modal-label">شماره کارت (۱۶ رقم)</label>
-    <input class="modal-input" id="cardNumber" placeholder="6219861034529876" value="{{ card_number }}" maxlength="16">
+    <input class="modal-input" id="cardNumber" placeholder="6219861034529876" maxlength="16">
     <label class="modal-label">نام صاحب کارت</label>
-    <input class="modal-input" id="cardOwner" placeholder="نام و نام خانوادگی" value="{{ card_owner }}">
+    <input class="modal-input" id="cardOwner" placeholder="نام و نام خانوادگی">
     <div class="modal-acts">
-      <button class="modal-btn" onclick="closeCardModal()">انصراف</button>
+      <button class="modal-btn" onclick="closeModal('cardModal')">انصراف</button>
       <button class="modal-btn btn-confirm" id="cardConfirmBtn" onclick="confirmCard()">ذخیره</button>
     </div>
   </div>
@@ -187,20 +251,70 @@
 {% block extra_scripts %}
 <script>
 const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
-function openCardModal() { document.getElementById('cardModal').classList.add('open'); }
-function closeCardModal() { document.getElementById('cardModal').classList.remove('open'); }
+let editCardId = null;
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openAddCardModal() {
+  editCardId = null;
+  document.getElementById('cardModalTitle').textContent = 'کارت جدید';
+  document.getElementById('cardNumber').value = '';
+  document.getElementById('cardOwner').value = '';
+  document.getElementById('cardModal').classList.add('open');
+}
+
+function openEditCardModal(id, number, owner) {
+  editCardId = id;
+  document.getElementById('cardModalTitle').textContent = 'ویرایش کارت';
+  document.getElementById('cardNumber').value = number.replace(/\s/g, '');
+  document.getElementById('cardOwner').value = owner;
+  document.getElementById('cardModal').classList.add('open');
+}
+
+async function apiCall(body) {
+  const res = await fetch('/diako/api/finance-action/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
 
 async function confirmCard() {
   var btn = document.getElementById('cardConfirmBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
-  var res = await fetch('/diako/api/finance-action/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-    body: JSON.stringify({ action: 'set_card', number: document.getElementById('cardNumber').value, owner: document.getElementById('cardOwner').value }),
-  });
-  var data = await res.json();
+  var body = editCardId
+    ? { action: 'update_card', card_id: editCardId, number: document.getElementById('cardNumber').value, owner: document.getElementById('cardOwner').value }
+    : { action: 'add_card', number: document.getElementById('cardNumber').value, owner: document.getElementById('cardOwner').value };
+  var data = await apiCall(body);
   if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
   btn.disabled = false; btn.innerHTML = 'ذخیره';
+}
+
+async function toggleCardActive() {
+  var data = await apiCall({ action: 'toggle_card_active' });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function setCardMode(mode) {
+  var data = await apiCall({ action: 'set_card_mode', mode: mode });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function setFixedCard(id) {
+  var data = await apiCall({ action: 'set_fixed_card', card_id: id });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function toggleCardItem(id) {
+  var data = await apiCall({ action: 'toggle_card_item', card_id: id });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+}
+
+async function deleteCard(id) {
+  if (!confirm('مطمئنی می‌خوای این کارت رو حذف کنی؟')) return;
+  var data = await apiCall({ action: 'delete_card', card_id: id });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
 }
 
 async function approveTopup(id) {
@@ -227,6 +341,6 @@ function showNotif(title, body, type) {
   setTimeout(function() { card.classList.add('hiding'); setTimeout(function() { card.remove(); }, 300); }, 3500);
 }
 
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCardModal(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal('cardModal'); });
 </script>
 {% endblock %}

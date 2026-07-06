@@ -19,6 +19,8 @@ from handlers.broadcast import register_broadcast_handlers
 from handlers.stats import register_stats_handlers
 from handlers.discount import register_discount_handlers
 from handlers.services import register_services_handlers
+from handlers.force_join import register_force_join_handlers
+from middlewares import ForceJoinMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +39,9 @@ def is_admin(user_id: int) -> bool:
     """چک می‌کنه آیا کاربر ادمین است یا نه"""
     return user_id in ADMIN_IDS
 
+dp.message.outer_middleware(ForceJoinMiddleware())
+dp.callback_query.outer_middleware(ForceJoinMiddleware())
+
 # ثبت هندلرها
 register_admin_handlers(dp)
 register_server_handlers(dp)
@@ -51,6 +56,7 @@ register_discount_handlers(dp)
 register_services_handlers(dp)
 register_user_handlers(dp)
 register_finance_handlers(dp)
+register_force_join_handlers(dp)
 
 async def _texts_refresh_loop():
     while True:

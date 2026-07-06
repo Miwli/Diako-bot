@@ -5,52 +5,69 @@
 
 {% block extra_head %}
 <style>
-.mon-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: stretch; }
+.mon-grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: stretch; }
 @media (max-width: 1000px) { .mon-grid { grid-template-columns: 1fr; } }
 
 /* ── کارت کره ── */
-.globe-card { position: relative; overflow: hidden; padding: 0 !important; min-height: 560px; background: radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb),0.07), transparent 55%), #04070d; border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; }
-#globeWrap { position: absolute; inset: 0; cursor: grab; }
-#globeWrap:active { cursor: grabbing; }
+.globe-card { position: relative; overflow: hidden; padding: 0 !important; min-height: 560px; background: radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb),0.08), transparent 55%), var(--bg-base); border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; }
+#globeWrap { position: absolute; inset: 0; cursor: grab; direction: ltr; }
+#globeWrap.grabbing { cursor: grabbing; }
+#globeCanvas { width: 100%; height: 100%; contain: layout paint size; opacity: 0; transition: opacity 800ms ease; }
+#globeCanvas.ready { opacity: 1; }
+.hit-dot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; cursor: pointer; z-index: 4; }
+.hit-dot::after { content: attr(data-label); position: absolute; bottom: 115%; right: 50%; transform: translateX(50%); background: rgba(8,12,20,0.85); backdrop-filter: blur(8px); color: #e7edf7; font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms; }
+.hit-dot:hover::after { opacity: 1; }
 .globe-overlay { position: absolute; top: 14px; right: 16px; z-index: 5; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
-.globe-title { font-size: 14px; font-weight: 800; color: #e7edf7; display: flex; align-items: center; gap: 8px; }
+.globe-title { font-size: 14px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .globe-title i { color: var(--accent); }
-.globe-sub { font-size: 10px; color: rgba(231,237,247,0.45); }
-.globe-legend { position: absolute; bottom: 14px; right: 16px; z-index: 5; display: flex; gap: 14px; pointer-events: none; }
-.lg-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: rgba(231,237,247,0.6); }
+.globe-sub { font-size: 10px; color: var(--text-muted); }
+.globe-legend { position: absolute; bottom: 14px; right: 16px; z-index: 5; display: flex; gap: 13px; pointer-events: none; flex-wrap: wrap; }
+.lg-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); }
 .lg-dot { width: 8px; height: 8px; border-radius: 50%; }
-.lg-dot.on { background: #22e58f; box-shadow: 0 0 8px rgba(34,229,143,0.8); }
-.lg-dot.off { background: #ff5470; box-shadow: 0 0 8px rgba(255,84,112,0.8); }
-.lg-dot.na { background: #8b93a7; }
+.lg-dot.on   { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.lg-dot.off  { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.lg-dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.lg-dot.na   { background: #8b93a7; }
 .globe-stats { position: absolute; top: 14px; left: 16px; z-index: 5; display: flex; gap: 10px; }
-.gstat { background: rgba(8,12,20,0.55); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 8px 14px; text-align: center; }
+.gstat { background: rgba(0,0,0,0.35); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 8px 14px; text-align: center; }
 .gstat-num { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.gstat-num.on  { color: #22e58f; }
-.gstat-num.off { color: #ff5470; }
-.gstat-num.all { color: #e7edf7; }
-.gstat-lbl { font-size: 9px; color: rgba(231,237,247,0.5); margin-top: 2px; }
+.gstat-num.on  { color: var(--green); }
+.gstat-num.off { color: var(--red); }
+.gstat-num.all { color: var(--text); }
+.gstat-lbl { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
 
-/* ── لیست نودها ── */
-.node-list { display: flex; flex-direction: column; gap: 10px; max-height: 560px; overflow-y: auto; padding-left: 4px; }
-.node-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 13px 15px; cursor: pointer; transition: all 160ms; }
-.node-card:hover { border-color: rgba(var(--accent-rgb),0.35); background: rgba(var(--accent-rgb),0.04); transform: translateY(-1px); }
-.node-card.focused { border-color: rgba(var(--accent-rgb),0.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.1); }
-.nc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.nc-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.nc-pulse { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; position: relative; }
-.nc-pulse.on { background: #22e58f; }
-.nc-pulse.on::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(34,229,143,0.5); animation: pulse-ring 1.6s ease-out infinite; }
-.nc-pulse.off { background: #ff5470; }
-.nc-pulse.na { background: #8b93a7; }
-@keyframes pulse-ring { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
-.nc-latency { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 3px 9px; border-radius: 16px; }
-.nc-latency.fast { color: #22e58f; background: rgba(34,229,143,0.09); }
-.nc-latency.mid  { color: #ffc24b; background: rgba(255,194,75,0.09); }
-.nc-latency.slow { color: #ff5470; background: rgba(255,84,112,0.09); }
-.nc-rows { display: flex; flex-direction: column; gap: 4px; }
-.nc-row { display: flex; justify-content: space-between; font-size: 10.5px; }
-.nc-lbl { color: var(--text-muted); }
-.nc-val { color: var(--text); font-variant-numeric: tabular-nums; direction: ltr; }
+/* ── لیست سرورها ── */
+.srv-list { display: flex; flex-direction: column; gap: 10px; max-height: 560px; overflow-y: auto; padding-left: 4px; }
+.srv-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 13px 15px; transition: all 160ms; }
+.srv-card:hover { border-color: rgba(var(--accent-rgb),0.35); }
+.srv-card.focused { border-color: rgba(var(--accent-rgb),0.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.1); }
+.srv-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.srv-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.pulse { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.pulse.on { background: var(--green); }
+.pulse.on::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--green); opacity: 0.5; animation: pulse-ring 1.6s ease-out infinite; }
+.pulse.off  { background: var(--red); }
+.pulse.warn { background: var(--warn); }
+.pulse.na   { background: #8b93a7; }
+@keyframes pulse-ring { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.5); opacity: 0; } }
+.srv-latency { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 3px 9px; border-radius: 16px; }
+.srv-latency.fast { color: var(--green); background: rgba(52,211,153,0.09); }
+.srv-latency.mid  { color: var(--warn); background: rgba(167,139,250,0.09); }
+.srv-latency.slow { color: var(--red); background: rgba(248,113,113,0.09); }
+.srv-loc { font-size: 10px; color: var(--text-muted); margin: 5px 0 0 0; display: flex; justify-content: space-between; }
+.srv-loc .host { direction: ltr; }
+.srv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; }
+.sstat { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.045); border-radius: 9px; padding: 6px 9px; }
+.sstat-lbl { font-size: 9px; color: var(--text-muted); }
+.sstat-val { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; direction: ltr; text-align: right; }
+.sstat-val .unit { font-size: 9px; font-weight: 500; color: var(--text-muted); }
+.srv-nodes { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.srv-nodes-title { font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
+.node-row { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.14); border: 1px solid rgba(255,255,255,0.04); border-radius: 9px; padding: 7px 10px; cursor: pointer; transition: all 140ms; }
+.node-row:hover { border-color: rgba(var(--accent-rgb),0.3); }
+.node-row.focused { border-color: rgba(var(--accent-rgb),0.55); }
+.node-name { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.node-meta { font-size: 9px; color: var(--text-muted); direction: ltr; }
 .mon-refresh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .mon-refresh-lbl { font-size: 11px; color: var(--text-muted); }
 .refresh-btn { padding: 7px 13px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
@@ -82,6 +99,7 @@
       <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
       <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
       <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
+      <a href="/diako/force-join/" class="nav-item" data-tooltip="جوین اجباری"><i class="ti ti-lock"></i></a>
       <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
     </nav>
   </aside>
@@ -110,7 +128,10 @@
 
         <!-- کره زمین -->
         <div class="inner-card globe-card anim-card">
-          <div id="globeWrap"></div>
+          <div id="globeWrap">
+            <canvas id="globeCanvas"></canvas>
+            <div id="hitDots"></div>
+          </div>
           <div class="globe-overlay">
             <div class="globe-title"><i class="ti ti-world"></i> نقشه‌ی زنده‌ی نودها</div>
             <div class="globe-sub">بکش و بچرخون — روی نود کلیک کن</div>
@@ -118,12 +139,13 @@
           <div class="globe-stats" id="globeStats"></div>
           <div class="globe-legend">
             <div class="lg-item"><span class="lg-dot on"></span> آنلاین</div>
-            <div class="lg-item"><span class="lg-dot off"></span> آفلاین</div>
+            <div class="lg-item"><span class="lg-dot warn"></span> در حال اتصال</div>
+            <div class="lg-item"><span class="lg-dot off"></span> آفلاین/خطا</div>
             <div class="lg-item"><span class="lg-dot na"></span> غیرفعال</div>
           </div>
         </div>
 
-        <!-- لیست نودها -->
+        <!-- لیست سرورها و نودها -->
         <div>
           <div class="mon-refresh">
             <span class="mon-refresh-lbl" id="lastUpdate">در حال بارگذاری…</span>
@@ -131,8 +153,8 @@
               <i class="ti ti-refresh" id="refreshIcon"></i> بروزرسانی
             </button>
           </div>
-          <div class="node-list" id="nodeList">
-            <div class="mon-empty"><i class="ti ti-loader-2"></i><br>در حال دریافت وضعیت نودها…</div>
+          <div class="srv-list" id="srvList">
+            <div class="mon-empty"><i class="ti ti-loader-2"></i><br>در حال دریافت وضعیت سرورها…</div>
           </div>
         </div>
 
@@ -143,145 +165,327 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.32.2/dist/globe.gl.min.js"></script>
-<script>
+<script type="module">
+import createGlobe from "{% static 'js/cobe.esm.js' %}";
+
+let servers = [];
+let points  = [];   // نقاط کره: پنل‌ها + نودها
+let focusedKey = null;
+
+/* ── رنگ‌ها از تم فعلی ── */
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function hexToRgb01(hex) {
+  hex = hex.replace('#', '');
+  return [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+}
+function themeColors() {
+  const accent = cssVar('--accent-rgb').split(',').map(v => parseInt(v) / 255);
+  return {
+    accent,
+    green: hexToRgb01(cssVar('--green')),
+    red:   hexToRgb01(cssVar('--red')),
+    warn:  hexToRgb01(cssVar('--warn')),
+    gray:  [0.55, 0.58, 0.65],
+  };
+}
+function pointColor(p, c) {
+  if (!p.is_active) return c.gray;
+  if (p.status === 'online')     return c.green;
+  if (p.status === 'connecting') return c.warn;
+  if (p.status === 'disabled')   return c.gray;
+  return c.red;
+}
+
+/* ── ریاضیات cobe — همون قراردادی که خود کتابخونه توی شیدرش داره ── */
+function locToVec(lat, lon) {
+  const la = lat * Math.PI / 180, lo = lon * Math.PI / 180 - Math.PI;
+  const cl = Math.cos(la);
+  return [-cl * Math.cos(lo), Math.sin(la), cl * Math.sin(lo)];
+}
+function locToAngles(lat, lon) {
+  return [Math.PI - (lon * Math.PI / 180 - Math.PI / 2), lat * Math.PI / 180];
+}
+function project(vec, phi, theta, w, h) {
+  const cp = Math.cos(phi), sp = Math.sin(phi);
+  const ct = Math.cos(theta), st = Math.sin(theta);
+  const x2 = cp * vec[0] + sp * vec[2];
+  const y2 = sp * st * vec[0] + ct * vec[1] - cp * st * vec[2];
+  const z2 = ct * (cp * vec[2] - sp * vec[0]) + st * vec[1];
+  const aspect = w / h;
+  return { x: (x2 / aspect + 1) / 2 * w, y: (-y2 + 1) / 2 * h, front: z2 > 0.05 };
+}
+
+/* ── کره ── */
+const wrap   = document.getElementById('globeWrap');
+const canvas = document.getElementById('globeCanvas');
+const dotsEl = document.getElementById('hitDots');
+
 let globe = null;
-let nodes = [];
-let focusedId = null;
+let phi = locToAngles(35.7, 51.4)[0];   // شروع رو به ایران
+let theta = 0.25;
+let targetPhi = phi, targetTheta = theta;
+let autoRotate = true;
+let dragging = null, dragStartPhi = 0;
 
-const COLOR = { online: '#22e58f', offline: '#ff5470', error: '#ffc24b', inactive: '#8b93a7' };
-
-function nodeColor(n) {
-  if (!n.is_active) return COLOR.inactive;
-  return COLOR[n.status] || COLOR.offline;
+function buildMarkers() {
+  const c = themeColors();
+  return points
+    .filter(p => p.lat != null && p.lon != null)
+    .map(p => ({
+      location: [p.lat, p.lon],
+      size: p.kind === 'panel' ? 0.075 : 0.05,
+      color: pointColor(p, c),
+    }));
 }
 
-/* ── ساخت کره ── */
 function initGlobe() {
-  const wrap = document.getElementById('globeWrap');
-  globe = Globe()(wrap)
-    .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg')
-    .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
-    .backgroundColor('rgba(0,0,0,0)')
-    .showAtmosphere(true)
-    .atmosphereColor('#3a7bd5')
-    .atmosphereAltitude(0.18)
-    .pointAltitude(0.02)
-    .pointRadius(0.7)
-    .pointColor(nodeColor)
-    .pointsMerge(false)
-    .ringColor(n => t => {
-      const c = nodeColor(n);
-      const alpha = 1 - t;
-      return c + Math.round(alpha * 160).toString(16).padStart(2, '0');
-    })
-    .ringMaxRadius(4)
-    .ringPropagationSpeed(2)
-    .ringRepeatPeriod(1400)
-    .labelText('name')
-    .labelSize(1.15)
-    .labelDotRadius(0)
-    .labelColor(() => 'rgba(231,237,247,0.85)')
-    .labelAltitude(0.025)
-    .onPointClick(n => focusNode(n.id, true));
-
-  globe.controls().autoRotate = true;
-  globe.controls().autoRotateSpeed = 0.55;
-  globe.controls().enablePan = false;
-  globe.controls().minDistance = 140;
-  globe.controls().maxDistance = 480;
-  // با اولین درگ، چرخش خودکار قطع می‌شه
-  wrap.addEventListener('pointerdown', () => { globe.controls().autoRotate = false; }, { once: true });
-
-  const resize = () => { globe.width(wrap.clientWidth); globe.height(wrap.clientHeight); };
-  new ResizeObserver(resize).observe(wrap);
-  resize();
+  if (globe) { globe.destroy(); globe = null; }
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if (!w || !h) return;
+  const c = themeColors();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.classList.remove('ready');
+  globe = createGlobe(canvas, {
+    devicePixelRatio: dpr,
+    width: w * dpr,
+    height: h * dpr,
+    phi, theta,
+    dark: 1,
+    diffuse: 1.2,
+    mapSamples: 22000,
+    mapBrightness: 5.5,
+    baseColor: [0.22 + c.accent[0] * 0.12, 0.22 + c.accent[1] * 0.12, 0.24 + c.accent[2] * 0.12],
+    markerColor: c.accent,
+    glowColor: [c.accent[0] * 0.32, c.accent[1] * 0.32, c.accent[2] * 0.32],
+    opacity: 0.92,
+    markers: buildMarkers(),
+    onRender: (state) => {
+      if (autoRotate && dragging === null) { targetPhi += 0.0028; }
+      // کوتاه‌ترین مسیر چرخش
+      let dp = (targetPhi - phi) % (Math.PI * 2);
+      if (dp > Math.PI) dp -= Math.PI * 2;
+      if (dp < -Math.PI) dp += Math.PI * 2;
+      phi += dp * 0.08;
+      theta += (targetTheta - theta) * 0.08;
+      state.phi = phi;
+      state.theta = theta;
+      positionHitDots();
+    },
+  });
+  setTimeout(() => canvas.classList.add('ready'), 60);
 }
 
-/* ── دریافت وضعیت نودها ── */
+/* ── دات‌های تعاملی روی کره (کلیک + تولتیپ) ── */
+function rebuildHitDots() {
+  dotsEl.innerHTML = '';
+  points.filter(p => p.lat != null && p.lon != null).forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'hit-dot';
+    el.dataset.key = p.key;
+    el.dataset.label = p.tooltip;
+    el.style.display = 'none';
+    el.addEventListener('click', (e) => { e.stopPropagation(); focusPoint(p.key, true); });
+    el._vec = locToVec(p.lat, p.lon);
+    dotsEl.appendChild(el);
+  });
+}
+function positionHitDots() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  for (const el of dotsEl.children) {
+    const pos = project(el._vec, phi, theta, w, h);
+    if (pos.front) {
+      el.style.display = 'block';
+      el.style.left = pos.x + 'px';
+      el.style.top  = pos.y + 'px';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+}
+
+/* ── درگ برای چرخوندن ── */
+wrap.addEventListener('pointerdown', (e) => {
+  dragging = e.clientX;
+  dragStartPhi = targetPhi;
+  autoRotate = false;
+  wrap.classList.add('grabbing');
+});
+window.addEventListener('pointermove', (e) => {
+  if (dragging === null) return;
+  const delta = e.clientX - dragging;
+  targetPhi = dragStartPhi + delta * 0.006;
+  phi = targetPhi;   // موقع درگ بدون لگ
+});
+window.addEventListener('pointerup', () => { dragging = null; wrap.classList.remove('grabbing'); });
+
+/* ── فوکوس روی یک نقطه ── */
+function focusPoint(key, fromGlobe) {
+  focusedKey = key;
+  renderList();
+  const p = points.find(x => x.key === key);
+  if (p && p.lat != null) {
+    autoRotate = false;
+    const [fp, ft] = locToAngles(p.lat, p.lon);
+    targetPhi = fp;
+    targetTheta = Math.max(-1.2, Math.min(1.2, ft));
+  }
+  if (fromGlobe) {
+    document.querySelector(`[data-focus-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+/* ── دریافت داده ── */
 async function loadNodes(manual) {
   const icon = document.getElementById('refreshIcon');
   icon.classList.add('spinning');
   try {
     const res = await fetch('/diako/api/nodes-status/');
     const data = await res.json();
-    nodes = data.nodes || [];
-    renderGlobe();
+    servers = data.servers || [];
+    points = [];
+    servers.forEach(s => {
+      points.push({
+        key: 's' + s.id, kind: 'panel', is_active: s.is_active, status: s.status,
+        lat: s.lat, lon: s.lon,
+        tooltip: s.name + (s.city ? ' — ' + s.city : ''),
+      });
+      (s.nodes || []).forEach(n => {
+        points.push({
+          key: 's' + s.id + 'n' + n.id, kind: 'node', is_active: s.is_active, status: n.status,
+          lat: n.lat, lon: n.lon,
+          tooltip: n.name + (n.city ? ' — ' + n.city : ''),
+        });
+      });
+    });
+    if (globe) globe.update({ markers: buildMarkers() }); else initGlobe();
+    rebuildHitDots();
     renderList();
     renderStats();
-    const t = new Date().toLocaleTimeString('fa-IR');
-    document.getElementById('lastUpdate').textContent = 'آخرین بروزرسانی: ' + t;
+    document.getElementById('lastUpdate').textContent =
+      'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
   } catch {
     document.getElementById('lastUpdate').textContent = 'خطا در دریافت وضعیت ❌';
   }
   icon.classList.remove('spinning');
 }
 
-function renderGlobe() {
-  if (!globe) return;
-  const placed = nodes.filter(n => n.lat != null && n.lon != null);
-  const ringed = placed.filter(n => n.is_active && n.status === 'online');
-  globe.pointsData(placed).ringsData(ringed).labelsData(placed);
-}
-
+/* ── آمار بالای کره ── */
 function renderStats() {
-  const on  = nodes.filter(n => n.status === 'online').length;
-  const off = nodes.filter(n => n.status !== 'online').length;
+  const on  = points.filter(p => p.status === 'online' && p.is_active).length;
+  const off = points.length - on;
   document.getElementById('globeStats').innerHTML = `
-    <div class="gstat"><div class="gstat-num all">${nodes.length}</div><div class="gstat-lbl">کل نودها</div></div>
+    <div class="gstat"><div class="gstat-num all">${points.length}</div><div class="gstat-lbl">کل نقاط</div></div>
     <div class="gstat"><div class="gstat-num on">${on}</div><div class="gstat-lbl">آنلاین</div></div>
     <div class="gstat"><div class="gstat-num off">${off}</div><div class="gstat-lbl">آفلاین</div></div>`;
 }
 
+/* ── لیست سرورها ── */
 function latencyClass(ms) {
-  if (ms == null) return '';
+  if (ms == null) return 'slow';
   if (ms < 400) return 'fast';
   if (ms < 1200) return 'mid';
   return 'slow';
 }
+function pulseClass(p) {
+  if (!p.is_active || p.status === 'disabled') return 'na';
+  if (p.status === 'online') return 'on';
+  if (p.status === 'connecting') return 'warn';
+  return 'off';
+}
+function fmtBytes(b) {
+  if (b == null) return '—';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return b.toFixed(b >= 100 ? 0 : 1) + ' <span class="unit">' + units[i] + '</span>';
+}
+const NODE_ST_FA = { online: 'متصل', connecting: 'در حال اتصال', error: 'خطا', disabled: 'غیرفعال' };
 
 function renderList() {
-  const list = document.getElementById('nodeList');
-  if (!nodes.length) {
+  const list = document.getElementById('srvList');
+  if (!servers.length) {
     list.innerHTML = '<div class="mon-empty"><i class="ti ti-server-off"></i><br>هنوز سروری ثبت نشده</div>';
     return;
   }
-  list.innerHTML = nodes.map(n => {
-    const pulse = !n.is_active ? 'na' : (n.status === 'online' ? 'on' : 'off');
-    const stTxt = !n.is_active ? 'غیرفعال' : (n.status === 'online' ? 'آنلاین' : (n.status === 'error' ? 'خطا (' + (n.http_status || '?') + ')' : 'آفلاین'));
-    const loc = [n.city, n.country].filter(Boolean).join('، ') || 'نامشخص';
-    const lat = n.latency != null
-      ? `<span class="nc-latency ${latencyClass(n.latency)}">${n.latency} ms</span>`
-      : '<span class="nc-latency slow">—</span>';
+  list.innerHTML = servers.map(s => {
+    const key = 's' + s.id;
+    const sp = { is_active: s.is_active, status: s.status };
+    const stTxt = !s.is_active ? 'غیرفعال' : (s.status === 'online' ? 'آنلاین' : 'آفلاین');
+    const loc = [s.city, s.country].filter(Boolean).join('، ') || 'نامشخص';
+    const lat = s.latency != null
+      ? `<span class="srv-latency ${latencyClass(s.latency)}">${s.latency} ms</span>`
+      : `<span class="srv-latency slow">${stTxt}</span>`;
+
+    let statsHtml = '';
+    if (s.stats) {
+      const st = s.stats;
+      const mem = (st.mem_used != null && st.mem_total)
+        ? `${fmtBytes(st.mem_used)} / ${fmtBytes(st.mem_total)}` : '—';
+      statsHtml = `
+      <div class="srv-stats">
+        <div class="sstat"><div class="sstat-lbl">کاربران فعال</div><div class="sstat-val">${st.users_active ?? '—'} / ${st.users_total ?? '—'}</div></div>
+        <div class="sstat"><div class="sstat-lbl">نسخه پنل</div><div class="sstat-val">${st.version || '—'}</div></div>
+        <div class="sstat"><div class="sstat-lbl">پردازنده</div><div class="sstat-val">${st.cpu_usage != null ? st.cpu_usage + '<span class="unit">%</span>' : '—'} <span class="unit">(${st.cpu_cores ?? '?'} core)</span></div></div>
+        <div class="sstat"><div class="sstat-lbl">حافظه</div><div class="sstat-val">${mem}</div></div>
+        <div class="sstat"><div class="sstat-lbl">ترافیک ورودی</div><div class="sstat-val">${fmtBytes(st.incoming_bandwidth)}</div></div>
+        <div class="sstat"><div class="sstat-lbl">ترافیک خروجی</div><div class="sstat-val">${fmtBytes(st.outgoing_bandwidth)}</div></div>
+      </div>`;
+    }
+
+    let nodesHtml = '';
+    if ((s.nodes || []).length) {
+      nodesHtml = `
+      <div class="srv-nodes">
+        <div class="srv-nodes-title"><i class="ti ti-topology-star-3"></i> نودها (${s.nodes.length})</div>
+        ${s.nodes.map(n => {
+          const nkey = key + 'n' + n.id;
+          const np = { is_active: s.is_active, status: n.status };
+          const meta = [n.city || null, n.xray_version ? 'xray ' + n.xray_version : null].filter(Boolean).join(' · ');
+          return `
+          <div class="node-row ${focusedKey === nkey ? 'focused' : ''}" data-focus-key="${nkey}">
+            <div class="node-name"><span class="pulse ${pulseClass(np)}"></span>${n.name || n.address}
+              <span style="font-size:9px;color:var(--text-muted)">${NODE_ST_FA[n.status] || n.status}</span></div>
+            <div class="node-meta">${meta || n.address}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
     return `
-    <div class="node-card ${focusedId === n.id ? 'focused' : ''}" onclick="focusNode(${n.id}, false)">
-      <div class="nc-head">
-        <div class="nc-name"><span class="nc-pulse ${pulse}"></span>${n.name}</div>
+    <div class="srv-card ${focusedKey === key ? 'focused' : ''}">
+      <div class="srv-head" data-focus-key="${key}">
+        <div class="srv-name"><span class="pulse ${pulseClass(sp)}"></span>${s.name}</div>
         ${lat}
       </div>
-      <div class="nc-rows">
-        <div class="nc-row"><span class="nc-lbl">وضعیت</span><span class="nc-val" style="direction:rtl">${stTxt}</span></div>
-        <div class="nc-row"><span class="nc-lbl">موقعیت</span><span class="nc-val" style="direction:rtl">${loc}</span></div>
-        <div class="nc-row"><span class="nc-lbl">هاست</span><span class="nc-val">${n.host || '—'}</span></div>
-      </div>
+      <div class="srv-loc"><span>📍 ${loc}</span><span class="host">${s.host || ''}</span></div>
+      ${statsHtml}
+      ${nodesHtml}
     </div>`;
   }).join('');
 }
 
-/* ── فوکوس روی یک نود (چرخش کره به سمتش) ── */
-function focusNode(id, fromGlobe) {
-  focusedId = id;
-  renderList();
-  const n = nodes.find(x => x.id === id);
-  if (n && n.lat != null && globe) {
-    globe.controls().autoRotate = false;
-    globe.pointOfView({ lat: n.lat, lng: n.lon, altitude: 1.6 }, 900);
+// کلیک روی سرور/نود توی لیست → فوکوس کره
+document.getElementById('srvList').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-focus-key]');
+  if (el) focusPoint(el.dataset.focusKey, false);
+});
+
+/* ── ری‌سایز و تعویض تم ── */
+let resizeTimer;
+new ResizeObserver(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(initGlobe, 180);
+}).observe(wrap);
+
+new MutationObserver((muts) => {
+  for (const m of muts) {
+    if (m.attributeName === 'data-theme') { initGlobe(); renderStats(); break; }
   }
-  if (!fromGlobe) {
-    // اسکرول کارت توی دید بمونه
-    document.querySelector('.node-card.focused')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-}
+}).observe(document.documentElement, { attributes: true });
+
+window.loadNodes = loadNodes;
 
 initGlobe();
 loadNodes(false);

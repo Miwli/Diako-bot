@@ -22,9 +22,13 @@ class BuyVPN(StatesGroup):
 class AdminAction(StatesGroup):
     waiting_for_rejection_reason = State()
 
-class SetCardInfo(StatesGroup):
-    waiting_for_card_number = State()
-    waiting_for_card_owner  = State()
+class AddCard(StatesGroup):
+    waiting_for_number = State()
+    waiting_for_owner  = State()
+
+class EditCard(StatesGroup):
+    waiting_for_number = State()
+    waiting_for_owner  = State()
 
 class TopUp(StatesGroup):
     waiting_for_amount  = State()
@@ -105,4 +109,14 @@ class ExtraTime(StatesGroup):
 
 class ChangeNote(StatesGroup):
     waiting_for_note = State()
+
+class AddChannel(StatesGroup):
+    waiting_for_chat_id = State()
+    waiting_for_title   = State()
+    waiting_for_link    = State()
+
+class EditChannel(StatesGroup):
+    waiting_for_chat_id = State()
+    waiting_for_title   = State()
+    waiting_for_link    = State()
 

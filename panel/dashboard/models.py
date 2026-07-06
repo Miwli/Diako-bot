@@ -134,6 +134,43 @@ class Settings(models.Model):
         verbose_name_plural = 'تنظیمات'
 
 
+class PaymentCards(models.Model):
+    number      = models.TextField()
+    owner       = models.TextField(blank=True, null=True)
+    is_active   = models.IntegerField(default=1)
+    order_index = models.IntegerField(default=0)
+    created_at  = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'payment_cards'
+        verbose_name = 'کارت پرداخت'
+        verbose_name_plural = 'کارت‌های پرداخت'
+        ordering = ['order_index', 'id']
+
+    def __str__(self):
+        return f"{self.number} — {self.owner or '—'}"
+
+
+class RequiredChannels(models.Model):
+    chat_id     = models.TextField()
+    title       = models.TextField(blank=True, null=True)
+    invite_link = models.TextField(blank=True, null=True)
+    is_active   = models.IntegerField(default=1)
+    order_index = models.IntegerField(default=0)
+    created_at  = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'required_channels'
+        verbose_name = 'کانال اجباری'
+        verbose_name_plural = 'کانال‌های اجباری'
+        ordering = ['order_index', 'id']
+
+    def __str__(self):
+        return f"{self.title or self.chat_id}"
+
+
 class Tickets(models.Model):
     user_id = models.IntegerField()
     topic_id = models.IntegerField(blank=True, null=True)

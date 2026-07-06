@@ -288,6 +288,37 @@ async def init_db():
             )
         """)
         await db.execute("""
+            CREATE TABLE IF NOT EXISTS payment_cards (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                number      TEXT NOT NULL,
+                owner       TEXT,
+                is_active   INTEGER DEFAULT 1,
+                order_index INTEGER DEFAULT 0,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS geo_cache (
+                host    TEXT PRIMARY KEY,
+                ip      TEXT,
+                lat     REAL,
+                lon     REAL,
+                city    TEXT,
+                country TEXT
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS required_channels (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id     TEXT NOT NULL,
+                title       TEXT,
+                invite_link TEXT,
+                is_active   INTEGER DEFAULT 1,
+                order_index INTEGER DEFAULT 0,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
             CREATE TABLE IF NOT EXISTS keyboard_buttons (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
                 keyboard_name TEXT NOT NULL,
@@ -392,6 +423,35 @@ async def init_db():
             )
         await db.commit()
 
+    # migration: کارت تک‌شماره‌ی قدیمی رو به جدول payment_cards منتقل می‌کنیم
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT COUNT(*) FROM payment_cards")
+        (count,) = await cur.fetchone()
+        if count == 0:
+            cur = await db.execute("SELECT value FROM settings WHERE key = 'card_number'")
+            row = await cur.fetchone()
+            if row and row[0]:
+                cur2 = await db.execute("SELECT value FROM settings WHERE key = 'card_owner'")
+                row2 = await cur2.fetchone()
+                await db.execute(
+                    "INSERT INTO payment_cards (number, owner, is_active) VALUES (?, ?, 1)",
+                    (row[0], row2[0] if row2 else None)
+                )
+                await db.commit()
+
+    # migration: دکمه‌ی جوین اجباری در پنل ادمین — اگه وجود نداشت اضافه می‌کنیم
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT OR IGNORE INTO keyboard_buttons
+              (keyboard_name, label, callback_data, row_index, col_index, is_active)
+            SELECT 'admin_panel','🔒 جوین اجباری','admin_force_join',12,0,1
+            WHERE NOT EXISTS (
+              SELECT 1 FROM keyboard_buttons
+              WHERE keyboard_name='admin_panel' AND callback_data='admin_force_join'
+            )
+        """)
+        await db.commit()
+
     await _seed_keyboard_buttons()
     await init_texts_cache()
     await init_keyboards_cache()
@@ -487,6 +547,23 @@ async def set_server_geo(server_id: int, ip: str, lat: float, lon: float, city: 
         await db.execute(
             "UPDATE servers SET geo_ip = ?, geo_lat = ?, geo_lon = ?, geo_city = ?, geo_country = ? WHERE id = ?",
             (ip, lat, lon, city, country, server_id)
+        )
+        await db.commit()
+
+async def get_geo_cache(host: str):
+    """موقعیت کش‌شده‌ی یک هاست/آیپی — برای نودهای مانیتورینگ"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM geo_cache WHERE host = ?", (host,))
+        return await cursor.fetchone()
+
+async def set_geo_cache(host: str, ip: str, lat: float, lon: float, city: str, country: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO geo_cache (host, ip, lat, lon, city, country) VALUES (?,?,?,?,?,?)
+               ON CONFLICT(host) DO UPDATE SET ip=excluded.ip, lat=excluded.lat, lon=excluded.lon,
+               city=excluded.city, country=excluded.country""",
+            (host, ip, lat, lon, city, country)
         )
         await db.commit()
 
@@ -692,6 +769,118 @@ async def set_setting(key: str, value: str):
             "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (key, value)
         )
+        await db.commit()
+
+# ─── کارت‌های پرداخت (کارت به کارت) ─────────────
+
+async def get_payment_cards(active_only: bool = False):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        query = "SELECT * FROM payment_cards"
+        if active_only:
+            query += " WHERE is_active = 1"
+        query += " ORDER BY order_index, id"
+        cursor = await db.execute(query)
+        return await cursor.fetchall()
+
+async def get_payment_card(card_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM payment_cards WHERE id = ?", (card_id,))
+        return await cursor.fetchone()
+
+async def add_payment_card(number: str, owner: str = None) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO payment_cards (number, owner) VALUES (?, ?)", (number, owner)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def update_payment_card(card_id: int, number: str = None, owner: str = None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        if number is not None:
+            await db.execute("UPDATE payment_cards SET number = ? WHERE id = ?", (number, card_id))
+        if owner is not None:
+            await db.execute("UPDATE payment_cards SET owner = ? WHERE id = ?", (owner, card_id))
+        await db.commit()
+
+async def toggle_payment_card(card_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE payment_cards SET is_active = 1 - is_active WHERE id = ?", (card_id,))
+        await db.commit()
+
+async def delete_payment_card(card_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM payment_cards WHERE id = ?", (card_id,))
+        await db.commit()
+
+async def get_selected_payment_card():
+    """کارت فعال که باید به کاربر نمایش داده بشه، بر اساس حالت انتخاب کارت (نوبتی/تصادفی/ثابت)"""
+    cards = await get_payment_cards(active_only=True)
+    if not cards:
+        return None
+    mode = await get_setting("card_select_mode") or "round_robin"
+
+    if mode == "fixed":
+        fixed_id = await get_setting("card_fixed_id")
+        match = next((c for c in cards if str(c["id"]) == str(fixed_id)), None) if fixed_id else None
+        return match or cards[0]
+
+    if mode == "random":
+        import random
+        return random.choice(cards)
+
+    idx = await get_setting("card_rr_index")
+    idx = int(idx) % len(cards) if idx else 0
+    await set_setting("card_rr_index", str((idx + 1) % len(cards)))
+    return cards[idx]
+
+# ─── کانال‌های جوین اجباری ─────────────────────
+
+async def get_required_channels(active_only: bool = False):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        query = "SELECT * FROM required_channels"
+        if active_only:
+            query += " WHERE is_active = 1"
+        query += " ORDER BY order_index, id"
+        cursor = await db.execute(query)
+        return await cursor.fetchall()
+
+async def get_required_channel(channel_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM required_channels WHERE id = ?", (channel_id,))
+        return await cursor.fetchone()
+
+async def add_required_channel(chat_id: str, title: str = None, invite_link: str = None) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO required_channels (chat_id, title, invite_link) VALUES (?, ?, ?)",
+            (chat_id, title, invite_link)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def update_required_channel(channel_id: int, chat_id: str = None, title: str = None, invite_link: str = None):
+    async with aiosqlite.connect(DB_PATH) as db:
+        if chat_id is not None:
+            await db.execute("UPDATE required_channels SET chat_id = ? WHERE id = ?", (chat_id, channel_id))
+        if title is not None:
+            await db.execute("UPDATE required_channels SET title = ? WHERE id = ?", (title, channel_id))
+        if invite_link is not None:
+            await db.execute("UPDATE required_channels SET invite_link = ? WHERE id = ?", (invite_link, channel_id))
+        await db.commit()
+
+async def toggle_required_channel(channel_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE required_channels SET is_active = 1 - is_active WHERE id = ?", (channel_id,))
+        await db.commit()
+
+async def delete_required_channel(channel_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM required_channels WHERE id = ?", (channel_id,))
         await db.commit()
 
 # ─── متن‌های ربات (کش حافظه) ─────────────────
@@ -911,12 +1100,44 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "admin_plan_deleted_empty":       "🗑 پلن <b>{name}</b> حذف شد.\n\n❌ هیچ پلنی باقی نمونده.",
     # ─── مدیریت مالی (finance.py) ─────────────────────────────────────────
     "admin_finance_title":            "💰 <b>مدیریت مالی</b>\n\nروش‌های پرداخت فعال را مدیریت کنید:",
-    "admin_card_settings_text":       "⚙️ <b>تنظیمات کارت به کارت</b>\n────────────────────────\n💳 شماره کارت: <code>{number}</code>\n👤 نام صاحب کارت: {owner}",
-    "admin_card_ask_number":          "💳 شماره کارت جدید را وارد کنید:\n\nمثال: <code>6219 8610 3452 9876</code>",
+    "admin_cards_list_text":          "💳 <b>کارت‌های پرداخت</b>\n\nحالت انتخاب کارت: <b>{mode}</b>",
+    "admin_cards_empty":              "❌ هیچ کارتی ثبت نشده!",
+    "admin_card_ask_number":          "💳 شماره کارت را وارد کنید:\n\nمثال: <code>6219 8610 3452 9876</code>",
     "admin_card_invalid":             "❌ شماره کارت باید ۱۶ رقم باشد.\nدوباره وارد کنید:",
-    "admin_card_number_saved":        "✅ شماره کارت ذخیره شد:\n<code>{number}</code>",
-    "admin_card_ask_owner":           "👤 نام صاحب کارت را وارد کنید:",
-    "admin_card_owner_saved":         "✅ نام صاحب کارت ذخیره شد: {name}",
+    "admin_card_ask_owner":           "👤 نام صاحب کارت را وارد کنید:\n\n<i>برای رد شدن، بنویسید: -</i>",
+    "admin_card_added":               "✅ کارت جدید اضافه شد.",
+    "admin_card_settings_text":       "⚙️ <b>تنظیمات کارت</b>\n────────────────────────\n💳 <code>{number}</code>\n👤 {owner}\n📌 وضعیت: {status}",
+    "admin_card_ask_edit_number":     "💳 شماره جدید کارت را وارد کنید:",
+    "admin_card_ask_edit_owner":      "👤 نام جدید صاحب کارت را وارد کنید:\n\n<i>برای رد شدن، بنویسید: -</i>",
+    "admin_card_number_saved":        "✅ شماره کارت بروزرسانی شد.",
+    "admin_card_owner_saved":         "✅ نام صاحب کارت بروزرسانی شد.",
+    "admin_card_delete_confirm":      "⚠️ مطمئنی می‌خوای این کارت رو حذف کنی؟\nاین عمل قابل بازگشت نیست.",
+    "admin_card_deleted":             "🗑 کارت حذف شد.",
+    "admin_card_mode_changed":        "✅ حالت انتخاب کارت روی «{mode}» تنظیم شد.",
+    "admin_card_set_fixed":           "⭐️ این کارت به‌عنوان کارت پیش‌فرض تنظیم شد.",
+    "admin_card_mode_round_robin":    "🔁 نوبتی",
+    "admin_card_mode_random":         "🎲 تصادفی",
+    "admin_card_mode_fixed":          "📌 ثابت",
+    # ─── جوین اجباری (force_join.py) ───────────────────────────────────────
+    "admin_force_join_title":         "🔒 <b>جوین اجباری کانال</b>\n\nکاربران قبل از استفاده از بات باید عضو کانال‌های زیر باشند.",
+    "admin_channels_list_text":       "📋 <b>لیست کانال‌های اجباری</b>",
+    "admin_channels_empty":           "❌ هیچ کانالی ثبت نشده!",
+    "admin_channel_ask_id":           "🆔 آیدی عددی کانال (مثل <code>-1001234567890</code>) یا یوزرنیم عمومی (مثل <code>@mychannel</code>) را بفرستید:",
+    "admin_channel_id_invalid":       "❌ فرمت نامعتبر است.\nیا با @ شروع کنید (کانال عمومی) یا آیدی عددی که با -100 شروع می‌شود بفرستید.",
+    "admin_channel_ask_title":        "📝 یک اسم برای این کانال بفرستید (برای نمایش به کاربر):",
+    "admin_channel_ask_link":         "🔗 لینک دعوت کانال را بفرستید:\n\n<i>اگه کانال عمومیه و یوزرنیم داره، برای رد شدن بنویسید: -</i>",
+    "admin_channel_added":            "✅ کانال جدید اضافه شد.",
+    "admin_channel_settings_text":    "⚙️ <b>تنظیمات کانال</b>\n────────────────────────\n🆔 {chat_id}\n📝 {title}\n🔗 {link}\n📌 وضعیت: {status}",
+    "admin_channel_ask_edit_id":      "🆔 آیدی/یوزرنیم جدید کانال را بفرستید:",
+    "admin_channel_ask_edit_title":   "📝 عنوان جدید کانال را بفرستید:",
+    "admin_channel_ask_edit_link":    "🔗 لینک دعوت جدید را بفرستید:\n\n<i>برای رد شدن بنویسید: -</i>",
+    "admin_channel_id_saved":         "✅ آیدی کانال بروزرسانی شد.",
+    "admin_channel_title_saved":      "✅ عنوان کانال بروزرسانی شد.",
+    "admin_channel_link_saved":       "✅ لینک کانال بروزرسانی شد.",
+    "admin_channel_delete_confirm":   "⚠️ مطمئنی می‌خوای این کانال رو حذف کنی؟\nاین عمل قابل بازگشت نیست.",
+    "admin_channel_deleted":          "🗑 کانال حذف شد.",
+    "force_join_prompt":              "🔒 <b>برای استفاده از بات</b> اول باید عضو کانال‌(های) زیر بشید، بعد روی «✅ عضو شدم» بزنید:",
+    "force_join_still_missing":       "❌ هنوز عضو همه‌ی کانال‌ها نشدید! لطفاً اول عضو بشید.",
     # ─── پیام همگانی (broadcast.py) ───────────────────────────────────────
     "admin_broadcast_title":          "📢 <b>پیام همگانی</b>\n\nمخاطبان را انتخاب کنید:",
     "admin_broadcast_ask_content":    "📢 <b>ارسال به {target}</b>\n\nپیام خود را ارسال کنید:\n<i>(متن، عکس یا ویدیو با کپشن)</i>",
@@ -1968,7 +2189,8 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
         ("admin_panel", "📢 پیام همگانی",             "admin_broadcast",  9,  0, None),
         ("admin_panel", "📊 آمار و گزارش",           "admin_stats",      10, 0, None),
         ("admin_panel", "⚙️ تنظیمات عمومی",         "admin_general",    11, 0, None),
-        ("admin_panel", "🔙 بازگشت",                 "back_to_start",    12, 0, None),
+        ("admin_panel", "🔒 جوین اجباری",            "admin_force_join", 12, 0, None),
+        ("admin_panel", "🔙 بازگشت",                 "back_to_start",    13, 0, None),
     ],
     "admin_general": [
         ("admin_general", "🎨 ظاهر ربات", "admin_banner_and_text", 0, 0, None),
@@ -2023,11 +2245,6 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
         ("admin_users", "🚫 کاربران بن‌شده",  "admin_ul_banned_0",    3, 0, None),
         ("admin_users", "🔙 بازگشت",          "admin_panel",          4, 0, None),
     ],
-    "card_settings": [
-        ("card_settings", "💳 تغییر شماره کارت",    "set_card_number", 0, 0, None),
-        ("card_settings", "👤 تغییر نام صاحب کارت", "set_card_owner",  1, 0, None),
-        ("card_settings", "🔙 بازگشت",              "admin_finance",   2, 0, None),
-    ],
     "after_order": [
         ("after_order", "⚙️ پنل ادمین", "admin_panel",   0, 0, None),
         ("after_order", "🏠 منوی اصلی", "back_to_start", 0, 1, None),
@@ -2049,6 +2266,14 @@ _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
     "confirm_delete_plan": [
         ("confirm_delete_plan", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_plan_{id}"),
         ("confirm_delete_plan", "❌ انصراف",       "_", 0, 1, "plan_settings_{id}"),
+    ],
+    "confirm_delete_card": [
+        ("confirm_delete_card", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_card_{id}"),
+        ("confirm_delete_card", "❌ انصراف",       "_", 0, 1, "card_settings_{id}"),
+    ],
+    "confirm_delete_channel": [
+        ("confirm_delete_channel", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_channel_{id}"),
+        ("confirm_delete_channel", "❌ انصراف",       "_", 0, 1, "channel_settings_{id}"),
     ],
     "confirm_delete_service": [
         ("confirm_delete_service", "🗑 بله، حذف کن", "_", 0, 0, "confirmed_delete_service_{id}"),
@@ -2161,6 +2386,7 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     # ── ادمین ─────────────────────────────────────────
     ("admin_panel",                  "⚙️ پنل ادمین",                     "admin_panel",                  "admin"),
     ("admin_general",                "⚙️ تنظیمات عمومی",                 "admin_general",                "admin"),
+    ("admin_force_join",             "🔒 جوین اجباری",                    "admin_force_join",             "admin"),
     ("admin_banner_and_text",        "🎨 ظاهر ربات",                     "admin_banner_and_text",        "admin"),
     ("admin_banner_settings",        "🖼 تنظیمات بنر",                   "admin_banner_settings",        "admin"),
     ("admin_text_settings",          "✏️ تنظیمات متن",                   "admin_text_settings",          "admin"),
@@ -2171,8 +2397,6 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     ("list_servers",                 "📋 لیست سرورها",                   "list_servers",                 "admin"),
     ("admin_plans",                  "📦 مدیریت پلن‌ها",                 "admin_plans",                  "admin"),
     ("admin_finance",                "💰 مدیریت مالی",                   "admin_finance",                "admin"),
-    ("set_card_number",              "💳 تغییر شماره کارت",              "set_card_number",              "admin"),
-    ("set_card_owner",               "👤 تغییر نام صاحب کارت",          "set_card_owner",               "admin"),
     ("admin_users",                  "👥 مدیریت کاربران",               "admin_users",                  "admin"),
     ("admin_users_search",           "🔍 جستجوی کاربر",                 "admin_users_search",           "admin"),
     ("admin_ul_newest_0",            "🕐 جدیدترین کاربران",             "admin_ul_newest_0",            "admin"),
