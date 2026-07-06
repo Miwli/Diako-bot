@@ -38,10 +38,23 @@ except Exception:
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-7espy+8c8zk9l_+$om6h^!43i-ncp$s4mjtf0=fu@x#%f5x_i_',
-)
+# اگه env var تنظیم نشده باشه، یه کلید تصادفی مخصوص همین دیپلوی می‌سازیم و
+# روی دیسک (خارج از گیت) نگه می‌داریم — به‌جای یه مقدار ثابت که توی کد باشه
+# و برای هر کسی که این ریپو رو کلون کنه یکسان و قابل‌حدس باشه.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    _key_file = BASE_DIR.parent / 'shared-data' / '.django_secret_key'
+    try:
+        if _key_file.exists():
+            SECRET_KEY = _key_file.read_text().strip()
+        else:
+            import secrets as _secrets
+            SECRET_KEY = _secrets.token_urlsafe(50)
+            _key_file.parent.mkdir(parents=True, exist_ok=True)
+            _key_file.write_text(SECRET_KEY)
+    except OSError:
+        import secrets as _secrets
+        SECRET_KEY = _secrets.token_urlsafe(50)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')

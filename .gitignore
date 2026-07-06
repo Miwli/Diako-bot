@@ -1,4 +1,5 @@
 shared-data/*.db
+shared-data/.django_secret_key
 shared_lib/__pycache__/
 wiki/
 INVENTORY.md
