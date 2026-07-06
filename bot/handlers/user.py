@@ -21,7 +21,7 @@ from shared_lib.db import (
     get_free_test_uses, increment_free_test_uses,
     get_text, get_keyboard_buttons, set_service_note,
 )
-from rebecca_api import RebeccaAPI
+from shared_lib.rebecca_api import RebeccaAPI
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 

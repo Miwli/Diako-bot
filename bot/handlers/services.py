@@ -12,7 +12,7 @@ from shared_lib.db import (
     get_user_wallet_stats, deduct_balance_if_sufficient, add_transaction,
     get_text,
 )
-from rebecca_api import RebeccaAPI
+from shared_lib.rebecca_api import RebeccaAPI
 
 log = logging.getLogger(__name__)
 

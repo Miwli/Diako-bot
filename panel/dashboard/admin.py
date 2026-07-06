@@ -123,7 +123,7 @@ def _approve_ev_request(request, req_obj):
     """تایید درخواست افزودن حجم از پنل — اتصال به Rebecca و افزودن حجم"""
     import asyncio
     from shared_lib.db import get_extra_volume_request, update_extra_volume_request, get_plan_with_server
-    from rebecca_api import RebeccaAPI
+    from shared_lib.rebecca_api import RebeccaAPI
     import sys, os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "bot"))
 
@@ -180,7 +180,7 @@ def _approve_et_request(request, req_obj):
     """تایید درخواست افزودن زمان از پنل — اتصال به Rebecca و افزودن زمان"""
     import sys, os
     from shared_lib.db import get_extra_time_request, update_extra_time_request, get_plan_with_server
-    from rebecca_api import RebeccaAPI
+    from shared_lib.rebecca_api import RebeccaAPI
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "bot"))
 
     req = async_to_sync(get_extra_time_request)(req_obj.id)

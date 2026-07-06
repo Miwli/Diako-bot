@@ -21,7 +21,7 @@ from shared_lib.db import (
     add_referral_commission, get_user,
     get_text,
 )
-from rebecca_api import RebeccaAPI
+from shared_lib.rebecca_api import RebeccaAPI
 
 async def _apply_referral_rewards(bot, buyer_id: int, price: int):
     from bot import logger

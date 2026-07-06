@@ -14,7 +14,7 @@ from shared_lib.db import (
     update_server_url, update_server_token,
     get_text,
 )
-from rebecca_api import RebeccaAPI
+from shared_lib.rebecca_api import RebeccaAPI
 
 def _server_settings_text(server, svc_ids: list) -> str:
     status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"

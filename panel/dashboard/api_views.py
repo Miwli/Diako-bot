@@ -451,9 +451,7 @@ def service_action(request):
         return JsonResponse({'ok': False, 'error': 'سرویس یافت نشد'}, status=404)
 
     if action == 'changestatus':
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
-        from rebecca_api import RebeccaAPI
+        from shared_lib.rebecca_api import RebeccaAPI
         api = RebeccaAPI(order['panel_url'], order['panel_token'])
         try:
             live = async_to_sync(api.get_user)(order['vpn_username'])
@@ -571,9 +569,7 @@ def server_action(request):
             return JsonResponse({'ok': False, 'error': 'آدرس و توکن الزامی است'})
         if not url.startswith('https://') or url.endswith('/'):
             return JsonResponse({'ok': False, 'error': 'آدرس باید با https:// شروع و بدون / در انتها باشد'})
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
-        from rebecca_api import RebeccaAPI
+        from shared_lib.rebecca_api import RebeccaAPI
         api = RebeccaAPI(url, token)
         try:
             services = async_to_sync(api.get_services)()
@@ -942,9 +938,7 @@ def extra_request_action(request):
         plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
         if not plan_data:
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
-        from rebecca_api import RebeccaAPI
+        from shared_lib.rebecca_api import RebeccaAPI
         api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
         try:
             async_to_sync(api.add_volume)(req['vpn_username'], req['traffic_gb'])
@@ -975,9 +969,7 @@ def extra_request_action(request):
         plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
         if not plan_data:
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'bot'))
-        from rebecca_api import RebeccaAPI
+        from shared_lib.rebecca_api import RebeccaAPI
         api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
         try:
             async_to_sync(api.add_time)(req['vpn_username'], req['days'])
