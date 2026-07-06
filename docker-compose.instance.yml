@@ -1,9 +1,9 @@
+# تمپلیت نمونه‌های ریسلر — از ایمیج‌های آماده‌ی نصب اصلی استفاده می‌کنه، بدون build
+# اجرا:  docker compose -p diako-<slug> -f این‌فایل --project-directory instances/<slug> up -d
+
 services:
 
   bot:
-    build:
-      context: .
-      dockerfile: Dockerfile.bot
     image: diako-bot:latest
     restart: unless-stopped
     env_file: .env
@@ -13,9 +13,6 @@ services:
       - panel
 
   panel:
-    build:
-      context: .
-      dockerfile: Dockerfile.panel
     image: diako-panel:latest
     restart: unless-stopped
     env_file: .env
