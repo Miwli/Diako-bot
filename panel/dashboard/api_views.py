@@ -518,6 +518,7 @@ _NODE_STATUS_MAP = {
 async def _check_all_servers(servers: list) -> list:
     """چک موازی همه‌ی سرورها: تاخیر، آمار سیستم و نودهای داخل هر پنل"""
     import asyncio
+    import aiohttp
     import math
     import time
     from urllib.parse import urlparse
@@ -535,6 +536,7 @@ async def _check_all_servers(servers: list) -> list:
             'lat': None, 'lon': None, 'city': '', 'country': '',
             'stats':     None,
             'nodes':     [],
+            'nodes_error': None,
         }
 
         geo = await _geo_lookup(host)
@@ -555,8 +557,8 @@ async def _check_all_servers(servers: list) -> list:
                 'users_total':        stats.get('total_user'),
                 'cpu_usage':          stats.get('cpu_usage'),
                 'cpu_cores':          stats.get('cpu_cores'),
-                'mem_used':           stats.get('mem_used'),
-                'mem_total':          stats.get('mem_total'),
+                'mem_used':           (stats.get('memory') or {}).get('current'),
+                'mem_total':          (stats.get('memory') or {}).get('total'),
                 'incoming_bandwidth': stats.get('incoming_bandwidth'),
                 'outgoing_bandwidth': stats.get('outgoing_bandwidth'),
             }
@@ -582,8 +584,15 @@ async def _check_all_servers(servers: list) -> list:
 
         try:
             raw_nodes = await api.get_nodes()
+        except aiohttp.ClientResponseError as e:
+            raw_nodes = []
+            if e.status == 403:
+                info['nodes_error'] = 'ادمین این سرور در پنل ربکا دسترسی مشاهده‌ی نودها را ندارد'
+            else:
+                info['nodes_error'] = f'دریافت نودها ناموفق بود (HTTP {e.status})'
         except Exception:
             raw_nodes = []
+            info['nodes_error'] = 'دریافت نودها ناموفق بود'
 
         async def node_info(n: dict, idx: int) -> dict:
             raw_status = n.get('status', '')
@@ -595,6 +604,8 @@ async def _check_all_servers(servers: list) -> list:
                 'raw_status':   raw_status,
                 'xray_version': n.get('xray_version'),
                 'message':      n.get('message'),
+                'uplink':       n.get('uplink'),
+                'downlink':     n.get('downlink'),
                 'lat': None, 'lon': None, 'city': '', 'country': '', 'geo_is_fallback': False,
             }
             g = await _geo_lookup(n.get('address', ''))
