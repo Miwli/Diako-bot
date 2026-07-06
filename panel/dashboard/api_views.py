@@ -518,6 +518,7 @@ _NODE_STATUS_MAP = {
 async def _check_all_servers(servers: list) -> list:
     """چک موازی همه‌ی سرورها: تاخیر، آمار سیستم و نودهای داخل هر پنل"""
     import asyncio
+    import math
     import time
     from urllib.parse import urlparse
     from shared_lib.rebecca_api import RebeccaAPI
@@ -584,7 +585,7 @@ async def _check_all_servers(servers: list) -> list:
         except Exception:
             raw_nodes = []
 
-        async def node_info(n: dict) -> dict:
+        async def node_info(n: dict, idx: int) -> dict:
             raw_status = n.get('status', '')
             node = {
                 'id':           n.get('id'),
@@ -594,15 +595,23 @@ async def _check_all_servers(servers: list) -> list:
                 'raw_status':   raw_status,
                 'xray_version': n.get('xray_version'),
                 'message':      n.get('message'),
-                'lat': None, 'lon': None, 'city': '', 'country': '',
+                'lat': None, 'lon': None, 'city': '', 'country': '', 'geo_is_fallback': False,
             }
             g = await _geo_lookup(n.get('address', ''))
             if g:
                 node.update(lat=g['lat'], lon=g['lon'],
                             city=g.get('city', ''), country=g.get('country', ''))
+            elif info['lat'] is not None:
+                # نتونستیم آدرس نود رو geolocate کنیم — دورتادور سرور والدش پخششون می‌کنیم که روی هم نیفتن
+                angle = idx * 137.5 * math.pi / 180  # زاویه‌ی طلایی — پخش یکنواخت
+                node.update(
+                    lat=info['lat'] + 1.1 * math.cos(angle),
+                    lon=info['lon'] + 1.1 * math.sin(angle),
+                    geo_is_fallback=True,
+                )
             return node
 
-        info['nodes'] = list(await asyncio.gather(*[node_info(dict(n)) for n in raw_nodes]))
+        info['nodes'] = list(await asyncio.gather(*[node_info(dict(n), i) for i, n in enumerate(raw_nodes)]))
         return info
 
     return list(await asyncio.gather(*[check(dict(s)) for s in servers]))

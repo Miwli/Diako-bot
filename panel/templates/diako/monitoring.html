@@ -9,12 +9,13 @@
 @media (max-width: 1000px) { .mon-grid { grid-template-columns: 1fr; } }
 
 /* ── کارت کره ── */
-.globe-card { position: relative; overflow: hidden; padding: 0 !important; min-height: 560px; background: radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb),0.08), transparent 55%), var(--bg-base); border: 1px solid rgba(255,255,255,0.06); border-radius: 18px; }
+.globe-card { position: relative; overflow: hidden; padding: 0 !important; min-height: 560px; background: radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb),0.08), transparent 55%), rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; }
 #globeWrap { position: absolute; inset: 0; cursor: grab; direction: ltr; }
 #globeWrap.grabbing { cursor: grabbing; }
 #globeCanvas { width: 100%; height: 100%; contain: layout paint size; opacity: 0; transition: opacity 800ms ease; }
 #globeCanvas.ready { opacity: 1; }
-.hit-dot { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; cursor: pointer; z-index: 4; }
+.hit-dot { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; cursor: pointer; z-index: 4; }
+.hit-dot.node { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; }
 .hit-dot::after { content: attr(data-label); position: absolute; bottom: 115%; right: 50%; transform: translateX(50%); background: rgba(8,12,20,0.85); backdrop-filter: blur(8px); color: #e7edf7; font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 140ms; }
 .hit-dot:hover::after { opacity: 1; }
 .globe-overlay { position: absolute; top: 14px; right: 16px; z-index: 5; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
@@ -228,6 +229,7 @@ let theta = 0.25;
 let targetPhi = phi, targetTheta = theta;
 let autoRotate = true;
 let dragging = null, dragStartPhi = 0;
+let rafId = null;
 
 function buildMarkers() {
   const c = themeColors();
@@ -235,9 +237,22 @@ function buildMarkers() {
     .filter(p => p.lat != null && p.lon != null)
     .map(p => ({
       location: [p.lat, p.lon],
-      size: p.kind === 'panel' ? 0.075 : 0.05,
+      size: p.kind === 'panel' ? 0.065 : 0.028,
       color: pointColor(p, c),
     }));
+}
+
+// cobe خودش هیچ حلقه‌ی رندری نداره — خودمون هر فریم باید update() صداش کنیم
+function tick() {
+  if (autoRotate && dragging === null) { targetPhi += 0.0028; }
+  let dp = (targetPhi - phi) % (Math.PI * 2);
+  if (dp > Math.PI) dp -= Math.PI * 2;
+  if (dp < -Math.PI) dp += Math.PI * 2;
+  phi += dp * 0.08;
+  theta += (targetTheta - theta) * 0.08;
+  if (globe) globe.update({ phi, theta });
+  positionHitDots();
+  rafId = requestAnimationFrame(tick);
 }
 
 function initGlobe() {
@@ -249,8 +264,8 @@ function initGlobe() {
   canvas.classList.remove('ready');
   globe = createGlobe(canvas, {
     devicePixelRatio: dpr,
-    width: w * dpr,
-    height: h * dpr,
+    width: w,   // cobe خودش تو ضرب می‌کنه در devicePixelRatio
+    height: h,
     phi, theta,
     dark: 1,
     diffuse: 1.2,
@@ -261,20 +276,27 @@ function initGlobe() {
     glowColor: [c.accent[0] * 0.32, c.accent[1] * 0.32, c.accent[2] * 0.32],
     opacity: 0.92,
     markers: buildMarkers(),
-    onRender: (state) => {
-      if (autoRotate && dragging === null) { targetPhi += 0.0028; }
-      // کوتاه‌ترین مسیر چرخش
-      let dp = (targetPhi - phi) % (Math.PI * 2);
-      if (dp > Math.PI) dp -= Math.PI * 2;
-      if (dp < -Math.PI) dp += Math.PI * 2;
-      phi += dp * 0.08;
-      theta += (targetTheta - theta) * 0.08;
-      state.phi = phi;
-      state.theta = theta;
-      positionHitDots();
-    },
   });
   setTimeout(() => canvas.classList.add('ready'), 60);
+  if (!rafId) rafId = requestAnimationFrame(tick);
+}
+
+function resizeGlobe() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if (!w || !h) return;
+  if (!globe) { initGlobe(); return; }
+  globe.update({ width: w, height: h });
+}
+
+function updateGlobeTheme() {
+  if (!globe) return;
+  const c = themeColors();
+  globe.update({
+    baseColor: [0.22 + c.accent[0] * 0.12, 0.22 + c.accent[1] * 0.12, 0.24 + c.accent[2] * 0.12],
+    markerColor: c.accent,
+    glowColor: [c.accent[0] * 0.32, c.accent[1] * 0.32, c.accent[2] * 0.32],
+    markers: buildMarkers(),
+  });
 }
 
 /* ── دات‌های تعاملی روی کره (کلیک + تولتیپ) ── */
@@ -282,7 +304,7 @@ function rebuildHitDots() {
   dotsEl.innerHTML = '';
   points.filter(p => p.lat != null && p.lon != null).forEach(p => {
     const el = document.createElement('div');
-    el.className = 'hit-dot';
+    el.className = 'hit-dot' + (p.kind === 'node' ? ' node' : '');
     el.dataset.key = p.key;
     el.dataset.label = p.tooltip;
     el.style.display = 'none';
@@ -352,10 +374,11 @@ async function loadNodes(manual) {
         tooltip: s.name + (s.city ? ' — ' + s.city : ''),
       });
       (s.nodes || []).forEach(n => {
+        const loc = n.geo_is_fallback ? ' — موقعیت تقریبی' : (n.city ? ' — ' + n.city : '');
         points.push({
           key: 's' + s.id + 'n' + n.id, kind: 'node', is_active: s.is_active, status: n.status,
           lat: n.lat, lon: n.lon,
-          tooltip: n.name + (n.city ? ' — ' + n.city : ''),
+          tooltip: (n.name || n.address) + loc,
         });
       });
     });
@@ -476,12 +499,12 @@ document.getElementById('srvList').addEventListener('click', (e) => {
 let resizeTimer;
 new ResizeObserver(() => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(initGlobe, 180);
+  resizeTimer = setTimeout(resizeGlobe, 180);
 }).observe(wrap);
 
 new MutationObserver((muts) => {
   for (const m of muts) {
-    if (m.attributeName === 'data-theme') { initGlobe(); renderStats(); break; }
+    if (m.attributeName === 'data-theme') { updateGlobeTheme(); renderStats(); break; }
   }
 }).observe(document.documentElement, { attributes: true });
 
