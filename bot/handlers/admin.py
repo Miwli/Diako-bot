@@ -136,6 +136,10 @@ def register_admin_handlers(dp):
 
     @dp.callback_query(F.data == "admin_panel")
     async def admin_panel(callback: types.CallbackQuery):
+        from bot import is_admin
+        if not is_admin(callback.from_user.id):
+            await callback.answer("⛔️ شما به این بخش دسترسی ندارید.", show_alert=True)
+            return
         await _edit_or_replace(callback, get_text("admin_panel_title"), admin_panel_menu())
         await callback.answer()
 

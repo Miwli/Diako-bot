@@ -338,6 +338,13 @@ async def init_db():
               WHERE keyboard_name='user_main' AND callback_data='admin_panel'
             )
         """)
+        # اگه این دکمه از قبل با admin_only اشتباه (مثلاً از ذخیره‌ی ادیتور کیبورد) وجود داشت،
+        # همیشه به حالت درست برش می‌گردونیم — این دکمه هرگز نباید برای کاربر عادی نمایش داده بشه
+        await db.execute("""
+            UPDATE keyboard_buttons SET admin_only = 1
+            WHERE keyboard_name = 'user_main' AND callback_data = 'admin_panel'
+        """)
+        await db.commit()
         # دکمه‌ی بازگشت در buy_vpn — اگه وجود نداشت اضافه می‌کنیم
         await db.execute("""
             INSERT OR IGNORE INTO keyboard_buttons
@@ -2272,14 +2279,23 @@ async def save_keyboard_layout(keyboard_name: str, buttons: list[dict]):
                    (keyboard_name, label, callback_data, row_index, col_index, is_active, callback_template, admin_only)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 [
-                    (keyboard_name, b["label"], b["callback_data"],
-                     b["row_index"], b["col_index"], b.get("is_active", 1),
-                     b.get("callback_template"), b.get("admin_only", 0))
+                    (
+                        keyboard_name, b["label"], b["callback_data"],
+                        b["row_index"], b["col_index"], b.get("is_active", 1),
+                        b.get("callback_template"),
+                        # دکمه‌ی ورود به پنل ادمین هرگز نباید برای کاربر عادی نمایان بشه —
+                        # مستقل از چیزی که ادیتور می‌فرسته، همیشه admin_only اجباریه
+                        1 if (keyboard_name == "user_main" and b["callback_data"] == "admin_panel")
+                        else b.get("admin_only", 0)
+                    )
                     for b in buttons
                 ]
             )
         await db.commit()
-    _keyboards_cache[keyboard_name] = [dict(b) for b in buttons if b.get("is_active", 1)]
+    _keyboards_cache[keyboard_name] = [
+        dict(b) for b in buttons
+        if b.get("is_active", 1) and not (keyboard_name == "user_main" and b["callback_data"] == "admin_panel")
+    ]
 
 
 async def get_servers_as_buttons() -> list[dict]:
