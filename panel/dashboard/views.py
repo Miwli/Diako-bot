@@ -7,7 +7,7 @@ from django.db.models import Count, Q, Subquery, OuterRef, IntegerField, Value
 from django.db.models.functions import Coalesce
 from shared_lib.db import (
     get_admin_stats, get_all_keyboard_buttons, get_keyboard_actions, get_all_texts,
-    get_setting,
+    get_setting, get_all_keyboard_buttons_grouped,
 )
 from .models import (
     Orders, Servers, Users, Plans, DiscountCodes, TopUpRequests, Transactions,
@@ -222,6 +222,20 @@ def keyboard_editor_view(request):
         'actions_json': json.dumps(actions, ensure_ascii=False),
         'bot_texts_json': json.dumps(bot_texts, ensure_ascii=False),
         'admin_username': request.user.username,
+    })
+
+
+@login_required
+def import_export_view(request):
+    all_texts_rows = async_to_sync(get_all_texts)()
+    bot_texts = {row['key']: row['value'] for row in all_texts_rows}
+    keyboards = async_to_sync(get_all_keyboard_buttons_grouped)()
+    actions = async_to_sync(get_keyboard_actions)()
+    return render(request, 'diako/import_export.html', {
+        'bot_texts_json':        json.dumps(bot_texts, ensure_ascii=False),
+        'keyboards_json':        json.dumps(keyboards, ensure_ascii=False),
+        'keyboard_actions_json': json.dumps(actions, ensure_ascii=False),
+        'admin_username':        request.user.username,
     })
 
 

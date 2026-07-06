@@ -402,6 +402,38 @@ def order_action(request):
 
 @login_required
 @require_http_methods(["POST"])
+def import_config(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    if not isinstance(data, dict):
+        return JsonResponse({'ok': False, 'error': 'فرمت فایل نامعتبر است'}, status=400)
+
+    from shared_lib.db import import_texts, import_keyboards, save_keyboard_actions
+    result = {}
+    try:
+        if 'bot_texts' in data:
+            if not isinstance(data['bot_texts'], dict):
+                return JsonResponse({'ok': False, 'error': 'bot_texts باید یک آبجکت باشد'}, status=400)
+            result['texts'] = async_to_sync(import_texts)(data['bot_texts'])
+        if 'keyboards' in data:
+            if not isinstance(data['keyboards'], dict):
+                return JsonResponse({'ok': False, 'error': 'keyboards باید یک آبجکت باشد'}, status=400)
+            result['keyboards'] = async_to_sync(import_keyboards)(data['keyboards'])
+        if 'keyboard_actions' in data:
+            if not isinstance(data['keyboard_actions'], list):
+                return JsonResponse({'ok': False, 'error': 'keyboard_actions باید یک لیست باشد'}, status=400)
+            result['actions'] = async_to_sync(save_keyboard_actions)(data['keyboard_actions'])
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'خطا در اعمال: {e}'}, status=400)
+
+    return JsonResponse({'ok': True, 'result': result})
+
+
+@login_required
+@require_http_methods(["POST"])
 def service_action(request):
     try:
         data = json.loads(request.body)

@@ -2320,6 +2320,51 @@ async def get_keyboard_actions() -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_keyboard_names() -> list[str]:
+    """همه‌ی نام‌های کیبورد شناخته‌شده — برای صفحه‌ی Export/Import"""
+    return list(_DEFAULT_KEYBOARDS.keys())
+
+
+async def get_all_keyboard_buttons_grouped() -> dict[str, list[dict]]:
+    """همه‌ی دکمه‌های همه‌ی کیبوردها، گروه‌بندی‌شده بر اساس keyboard_name — برای Export"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM keyboard_buttons ORDER BY keyboard_name, row_index, col_index"
+        )
+        rows = await cursor.fetchall()
+    grouped: dict[str, list[dict]] = {}
+    for r in rows:
+        grouped.setdefault(r["keyboard_name"], []).append(dict(r))
+    return grouped
+
+
+async def import_texts(texts: dict) -> int:
+    """ایمپورت متن‌ها — هر کلید جداگانه upsert می‌شود"""
+    for key, value in texts.items():
+        await set_text(key, value)
+    return len(texts)
+
+
+async def import_keyboards(keyboards: dict) -> int:
+    """ایمپورت کیبوردها — چینش هر کیبورد کامل جایگزین می‌شود"""
+    for name, buttons in keyboards.items():
+        await save_keyboard_layout(name, buttons)
+    return len(keyboards)
+
+
+async def save_keyboard_actions(actions: list) -> int:
+    """ایمپورت کاتالوگ اکشن‌ها — بر اساس action_name جایگزین می‌شود، چیزی حذف نمی‌شود"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        for a in actions:
+            await db.execute(
+                "INSERT OR REPLACE INTO keyboard_actions (action_name, label, callback_data, grp) VALUES (?, ?, ?, ?)",
+                (a["action_name"], a["label"], a["callback_data"], a.get("grp", "user"))
+            )
+        await db.commit()
+    return len(actions)
+
+
 def _dyn(kb, label, cb, row, *, col=0, is_dynamic=True):
     return {"keyboard_name": kb, "label": label, "callback_data": cb,
             "row_index": row, "col_index": col, "is_active": 1, "is_dynamic": is_dynamic}
