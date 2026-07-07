@@ -63,8 +63,21 @@ setup_global_command() {
   print_ok "Global command ready — type 'diako' anywhere to open this menu"
 }
 
+# Rewriting the nginx config wipes the 443 block certbot added to it.
+# If a cert already exists for the domain, reinstall it so https keeps working.
+restore_ssl() {
+  local domain="$1"
+  [ -d "/etc/letsencrypt/live/${domain}" ] || return 0
+  if certbot --nginx -d "$domain" --non-interactive --redirect; then
+    print_ok "SSL config restored for ${domain}"
+  else
+    print_warn "SSL restore failed for ${domain} — run the SSL option again."
+  fi
+}
+
 # Updates DOMAIN in .env + Nginx config + restarts the panel container.
-# Does not touch SSL — do_ssl() calls this then issues/renews the certificate.
+# New certs are issued elsewhere (do_ssl / main_domain_ssl) — this only
+# re-installs an existing one after the config rewrite.
 apply_domain() {
   local NEW_DOMAIN="$1"
   local PANEL_PORT
@@ -88,6 +101,7 @@ server {
 }
 EOF
   nginx -t && systemctl reload nginx
+  restore_ssl "$NEW_DOMAIN"
 
   cd "$INSTALL_DIR"
   docker compose restart panel
@@ -545,6 +559,7 @@ server {
 }
 EOF
   nginx -t && systemctl reload nginx
+  restore_ssl "$DOMAIN"
   print_ok "Nginx updated"
 
   # Restart containers
@@ -766,6 +781,7 @@ server {
 EOF
   ln -sf "/etc/nginx/sites-available/diako-${slug}" "/etc/nginx/sites-enabled/diako-${slug}"
   nginx -t && systemctl reload nginx
+  restore_ssl "$domain"
 }
 
 instance_ssl() {
