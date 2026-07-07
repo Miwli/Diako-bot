@@ -956,12 +956,27 @@ def confirm_delete_channel_keyboard(channel_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def _channel_join_url(invite_link: str, chat_id: str) -> str | None:
+    raw = (invite_link or "").strip()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    if raw.startswith("t.me/") or raw.startswith("telegram.me/"):
+        return "https://" + raw
+    if raw.startswith("@"):
+        return "https://t.me/" + raw[1:]
+    if raw:
+        return "https://t.me/" + raw.lstrip("/")
+    cid = (chat_id or "").strip()
+    if cid.startswith("@"):
+        return "https://t.me/" + cid[1:]
+    return None
+
+
 def force_join_keyboard(channels: list) -> InlineKeyboardMarkup:
     buttons = []
     for c in channels:
-        chat_id = c["chat_id"]
-        link = c["invite_link"] or (f"https://t.me/{chat_id.lstrip('@')}" if chat_id.startswith("@") else None)
+        link = _channel_join_url(c["invite_link"], c["chat_id"])
         if link:
-            buttons.append([InlineKeyboardButton(text=f"📢 {c['title'] or chat_id}", url=link)])
+            buttons.append([InlineKeyboardButton(text=f"📢 {c['title'] or c['chat_id']}", url=link)])
     buttons.append([InlineKeyboardButton(text="✅ عضو شدم", callback_data="check_force_join")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
