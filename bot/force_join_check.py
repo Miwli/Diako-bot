@@ -1,4 +1,4 @@
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramAPIError
 from shared_lib.db import get_required_channels
 
 
@@ -15,7 +15,7 @@ async def get_missing_channels(bot, user_id: int) -> list:
             member = await bot.get_chat_member(ch["chat_id"], user_id)
             if member.status in ("left", "kicked"):
                 missing.append(ch)
-        except (TelegramBadRequest, TelegramForbiddenError):
-            # ربات به این کانال دسترسی نداره
+        except TelegramAPIError:
+            # نتونستیم عضویت رو چک کنیم، این کانال رو رد می‌کنیم
             continue
     return missing
