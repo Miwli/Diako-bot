@@ -16,14 +16,15 @@ from shared_lib.db import (
     get_admin_plans_as_buttons, get_discount_codes_as_buttons,
     get_admin_tutorials_as_buttons, get_admin_faqs_as_buttons, get_admin_users_as_buttons,
 )
-from shared_lib.db import update_order_status
+from shared_lib.db import update_order_status, delete_order
 from shared_lib.db import (
     get_user, ban_user, unban_user, admin_adjust_balance,
     get_transactions, get_free_test_uses,
     get_user_ticket_counts, get_user_order_counts, get_referral_stats,
     get_referral_by_referred, get_user_services, decrement_free_test_uses,
     get_setting, set_setting,
-    add_server, delete_server, toggle_server_status, update_server_url, update_server_token,
+    add_server, delete_server, toggle_server_status, update_server_name,
+    update_server_url, update_server_token,
     update_server_services, update_server_free_test, get_servers,
     add_plan, delete_plan, toggle_plan_status, update_plan, get_plan,
     create_discount_code, toggle_discount_code, delete_discount_code,
@@ -385,13 +386,17 @@ def order_action(request):
     action   = data.get('action')
     reason   = data.get('reason', '').strip() or None
 
-    if not order_id or action not in ('reject',):
+    if not order_id or action not in ('reject', 'delete'):
         return JsonResponse({'ok': False, 'error': 'پارامتر نامعتبر'}, status=400)
 
     try:
         order = Orders.objects.get(id=order_id)
     except Orders.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'سفارش یافت نشد'}, status=404)
+
+    if action == 'delete':
+        async_to_sync(delete_order)(order_id)
+        return JsonResponse({'ok': True})
 
     if order.status != 'pending':
         return JsonResponse({'ok': False, 'error': 'سفارش قابل تغییر نیست'})
@@ -693,6 +698,17 @@ def server_action(request):
         if not server_id:
             return JsonResponse({'ok': False, 'error': 'server_id الزامی است'}, status=400)
         async_to_sync(toggle_server_status)(int(server_id))
+        return JsonResponse({'ok': True})
+
+    if action == 'update_name':
+        server_id = data.get('server_id')
+        name = (data.get('name') or '').strip()
+        if not server_id or not name:
+            return JsonResponse({'ok': False, 'error': 'server_id و نام الزامی است'})
+        try:
+            async_to_sync(update_server_name)(int(server_id), name)
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'این نام قبلاً استفاده شده است'})
         return JsonResponse({'ok': True})
 
     if action == 'update_url':

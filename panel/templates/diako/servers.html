@@ -177,6 +177,7 @@
                 </td>
                 <td>
                   <div class="row-acts">
+                    <button class="row-btn" title="ویرایش نام" onclick="openEditNameModal({{ s.id }})"><i class="ti ti-pencil"></i></button>
                     <button class="row-btn" title="ویرایش سرویس‌ها" onclick="openEditServicesModal({{ s.id }})"><i class="ti ti-list-check"></i></button>
                     <button class="row-btn" title="ویرایش آدرس" onclick="openEditUrlModal({{ s.id }}, '{{ s.panel_url }}')"><i class="ti ti-link"></i></button>
                     <button class="row-btn" title="ویرایش توکن" onclick="openEditTokenModal({{ s.id }})"><i class="ti ti-key"></i></button>
@@ -220,6 +221,19 @@
     <div class="modal-acts">
       <button class="modal-btn" onclick="closeModal('addModal')">انصراف</button>
       <button class="modal-btn btn-confirm" id="addConfirmBtn" onclick="confirmAdd()" disabled>افزودن</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Name Modal -->
+<div class="modal-bg" id="editNameModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-pencil"></i><span>ویرایش نام سرور</span></div>
+    <label class="modal-label">نام جدید</label>
+    <input class="modal-input" id="editNameInput" placeholder="نام سرور">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('editNameModal')">انصراف</button>
+      <button class="modal-btn btn-confirm" onclick="confirmEditName()">ذخیره</button>
     </div>
   </div>
 </div>
@@ -273,6 +287,12 @@ const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] |
 let editServerId = null;
 
 function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+function openEditNameModal(id) {
+  editServerId = id;
+  const row = document.querySelector(`.mgmt-row[data-id="${id}"]`);
+  document.getElementById('editNameInput').value = row.dataset.name || '';
+  document.getElementById('editNameModal').classList.add('open');
+}
 function openEditUrlModal(id, url) {
   editServerId = id;
   document.getElementById('editUrlInput').value = url;
@@ -329,6 +349,13 @@ async function confirmAdd() {
   });
   if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
   btn.disabled = false; btn.innerHTML = 'افزودن';
+}
+
+async function confirmEditName() {
+  const name = document.getElementById('editNameInput').value.trim();
+  if (!name) { showNotif('خطا', 'نام نمی‌تواند خالی باشد', 'error'); return; }
+  const data = await apiCall({ action: 'update_name', server_id: editServerId, name });
+  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
 }
 
 async function confirmEditUrl() {
@@ -397,7 +424,7 @@ function showNotif(title, body, type) {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['addModal', 'editUrlModal', 'editTokenModal', 'editServicesModal'].forEach(id => document.getElementById(id).classList.remove('open'));
+    ['addModal', 'editNameModal', 'editUrlModal', 'editTokenModal', 'editServicesModal'].forEach(id => document.getElementById(id).classList.remove('open'));
   }
 });
 </script>

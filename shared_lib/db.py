@@ -605,6 +605,15 @@ async def update_server_services(server_id: int, service_ids: list):
         )
         await db.commit()
 
+async def update_server_name(server_id: int, name: str):
+    """تغییر نام سرور"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE servers SET name = ? WHERE id = ?",
+            (name, server_id)
+        )
+        await db.commit()
+
 async def update_server_url(server_id: int, panel_url: str):
     """بروزرسانی آدرس پنل سرور"""
     async with aiosqlite.connect(DB_PATH) as db:
@@ -1421,6 +1430,12 @@ async def update_order_status(order_id: int, status: str, rejection_reason: str 
             "UPDATE orders SET status = ?, rejection_reason = ? WHERE id = ?",
             (status, rejection_reason, order_id)
         )
+        await db.commit()
+
+async def delete_order(order_id: int):
+    """حذف کامل یک سفارش از دیتابیس"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM orders WHERE id = ?", (order_id,))
         await db.commit()
 
 # ─── توابع کاربران و کیف پول ───────────────────

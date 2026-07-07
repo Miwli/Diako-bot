@@ -872,6 +872,10 @@
                       <i class="ti ti-x"></i>
                     </button>
                     {% endif %}
+                    <button class="row-btn rb-reject" title="حذف سفارش"
+                            onclick="event.stopPropagation(); deleteOrder({{ order.id }})">
+                      <i class="ti ti-trash"></i>
+                    </button>
                     <button class="row-btn" title="جزئیات">
                       <i class="ti ti-chevron-left"></i>
                     </button>
@@ -1146,6 +1150,26 @@ async function confirmReject() {
     showNotif('خطا', 'خطای شبکه', 'error');
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-x"></i> رد کردن';
+  }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('سفارش #' + id + ' برای همیشه حذف شود؟ این کار قابل بازگشت نیست.')) return;
+  try {
+    const res = await fetch('/diako/api/order-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ order_id: id, action: 'delete' })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showNotif('حذف شد', 'سفارش #' + id + ' حذف شد.', 'reject');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showNotif('خطا', data.error || 'خطایی رخ داد', 'error');
+    }
+  } catch (e) {
+    showNotif('خطا', 'خطای شبکه', 'error');
   }
 }
 
