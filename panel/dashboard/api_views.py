@@ -24,7 +24,7 @@ from shared_lib.db import (
     get_referral_by_referred, get_user_services, decrement_free_test_uses,
     get_setting, set_setting,
     add_server, delete_server, toggle_server_status, update_server_url, update_server_token,
-    update_server_free_test, get_servers,
+    update_server_services, update_server_free_test, get_servers,
     add_plan, delete_plan, toggle_plan_status, update_plan, get_plan,
     create_discount_code, toggle_discount_code, delete_discount_code,
     create_tutorial, update_tutorial, toggle_tutorial, delete_tutorial, move_tutorial,
@@ -711,6 +711,16 @@ def server_action(request):
         if not server_id or not token:
             return JsonResponse({'ok': False, 'error': 'server_id و token الزامی است'})
         async_to_sync(update_server_token)(int(server_id), token)
+        return JsonResponse({'ok': True})
+
+    if action == 'update_services':
+        server_id = data.get('server_id')
+        service_ids = data.get('service_ids') or []
+        if not server_id:
+            return JsonResponse({'ok': False, 'error': 'server_id الزامی است'}, status=400)
+        if not service_ids:
+            return JsonResponse({'ok': False, 'error': 'حداقل یک سرویس را انتخاب کنید'})
+        async_to_sync(update_server_services)(int(server_id), [int(i) for i in service_ids])
         return JsonResponse({'ok': True})
 
     if action == 'update_free_test':
