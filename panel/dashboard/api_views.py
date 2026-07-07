@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from asgiref.sync import async_to_sync
 from shared_lib.db import (
     get_all_keyboard_buttons, get_keyboard_actions, save_keyboard_layout,
-    get_servers_as_buttons, save_server_order,
+    get_servers_as_buttons, save_server_order, save_faq_order, save_tutorial_order,
     get_plans_as_buttons, get_services_as_buttons, get_tickets_as_buttons,
     get_tutorials_as_buttons, get_faqs_as_buttons,
     get_admin_plans_as_buttons, get_discount_codes_as_buttons,
@@ -282,6 +282,12 @@ _DYNAMIC_LOADERS = {
     'admin_user_list':  lambda: async_to_sync(get_admin_users_as_buttons)(),
 }
 
+# کیبوردهایی که ترتیب داینامیک‌شان روی جدول خودشان ذخیره می‌شود
+_DYNAMIC_ORDER_SAVERS = {
+    'user_faqs':       save_faq_order,
+    'user_tutorials':  save_tutorial_order,
+}
+
 
 def keyboard_data(request, keyboard_name):
     if keyboard_name in _DYNAMIC_LOADERS:
@@ -366,6 +372,9 @@ def save_keyboard(request):
             async_to_sync(save_server_order)(dynamic)
             async_to_sync(save_keyboard_layout)('buy_vpn', static)
         elif keyboard_name in _DYNAMIC_LOADERS:
+            saver = _DYNAMIC_ORDER_SAVERS.get(keyboard_name)
+            if saver:
+                async_to_sync(saver)(dynamic)
             async_to_sync(save_keyboard_layout)(keyboard_name, static)
         else:
             async_to_sync(save_keyboard_layout)(keyboard_name, buttons)

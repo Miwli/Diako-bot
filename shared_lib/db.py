@@ -2732,6 +2732,34 @@ async def save_server_order(buttons: list[dict]):
         await db.commit()
 
 
+async def save_faq_order(buttons: list[dict]):
+    """ترتیب سوالات متداول را از ادیتور کیبورد ذخیره می‌کند"""
+    await _save_dynamic_order(buttons, "faq_detail_", "faqs")
+
+
+async def save_tutorial_order(buttons: list[dict]):
+    """ترتیب آموزش‌ها را از ادیتور کیبورد ذخیره می‌کند"""
+    await _save_dynamic_order(buttons, "tutorial_detail_", "tutorials")
+
+
+async def _save_dynamic_order(buttons: list[dict], prefix: str, table: str):
+    """order_index رکوردها را از روی چینش دکمه‌های داینامیک ادیتور آپدیت می‌کند"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        for btn in buttons:
+            cb = btn.get("callback_data", "")
+            if not cb.startswith(prefix):
+                continue
+            id_str = cb[len(prefix):]
+            if not id_str.isdigit():
+                continue
+            order_idx = btn.get("row_index", 0) * 10 + btn.get("col_index", 0)
+            await db.execute(
+                f"UPDATE {table} SET order_index = ? WHERE id = ?",
+                (order_idx, int(id_str)),
+            )
+        await db.commit()
+
+
 async def get_keyboard_actions() -> list[dict]:
     """کاتالوگ همه‌ی امکانات ممکن برای دکمه‌ها"""
     async with aiosqlite.connect(DB_PATH) as db:
