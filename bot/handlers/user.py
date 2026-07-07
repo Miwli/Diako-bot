@@ -465,11 +465,11 @@ def register_user_handlers(dp):
         if order["order_type"] == "free_test":
             await callback.answer(get_text("renew_free_test_error"), show_alert=True)
             return
-        plan = await get_plan(order["plan_id"])
-        if not plan:
+        server_id = order["server_id"]
+        if not server_id:
             await callback.answer(get_text("renew_no_server"), show_alert=True)
             return
-        plans = await get_plans(plan["server_id"], only_active=True)
+        plans = await get_plans(server_id, only_active=True)
         if not plans:
             await callback.answer(get_text("renew_no_plans"), show_alert=True)
             return
@@ -477,7 +477,7 @@ def register_user_handlers(dp):
         await _edit_or_replace(
             callback,
             get_text("renew_prompt"),
-            user_plans_keyboard(plans, plan["server_id"], multiple_servers=False, show_price=show_price)
+            user_plans_keyboard(plans, server_id, multiple_servers=False, show_price=show_price)
         )
         await callback.answer()
 
