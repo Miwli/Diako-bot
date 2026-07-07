@@ -231,6 +231,18 @@ let targetPhi = phi, targetTheta = theta;
 let autoRotate = true;
 let dragging = null, dragStartX = 0, dragStartY = 0, dragStartPhi = 0, dragStartTheta = 0;
 let rafId = null;
+let resumeTimer = null;
+
+// بعد از این مدت بی‌حرکتی دوباره خودش می‌چرخه
+const RESUME_DELAY = 4000;
+function pauseAutoRotate() {
+  autoRotate = false;
+  clearTimeout(resumeTimer);
+}
+function scheduleResume() {
+  clearTimeout(resumeTimer);
+  resumeTimer = setTimeout(() => { autoRotate = true; }, RESUME_DELAY);
+}
 
 function buildMarkers() {
   const c = themeColors();
@@ -335,7 +347,7 @@ wrap.addEventListener('pointerdown', (e) => {
   dragStartY = e.clientY;
   dragStartPhi = targetPhi;
   dragStartTheta = targetTheta;
-  autoRotate = false;
+  pauseAutoRotate();
   wrap.classList.add('grabbing');
 });
 window.addEventListener('pointermove', (e) => {
@@ -347,7 +359,12 @@ window.addEventListener('pointermove', (e) => {
   phi = targetPhi;     // موقع درگ بدون لگ، هم افقی هم عمودی
   theta = targetTheta;
 });
-window.addEventListener('pointerup', () => { dragging = null; wrap.classList.remove('grabbing'); });
+window.addEventListener('pointerup', () => {
+  if (dragging === null) return;
+  dragging = null;
+  wrap.classList.remove('grabbing');
+  scheduleResume();
+});
 
 /* ── فوکوس روی یک نقطه ── */
 function focusPoint(key, fromGlobe) {
@@ -355,10 +372,11 @@ function focusPoint(key, fromGlobe) {
   renderList();
   const p = points.find(x => x.key === key);
   if (p && p.lat != null) {
-    autoRotate = false;
+    pauseAutoRotate();
     const [fp, ft] = locToAngles(p.lat, p.lon);
     targetPhi = fp;
     targetTheta = Math.max(-1.2, Math.min(1.2, ft));
+    scheduleResume();
   }
   if (fromGlobe) {
     document.querySelector(`[data-focus-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
