@@ -339,7 +339,7 @@ def register_user_handlers(dp):
         request_id = await create_top_up_request(u.id, u.username, amount, file_id)
         await state.clear()
 
-        from bot import ADMIN_IDS
+        from bot import ADMIN_IDS, logger
         caption = get_text(
             "admin_topup_notify",
             full_name=u.full_name,
@@ -349,13 +349,16 @@ def register_user_handlers(dp):
             request_id=request_id,
         )
         for admin_id in ADMIN_IDS:
-            await message.bot.send_photo(
-                chat_id=admin_id,
-                photo=file_id,
-                caption=caption,
-                reply_markup=admin_topup_keyboard(request_id),
-                parse_mode="HTML"
-            )
+            try:
+                await message.bot.send_photo(
+                    chat_id=admin_id,
+                    photo=file_id,
+                    caption=caption,
+                    reply_markup=admin_topup_keyboard(request_id),
+                    parse_mode="HTML"
+                )
+            except Exception as exc:
+                logger.error(f"خطا در اطلاع‌رسانی شارژ به ادمین {admin_id}: {exc}")
         await message.answer(get_text("topup_submitted"), reply_markup=wallet_keyboard())
 
     # ─── کیف پول ──────────────────────────────────
@@ -974,7 +977,7 @@ def register_user_handlers(dp):
 
     @dp.message(BuyVPN.waiting_for_receipt, F.photo)
     async def receive_receipt(message: types.Message, state: FSMContext):
-        from bot import ADMIN_IDS
+        from bot import ADMIN_IDS, logger
         from keyboards import admin_order_keyboard
 
         data = await state.get_data()
@@ -1018,13 +1021,16 @@ def register_user_handlers(dp):
             amount=f"{final_price:,}",
         )
         for admin_id in ADMIN_IDS:
-            await message.bot.send_photo(
-                chat_id=admin_id,
-                photo=receipt_file_id,
-                caption=admin_text,
-                reply_markup=admin_order_keyboard(order_id),
-                parse_mode="HTML"
-            )
+            try:
+                await message.bot.send_photo(
+                    chat_id=admin_id,
+                    photo=receipt_file_id,
+                    caption=admin_text,
+                    reply_markup=admin_order_keyboard(order_id),
+                    parse_mode="HTML"
+                )
+            except Exception as exc:
+                logger.error(f"خطا در اطلاع‌رسانی سفارش به ادمین {admin_id}: {exc}")
 
     @dp.message(BuyVPN.waiting_for_receipt)
     async def receipt_not_photo(message: types.Message):
