@@ -136,6 +136,39 @@
         {% endif %}
       </div>
 
+      <!-- Location Change Requests -->
+      <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
+        <div style="padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;">
+          <div class="section-title"><i class="ti ti-map-pin"></i> درخواست‌های تغییر لوکیشن</div>
+          <button class="row-btn" style="width:auto;padding:4px 12px;font-size:11px;" onclick="toggleChangelocAdmin()">
+            {% if changeloc_need_admin %}🔒 نیاز به تایید ادمین: روشن{% else %}⚡ نیاز به تایید ادمین: خاموش{% endif %}
+          </button>
+        </div>
+        {% if lc_requests %}
+        <div class="mgmt-table-wrap" style="padding:0 6px;">
+          <table class="mgmt-table">
+            <thead><tr><th>#</th><th>کاربر</th><th>سرویس</th><th>از</th><th>به</th><th>وضعیت</th><th>تاریخ</th><th class="col-actions"></th></tr></thead>
+            <tbody>
+              {% for r in lc_requests %}
+              <tr class="mgmt-row">
+                <td><span class="cell-muted">#{{ r.id }}</span></td>
+                <td><span class="cell-name">{{ r.user_id }}</span></td>
+                <td><span class="cell-muted">{{ r.order_id }}</span></td>
+                <td><span class="cell-muted">{{ r.from_server_name }}</span></td>
+                <td><span class="cell-muted">{{ r.to_server_name }}</span></td>
+                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">در انتظار</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">تایید</span>{% else %}<span class="st-badge st-rejected">رد</span>{% endif %}</td>
+                <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
+                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="تایید و انتقال" onclick="approveLc({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="رد" onclick="rejectLc({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="ord-empty"><i class="ti ti-map-pin"></i><p>درخواستی وجود ندارد</p></div>
+        {% endif %}
+      </div>
+
       <!-- Extra Volume Plans -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
         <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-package"></i> پکیج‌های افزودن حجم</div></div>
@@ -218,6 +251,23 @@ async function approveEt(id) {
 async function rejectEt(id) {
   if (!confirm('رد درخواست افزودن زمان؟')) return;
   var d = await apiCall({ action: 'reject_et', req_id: id });
+  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+}
+
+async function approveLc(id) {
+  if (!confirm('تایید و انتقال سرویس؟ سرویس روی سرور جدید ساخته و از سرور قبلی حذف می‌شود.')) return;
+  var d = await apiCall({ action: 'approve_lc', req_id: id });
+  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+}
+
+async function rejectLc(id) {
+  if (!confirm('رد درخواست تغییر لوکیشن؟')) return;
+  var d = await apiCall({ action: 'reject_lc', req_id: id });
+  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+}
+
+async function toggleChangelocAdmin() {
+  var d = await apiCall({ action: 'toggle_changeloc_admin' });
   if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
 }
 

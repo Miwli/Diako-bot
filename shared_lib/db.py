@@ -110,6 +110,7 @@ async def init_db():
             "order_type":         "TEXT DEFAULT 'purchase'",
             "free_test_server_id":"INTEGER",
             "note":               "TEXT",
+            "location_server_id": "INTEGER",
         }.items():
             try:
                 await db.execute(f"ALTER TABLE orders ADD COLUMN {col} {col_type}")
@@ -285,6 +286,17 @@ async def init_db():
                 receipt_file_id TEXT,
                 status          TEXT DEFAULT 'pending',
                 created_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS location_change_requests (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id        INTEGER NOT NULL,
+                order_id       INTEGER NOT NULL,
+                from_server_id INTEGER,
+                to_server_id   INTEGER NOT NULL,
+                status         TEXT DEFAULT 'pending',
+                created_at     TEXT DEFAULT (datetime('now'))
             )
         """)
         await db.execute("""
@@ -1027,6 +1039,21 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "changenote_prompt":            "✏️ یادداشت خود را برای این سرویس ارسال کنید (حداکثر ۵۰۰ نویسه):",
     "changenote_success":           "✅ یادداشت ذخیره شد.",
     "changenote_too_long":          "❌ متن یادداشت خیلی طولانی است (حداکثر ۵۰۰ نویسه). دوباره ارسال کنید:",
+
+    "changeloc_select":             "📍 سرور جدید را برای سرویس <b>{name}</b> انتخاب کنید:\n\n⚠️ حجم باقی‌مانده و زمان انقضا حفظ می‌شوند، ولی لینک اشتراک جدید می‌شود.",
+    "changeloc_no_servers":         "❌ در حال حاضر سرور دیگری برای انتقال موجود نیست.",
+    "changeloc_confirm":            "📍 انتقال سرویس از <b>{from_server}</b> به <b>{to_server}</b>؟\n\n⚠️ لینک اشتراک فعلی از کار می‌افتد و لینک جدید دریافت می‌کنید.",
+    "changeloc_pending":            "⏳ درخواست تغییر لوکیشن ثبت شد و پس از تایید ادمین اعمال می‌شود.",
+    "changeloc_processing":         "⏳ در حال انتقال سرویس...",
+    "changeloc_success":            "✅ سرویس با موفقیت به <b>{server}</b> منتقل شد!\n\n🔗 لینک اشتراک جدید:\n<code>{url}</code>",
+    "changeloc_error":              "❌ خطا در تغییر لوکیشن: {error}",
+    "changeloc_admin_request":      "📍 درخواست تغییر لوکیشن\n\n👤 کاربر: {user_id}\n📦 سرویس: #{order_id}\n🔄 از {from_server} به {to_server}",
+    "changeloc_admin_approved":     "✅ انتقال انجام شد.",
+    "changeloc_admin_rejected":     "❌ درخواست رد شد.",
+    "changeloc_user_approved":      "✅ درخواست تغییر لوکیشن شما تایید شد و سرویس به <b>{server}</b> منتقل شد!\n\n🔗 لینک اشتراک جدید:\n<code>{url}</code>",
+    "changeloc_user_rejected":      "❌ درخواست تغییر لوکیشن شما رد شد.",
+    "changeloc_already_pending":    "⏳ شما یک درخواست تغییر لوکیشن در انتظار تایید دارید.",
+    "changeloc_already_processed":  "⚠️ این درخواست قبلاً پردازش شده.",
     # ─── پنل ادمین (admin.py) ─────────────────────────────────────────────
     "admin_panel_title":              "⚙️ پنل ادمین",
     "admin_general_title":            "⚙️ تنظیمات عمومی",
@@ -1338,11 +1365,13 @@ async def get_free_test_servers():
 _SERVICE_SELECT = """
     SELECT o.*,
         COALESCE(p.name, '🎁 تست رایگان') as plan_name,
-        COALESCE(s1.name, s2.name)         as server_name,
-        COALESCE(s1.panel_url, s2.panel_url)     as panel_url,
-        COALESCE(s1.panel_token, s2.panel_token) as panel_token
+        COALESCE(s0.id, s1.id, s2.id)      as server_id,
+        COALESCE(s0.name, s1.name, s2.name)      as server_name,
+        COALESCE(s0.panel_url, s1.panel_url, s2.panel_url)       as panel_url,
+        COALESCE(s0.panel_token, s1.panel_token, s2.panel_token) as panel_token
     FROM orders o
     LEFT JOIN plans   p  ON o.plan_id = p.id
+    LEFT JOIN servers s0 ON o.location_server_id = s0.id
     LEFT JOIN servers s1 ON p.server_id = s1.id
     LEFT JOIN servers s2 ON o.free_test_server_id = s2.id
 """
@@ -2127,6 +2156,128 @@ async def update_extra_volume_request(req_id: int, status: str, receipt_file_id:
         await db.commit()
 
 
+# ─── تغییر لوکیشن سرویس ───────────────────────
+
+
+async def create_location_change_request(user_id: int, order_id: int,
+                                         from_server_id: int, to_server_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO location_change_requests (user_id, order_id, from_server_id, to_server_id) "
+            "VALUES (?,?,?,?)",
+            (user_id, order_id, from_server_id, to_server_id)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+
+async def get_location_change_request(req_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("""
+            SELECT r.*,
+                   sf.name AS from_server_name,
+                   st.name AS to_server_name,
+                   o.vpn_username, o.user_id AS service_user_id
+            FROM location_change_requests r
+            LEFT JOIN servers sf ON r.from_server_id = sf.id
+            LEFT JOIN servers st ON r.to_server_id = st.id
+            JOIN orders o ON r.order_id = o.id
+            WHERE r.id = ?
+        """, (req_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def get_pending_location_change(order_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT * FROM location_change_requests WHERE order_id=? AND status='pending'",
+            (order_id,)
+        )
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def update_location_change_request(req_id: int, status: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE location_change_requests SET status=? WHERE id=?", (status, req_id)
+        )
+        await db.commit()
+
+
+async def perform_location_change(order_id: int, to_server_id: int) -> dict:
+    """جابجایی واقعی سرویس بین دو پنل ربکا — حجم باقی‌مانده و انقضا حفظ می‌شن.
+
+    یوزر معادل روی سرور مقصد ساخته می‌شه، یوزر قبلی حذف می‌شه و
+    اطلاعات جدید روی سفارش ذخیره می‌شه. هم بات هم پنل همین تابع رو صدا می‌زنن.
+    خروجی: {"vpn_username", "subscription_url"}
+    """
+    import time as _time
+    import json as _json
+    from shared_lib.rebecca_api import RebeccaAPI
+
+    service = await get_service_by_order(order_id)
+    if not service or not service["vpn_username"]:
+        raise ValueError("سرویس یا یوزرنیم VPN پیدا نشد")
+
+    target = await get_server(to_server_id)
+    if not target or not target["is_active"]:
+        raise ValueError("سرور مقصد در دسترس نیست")
+
+    service_ids = _json.loads(target["service_ids"] or "[]")
+    if not service_ids:
+        raise ValueError("سرور مقصد سرویس پیکربندی‌شده ندارد")
+
+    old_api = RebeccaAPI(service["panel_url"], service["panel_token"])
+    new_api = RebeccaAPI(target["panel_url"], target["panel_token"])
+
+    # وضعیت زنده از سرور فعلی — مبنای حجم و زمان باقی‌مانده
+    live = await old_api.get_user(service["vpn_username"])
+    data_limit = live.get("data_limit") or 0
+    used = live.get("used_traffic") or 0
+    expire_ts = live.get("expire") or 0
+
+    remaining_gb = 0 if data_limit == 0 else max(data_limit - used, 0) / (1024 ** 3)
+    now = int(_time.time())
+    remaining_hours = 0 if expire_ts == 0 else max(expire_ts - now, 0) / 3600
+    if expire_ts and remaining_hours == 0:
+        raise ValueError("سرویس منقضی شده — قابل انتقال نیست")
+
+    # اولین سرویس معتبر پنل مقصد
+    live_services = await new_api.get_services()
+    live_ids = {s["id"] for s in live_services}
+    service_id = next((sid for sid in service_ids if sid in live_ids), None)
+    if service_id is None:
+        raise ValueError("سرویس‌های تنظیم‌شده روی سرور مقصد در پنل موجود نیستند")
+
+    user_data = await new_api.create_user(
+        service_id=service_id,
+        data_limit_gb=remaining_gb,
+        duration_hours=remaining_hours,
+    )
+    new_username = user_data.get("username", "")
+    sub_path = user_data.get("subscription_url", "")
+    new_sub_url = await new_api.get_subscription_url(sub_path)
+
+    # حذف یوزر قدیمی — اگه نشد، انتقال رو خراب نمی‌کنیم
+    try:
+        await old_api.delete_user(service["vpn_username"])
+    except Exception:
+        pass
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE orders SET location_server_id=?, vpn_username=?, subscription_url=? WHERE id=?",
+            (to_server_id, new_username, new_sub_url, order_id)
+        )
+        await db.commit()
+
+    return {"vpn_username": new_username, "subscription_url": new_sub_url}
+
+
 # ─── کیبورد ادیتور ───────────────────────────
 
 _DEFAULT_KEYBOARDS: dict[str, list[tuple]] = {
@@ -2428,6 +2579,7 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     ("extra_time",                   "⏱ افزودن زمان",                  "extra_time_{id}",               "service"),
     ("changestatus",                 "⏸️ توقف/فعال‌سازی",              "changestatus_{id}",             "service"),
     ("changenote",                   "✏️ یادداشت",                     "changenote_{id}",               "service"),
+    ("changeloc",                    "📍 تغییر لوکیشن",                "changeloc_{id}",                "service"),
 ]
 
 

@@ -8,6 +8,7 @@ from keyboards import (
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
     user_service_detail_keyboard, confirm_delete_service_keyboard,
     confirm_changestatus_keyboard, cancel_changenote_keyboard,
+    changeloc_servers_keyboard, confirm_changeloc_keyboard, admin_changeloc_keyboard,
     wallet_keyboard, admin_topup_keyboard,
     free_test_servers_keyboard, free_test_confirm_keyboard
 )
@@ -21,6 +22,9 @@ from shared_lib.db import (
     get_free_test_uses, increment_free_test_uses,
     get_text, get_keyboard_buttons, set_service_note,
     get_selected_payment_card,
+    create_location_change_request, get_location_change_request,
+    get_pending_location_change, update_location_change_request,
+    perform_location_change,
 )
 from shared_lib.rebecca_api import RebeccaAPI
 
@@ -585,6 +589,161 @@ def register_user_handlers(dp):
         await set_service_note(order_id, note)
         await state.clear()
         await message.answer(get_text("changenote_success"))
+
+    # ─── تغییر لوکیشن ─────────────────────────────
+
+    @dp.callback_query(F.data.startswith("chgloc_srv_"))
+    async def changeloc_pick_server(callback: types.CallbackQuery):
+        order_id_s, server_id_s = callback.data.replace("chgloc_srv_", "").rsplit("_", 1)
+        order_id, server_id = int(order_id_s), int(server_id_s)
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        from shared_lib.db import get_server
+        target = await get_server(server_id)
+        if not target or not target["is_active"]:
+            await callback.answer(get_text("changeloc_no_servers"), show_alert=True)
+            return
+        text = get_text("changeloc_confirm",
+                        from_server=order["server_name"], to_server=target["name"])
+        await _edit_or_replace(callback, text, confirm_changeloc_keyboard(order_id, server_id))
+        await callback.answer()
+
+    @dp.callback_query(F.data.startswith("chgloc_go_"))
+    async def changeloc_go(callback: types.CallbackQuery):
+        order_id_s, server_id_s = callback.data.replace("chgloc_go_", "").rsplit("_", 1)
+        order_id, server_id = int(order_id_s), int(server_id_s)
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        if await get_pending_location_change(order_id):
+            await callback.answer(get_text("changeloc_already_pending"), show_alert=True)
+            return
+
+        need_admin = (await get_setting("changeloc_need_admin") or "1") == "1"
+        if not need_admin:
+            await callback.answer()
+            await callback.message.edit_text(get_text("changeloc_processing"))
+            try:
+                result = await perform_location_change(order_id, server_id)
+            except Exception as e:
+                from bot import logger
+                logger.error(f"خطا در تغییر لوکیشن سفارش #{order_id}: {e}")
+                await callback.message.edit_text(
+                    get_text("changeloc_error", error=str(e)),
+                    reply_markup=user_service_detail_keyboard(order_id, order["subscription_url"]),
+                    parse_mode="HTML"
+                )
+                return
+            from shared_lib.db import get_server
+            target = await get_server(server_id)
+            await callback.message.edit_text(
+                get_text("changeloc_success", server=target["name"], url=result["subscription_url"]),
+                reply_markup=user_service_detail_keyboard(order_id, result["subscription_url"]),
+                parse_mode="HTML"
+            )
+            return
+
+        req_id = await create_location_change_request(
+            callback.from_user.id, order_id, order["server_id"], server_id
+        )
+        from bot import bot, ADMIN_IDS, logger
+        from shared_lib.db import get_server
+        target = await get_server(server_id)
+        admin_text = get_text(
+            "changeloc_admin_request",
+            user_id=callback.from_user.id, order_id=order_id,
+            from_server=order["server_name"], to_server=target["name"],
+        )
+        for admin_id in ADMIN_IDS:
+            try:
+                await bot.send_message(admin_id, admin_text, reply_markup=admin_changeloc_keyboard(req_id))
+            except Exception as exc:
+                logger.error(f"خطا در اطلاع‌رسانی تغییر لوکیشن به ادمین {admin_id}: {exc}")
+        await callback.answer()
+        await _edit_or_replace(
+            callback,
+            get_text("changeloc_pending"),
+            user_service_detail_keyboard(order_id, order["subscription_url"])
+        )
+
+    @dp.callback_query(F.data.startswith("chgloc_approve_"))
+    async def changeloc_approve(callback: types.CallbackQuery):
+        from bot import is_admin, bot, logger
+        if not is_admin(callback.from_user.id):
+            await callback.answer()
+            return
+        req_id = int(callback.data.replace("chgloc_approve_", ""))
+        req = await get_location_change_request(req_id)
+        if not req or req["status"] != "pending":
+            await callback.answer(get_text("changeloc_already_processed"), show_alert=True)
+            return
+        await callback.answer()
+        try:
+            result = await perform_location_change(req["order_id"], req["to_server_id"])
+        except Exception as e:
+            logger.error(f"خطا در اعمال تغییر لوکیشن درخواست #{req_id}: {e}")
+            await callback.message.edit_text(
+                callback.message.text + "\n\n" + get_text("changeloc_error", error=str(e))
+            )
+            return
+        await update_location_change_request(req_id, "approved")
+        await callback.message.edit_text(
+            callback.message.text + "\n\n" + get_text("changeloc_admin_approved")
+        )
+        try:
+            await bot.send_message(
+                req["user_id"],
+                get_text("changeloc_user_approved",
+                         server=req["to_server_name"], url=result["subscription_url"]),
+                parse_mode="HTML"
+            )
+        except Exception as exc:
+            logger.error(f"خطا در اطلاع‌رسانی تایید تغییر لوکیشن به کاربر {req['user_id']}: {exc}")
+
+    @dp.callback_query(F.data.startswith("chgloc_reject_"))
+    async def changeloc_reject(callback: types.CallbackQuery):
+        from bot import is_admin, bot, logger
+        if not is_admin(callback.from_user.id):
+            await callback.answer()
+            return
+        req_id = int(callback.data.replace("chgloc_reject_", ""))
+        req = await get_location_change_request(req_id)
+        if not req or req["status"] != "pending":
+            await callback.answer(get_text("changeloc_already_processed"), show_alert=True)
+            return
+        await update_location_change_request(req_id, "rejected")
+        await callback.answer()
+        await callback.message.edit_text(
+            callback.message.text + "\n\n" + get_text("changeloc_admin_rejected")
+        )
+        try:
+            await bot.send_message(req["user_id"], get_text("changeloc_user_rejected"))
+        except Exception as exc:
+            logger.error(f"خطا در اطلاع‌رسانی رد تغییر لوکیشن به کاربر {req['user_id']}: {exc}")
+
+    @dp.callback_query(F.data.startswith("changeloc_"))
+    async def changeloc_start(callback: types.CallbackQuery):
+        order_id = int(callback.data.replace("changeloc_", ""))
+        order = await get_user_service(order_id, callback.from_user.id)
+        if not order:
+            await callback.answer(get_text("service_not_found"), show_alert=True)
+            return
+        if await get_pending_location_change(order_id):
+            await callback.answer(get_text("changeloc_already_pending"), show_alert=True)
+            return
+        servers = [s for s in await get_servers(only_active=True) if s["id"] != order["server_id"]]
+        if not servers:
+            await callback.answer(get_text("changeloc_no_servers"), show_alert=True)
+            return
+        await _edit_or_replace(
+            callback,
+            get_text("changeloc_select", name=order["vpn_username"]),
+            changeloc_servers_keyboard(order_id, servers)
+        )
+        await callback.answer()
 
     @dp.callback_query(F.data.startswith("sub_link_"))
     async def send_sub_link(callback: types.CallbackQuery):

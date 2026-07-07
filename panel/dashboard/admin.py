@@ -7,7 +7,7 @@ from .models import (
     DiscountCodes, TopUpRequests, Transactions,
     Referrals, Tickets, Tutorials, Faqs, Settings,
     ExtraVolumePlans, ExtraVolumeRequests,
-    ExtraTimePlans, ExtraTimeRequests,
+    ExtraTimePlans, ExtraTimeRequests, LocationChangeRequests,
     KeyboardButtons, KeyboardActions, PaymentCards, RequiredChannels,
 )
 
@@ -235,4 +235,34 @@ class ExtraTimeRequestsAdmin(admin.ModelAdmin):
         for req_obj in queryset:
             if req_obj.status not in ("approved", "rejected"):
                 async_to_sync(update_extra_time_request)(req_obj.id, "rejected")
+        messages.success(request, f"{queryset.count()} درخواست رد شد.")
+
+
+@admin.register(LocationChangeRequests)
+class LocationChangeRequestsAdmin(admin.ModelAdmin):
+    list_display = ("id", "user_id", "order_id", "from_server_id", "to_server_id", "status", "created_at")
+    list_filter  = ("status",)
+    actions      = ["approve_requests", "reject_requests"]
+
+    @admin.action(description="✅ تایید و انتقال سرویس")
+    def approve_requests(self, request, queryset):
+        from shared_lib.db import perform_location_change, update_location_change_request
+        for req_obj in queryset:
+            if req_obj.status in ("approved", "rejected"):
+                messages.warning(request, f"درخواست #{req_obj.id} قبلاً پردازش شده.")
+                continue
+            try:
+                async_to_sync(perform_location_change)(req_obj.order_id, req_obj.to_server_id)
+            except Exception as e:
+                messages.error(request, f"درخواست #{req_obj.id} — خطا: {e}")
+                continue
+            async_to_sync(update_location_change_request)(req_obj.id, "approved")
+            messages.success(request, f"✅ سرویس سفارش #{req_obj.order_id} منتقل شد.")
+
+    @admin.action(description="❌ رد کردن درخواست‌ها")
+    def reject_requests(self, request, queryset):
+        from shared_lib.db import update_location_change_request
+        for req_obj in queryset:
+            if req_obj.status not in ("approved", "rejected"):
+                async_to_sync(update_location_change_request)(req_obj.id, "rejected")
         messages.success(request, f"{queryset.count()} درخواست رد شد.")

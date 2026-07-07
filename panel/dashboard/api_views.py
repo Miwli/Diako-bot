@@ -1125,6 +1125,47 @@ def extra_request_action(request):
             _send_telegram(req['user_id'], '❌ درخواست افزودن زمان رد شد.')
         return JsonResponse({'ok': True})
 
+    if action == 'approve_lc':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        from shared_lib.db import (get_location_change_request, update_location_change_request,
+                                   perform_location_change, get_text)
+        req = async_to_sync(get_location_change_request)(int(req_id))
+        if not req:
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if req['status'] != 'pending':
+            return JsonResponse({'ok': False, 'error': 'قبلاً پردازش شده'})
+        try:
+            result = async_to_sync(perform_location_change)(req['order_id'], req['to_server_id'])
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': f'خطا در انتقال: {e}'})
+        async_to_sync(update_location_change_request)(int(req_id), 'approved')
+        _send_telegram(req['user_id'], get_text(
+            'changeloc_user_approved',
+            server=req['to_server_name'], url=result['subscription_url']
+        ))
+        return JsonResponse({'ok': True})
+
+    if action == 'reject_lc':
+        if not req_id:
+            return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
+        from shared_lib.db import (get_location_change_request, update_location_change_request,
+                                   get_text)
+        req = async_to_sync(get_location_change_request)(int(req_id))
+        if not req:
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if req['status'] != 'pending':
+            return JsonResponse({'ok': False, 'error': 'قبلاً پردازش شده'})
+        async_to_sync(update_location_change_request)(int(req_id), 'rejected')
+        _send_telegram(req['user_id'], get_text('changeloc_user_rejected'))
+        return JsonResponse({'ok': True})
+
+    if action == 'toggle_changeloc_admin':
+        from shared_lib.db import get_setting as _gs, set_setting as _ss
+        current = (async_to_sync(_gs)('changeloc_need_admin') or '1') == '1'
+        async_to_sync(_ss)('changeloc_need_admin', '0' if current else '1')
+        return JsonResponse({'ok': True, 'need_admin': not current})
+
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 

@@ -352,3 +352,21 @@ class ExtraTimeRequests(models.Model):
 
     def __str__(self):
         return f"درخواست #{self.pk} — کاربر {self.user_id} — وضعیت: {self.status}"
+
+
+class LocationChangeRequests(models.Model):
+    user_id        = models.IntegerField()
+    order_id       = models.IntegerField()
+    from_server_id = models.IntegerField(blank=True, null=True)
+    to_server_id   = models.IntegerField()
+    status         = models.TextField(default='pending')
+    created_at     = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'location_change_requests'
+        verbose_name = 'درخواست تغییر لوکیشن'
+        verbose_name_plural = 'درخواست‌های تغییر لوکیشن'
+
+    def __str__(self):
+        return f"درخواست #{self.pk} — کاربر {self.user_id} — وضعیت: {self.status}"

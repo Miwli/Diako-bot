@@ -12,7 +12,8 @@ from shared_lib.db import (
 from .models import (
     Orders, Servers, Users, Plans, DiscountCodes, TopUpRequests, Transactions,
     Tutorials, Faqs, ExtraVolumePlans, ExtraVolumeRequests,
-    ExtraTimePlans, ExtraTimeRequests, PaymentCards, RequiredChannels,
+    ExtraTimePlans, ExtraTimeRequests, LocationChangeRequests,
+    PaymentCards, RequiredChannels,
 )
 
 
@@ -321,13 +322,21 @@ def tutorials_view(request):
 def extra_requests_view(request):
     ev_requests = list(ExtraVolumeRequests.objects.all().order_by('-id')[:20])
     et_requests = list(ExtraTimeRequests.objects.all().order_by('-id')[:20])
+    lc_requests = list(LocationChangeRequests.objects.all().order_by('-id')[:20])
     ev_plans = list(ExtraVolumePlans.objects.all().order_by('order_index'))
     et_plans = list(ExtraTimePlans.objects.all().order_by('order_index'))
+    server_names = {s.id: s.name for s in Servers.objects.all()}
+    for r in lc_requests:
+        r.from_server_name = server_names.get(r.from_server_id, f"#{r.from_server_id}")
+        r.to_server_name = server_names.get(r.to_server_id, f"#{r.to_server_id}")
+    changeloc_need_admin = (async_to_sync(get_setting)('changeloc_need_admin') or '1') == '1'
     return render(request, 'diako/extra_requests.html', {
         'ev_requests': ev_requests,
         'et_requests': et_requests,
+        'lc_requests': lc_requests,
         'ev_plans': ev_plans,
         'et_plans': et_plans,
+        'changeloc_need_admin': changeloc_need_admin,
         'admin_username': request.user.username,
     })
 

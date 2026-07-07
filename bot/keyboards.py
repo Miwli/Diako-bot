@@ -511,6 +511,32 @@ def cancel_changenote_keyboard(order_id: int) -> InlineKeyboardMarkup:
     ])
 
 
+def changeloc_servers_keyboard(order_id: int, servers: list) -> InlineKeyboardMarkup:
+    # لیست داینامیک — از جدول سرورها میاد، نه از keyboard_buttons
+    rows = [
+        [InlineKeyboardButton(text=s["name"], callback_data=f"chgloc_srv_{order_id}_{s['id']}")]
+        for s in servers
+    ]
+    rows.append([InlineKeyboardButton(text="❌ انصراف", callback_data=f"my_service_{order_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def confirm_changeloc_keyboard(order_id: int, server_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ بله، منتقل کن", callback_data=f"chgloc_go_{order_id}_{server_id}"),
+            InlineKeyboardButton(text="❌ انصراف",        callback_data=f"my_service_{order_id}"),
+        ],
+    ])
+
+
+def admin_changeloc_keyboard(req_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ تایید انتقال", callback_data=f"chgloc_approve_{req_id}")],
+        [InlineKeyboardButton(text="❌ رد",            callback_data=f"chgloc_reject_{req_id}")],
+    ])
+
+
 # ─── سفارش‌ها ──────────────────────────────────────────────────────────────────
 
 def admin_order_keyboard(order_id) -> InlineKeyboardMarkup:
