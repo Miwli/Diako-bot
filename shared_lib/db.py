@@ -2884,7 +2884,7 @@ async def get_tutorials_as_buttons() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            "SELECT id, title FROM tutorials WHERE is_active=1 ORDER BY order_index, id LIMIT 8"
+            "SELECT id, title FROM tutorials WHERE is_active=1 ORDER BY order_index, id"
         )
         rows = await cur.fetchall()
     result = [
@@ -2902,7 +2902,7 @@ async def get_faqs_as_buttons() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            "SELECT id, question FROM faqs WHERE is_active=1 ORDER BY order_index, id LIMIT 8"
+            "SELECT id, question FROM faqs WHERE is_active=1 ORDER BY order_index, id"
         )
         rows = await cur.fetchall()
     result = [
