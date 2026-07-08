@@ -144,7 +144,7 @@
   top: 50%;
   transform: translateY(-50%);
   width: 56px;
-  background: rgba(255,255,255,0.04);
+  background: var(--surface);
   backdrop-filter: blur(24px);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 28px;
@@ -154,6 +154,7 @@
   padding: 12px 0;
   gap: 2px;
   z-index: 100;
+  box-shadow: var(--edge-soft), var(--elev-2);
 }
 
 .sidebar-logo {
@@ -210,7 +211,8 @@
 
 .nav-item.active {
   color: var(--accent);
-  background: var(--accent-dim);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),0.2), rgba(var(--accent-rgb),0.08));
+  box-shadow: var(--edge-soft), 0 3px 10px rgba(var(--accent-rgb),0.25);
 }
 
 .nav-item i { font-size: 18px; }
@@ -253,12 +255,6 @@
 
 .nav-item:hover::after { opacity: 1; }
 
-/* ════════════════════════════════
-   CARD SHADOWS
-════════════════════════════════ */
-.card, .dash-card, [class*="card"] {
-  box-shadow: 0 4px 24px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.04) inset;
-}
 
 /* ════════════════════════════════
    DASH BODY
@@ -296,7 +292,8 @@
   padding: 10px 16px;
   border: 1px solid rgba(255,255,255,0.13);
   border-radius: 16px;
-  background: rgba(255,255,255,0.04);
+  background: var(--surface);
+  box-shadow: var(--edge-soft), var(--elev-1);
 }
 
 .topbar-left {
@@ -330,7 +327,7 @@
   height: 32px;
   border-radius: 9px;
   border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -338,12 +335,14 @@
   color: var(--text-muted);
   font-size: 16px;
   font-family: inherit;
-  transition: color 200ms, background 200ms;
+  box-shadow: var(--edge-soft), 0 2px 6px rgba(0,0,0,0.18);
+  transition: color 200ms, background 200ms, transform 150ms, box-shadow 150ms;
   text-decoration: none;
   position: relative;
 }
 
-.ctrl-btn:hover { color: var(--accent); background: var(--accent-dim); }
+.ctrl-btn:hover { color: var(--accent); background: var(--accent-dim); transform: translateY(-1px); }
+.ctrl-btn:active { transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
 
 .lang-btn {
   font-size: 10px;
@@ -375,7 +374,7 @@
   padding: 6px;
   min-width: 150px;
   display: none;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: var(--elev-2), var(--edge-soft);
   z-index: 300;
 }
 
@@ -437,14 +436,16 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: var(--edge-soft), var(--elev-2);
 }
 
 /* کارت‌های داخل container */
 .inner-card {
-  background: rgba(255,255,255,0.04);
+  background: var(--surface);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 14px;
   padding: 14px;
+  box-shadow: var(--edge-soft), var(--elev-1);
 }
 
 /* ════════════════════════════════
@@ -882,7 +883,7 @@
 }
 
 .notif-card {
-  background: rgba(255,255,255,0.06);
+  background: var(--surface-raised);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 14px;
@@ -891,6 +892,7 @@
   max-width: 320px;
   pointer-events: all;
   cursor: pointer;
+  box-shadow: var(--edge-soft), var(--elev-2);
   animation: notifSlideIn 0.35s ease forwards;
 }
 
@@ -995,22 +997,10 @@
 .form-input:focus     { border-color: var(--accent); }
 .form-input::placeholder { color: var(--text-muted); }
 
-.btn-primary {
+.login-card .btn-primary {
   width: 100%;
-  padding: 10px;
-  border-radius: 9px;
-  border: none;
-  background: var(--accent);
-  color: #000;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 200ms;
   margin-top: 4px;
 }
-
-.btn-primary:hover { opacity: 0.85; }
 
 .error-msg {
   font-size: 12px;

@@ -1,10 +1,10 @@
-{% load static %}
+{% load static i18n %}
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'en' %}ltr{% else %}rtl{% endif %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}دیاکو{% endblock %}</title>
+  <title>{% block title %}{% trans "دیاکو" %}{% endblock %}</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +18,7 @@
   <!-- Diako CSS -->
   <link rel="stylesheet" href="{% static 'diako/css/themes.css' %}">
   <link rel="stylesheet" href="{% static 'diako/css/layout.css' %}">
+  <link rel="stylesheet" href="{% static 'diako/css/components.css' %}">
   <link rel="stylesheet" href="{% static 'diako/css/animations.css' %}">
 
   {% block extra_head %}{% endblock %}
@@ -29,11 +30,110 @@
   </div>
 </div>
 
-{% block body %}{% endblock %}
+{% block body %}
+<div class="dash-wrap">
+  <div class="sidebar-overlay"></div>
+  <aside class="sidebar">
+    <div class="sidebar-logo">د</div>
+    <div class="sidebar-divider"></div>
+    <nav class="sidebar-nav">
+      <a href="{% url 'diako_dashboard' %}" class="nav-item {% if nav == 'dashboard' %}active{% endif %}" data-tooltip="{% trans 'داشبورد' %}"><i class="ti ti-layout-dashboard"></i></a>
+      <a href="{% url 'diako_servers' %}" class="nav-item {% if nav == 'sales' %}active{% endif %}" data-tooltip="{% trans 'زیرساخت' %}"><i class="ti ti-server-2"></i></a>
+      <a href="{% url 'diako_orders' %}" class="nav-item {% if nav == 'orders' %}active{% endif %}" data-tooltip="{% trans 'سفارش‌ها' %}"><i class="ti ti-package"></i><span class="nav-badge order-badge hidden"></span></a>
+      <a href="{% url 'diako_users' %}" class="nav-item {% if nav == 'users' %}active{% endif %}" data-tooltip="{% trans 'کاربران' %}"><i class="ti ti-users"></i></a>
+      <a href="{% url 'diako_finance' %}" class="nav-item {% if nav == 'finance' %}active{% endif %}" data-tooltip="{% trans 'مالی' %}"><i class="ti ti-wallet"></i></a>
+      <a href="{% url 'diako_settings_bot' %}" class="nav-item {% if nav == 'settings' %}active{% endif %}" data-tooltip="{% trans 'تنظیمات' %}"><i class="ti ti-adjustments-horizontal"></i></a>
+      <a href="{% url 'diako_keyboard_editor' %}" class="nav-item {% if nav == 'customize' %}active{% endif %}" data-tooltip="{% trans 'شخصی‌سازی' %}"><i class="ti ti-palette"></i></a>
+    </nav>
+  </aside>
+
+  <div class="dash-body">
+    <div class="dash-topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
+        <h1 class="page-title">{% block page_title %}{{ page_title }}{% endblock %}</h1>
+      </div>
+      <div class="topbar-right">
+        <span class="bot-status" id="bot-status" title="{% trans 'وضعیت ربات' %}">
+          <span class="bs-dot"></span><span class="bs-label">{% trans 'ربات' %}</span>
+        </span>
+        <button class="ctrl-btn" onclick="openPalette()" title="{% trans 'جستجو' %} (Ctrl+K)"><i class="ti ti-search"></i></button>
+        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
+        <form action="{% url 'set_language' %}" method="post" style="display:contents">
+          {% csrf_token %}
+          <input type="hidden" name="language" value="{% if LANGUAGE_CODE == 'en' %}fa{% else %}en{% endif %}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button class="ctrl-btn lang-btn" type="submit">{% if LANGUAGE_CODE == 'en' %}فا{% else %}EN{% endif %}</button>
+        </form>
+        <div class="avatar-wrap">
+          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
+          <div class="avatar-menu" id="avatar-menu">
+            <div class="avatar-menu-name">{{ admin_username }}</div>
+            <a href="/admin/" class="avatar-menu-item" style="color: var(--text-muted)"><i class="ti ti-settings"></i><span>{% trans 'ادمین جنگو' %}</span></a>
+            <a href="{% url 'diako_logout' %}" class="avatar-menu-item"><i class="ti ti-logout"></i><span>{% trans 'خروج' %}</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if tabs %}
+    <div class="page-tabs anim-card">
+      {% for t in tabs %}
+      <a href="{{ t.url }}" class="tab-link {% if t.active %}active{% endif %}">
+        <i class="ti {{ t.icon }}"></i>{{ t.label }}{% if t.key == 'orders' %}<span class="tab-badge order-badge hidden"></span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="dash-container">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{# مودال‌ها و drawer ها بیرون از قاب — backdrop-filter کانتینر، position:fixed داخلش را می‌شکند #}
+{% block modals %}{% endblock %}
+
+<!-- Command Palette -->
+<div class="palette-bg" id="palette">
+  <div class="palette-box">
+    <div class="palette-head">
+      <i class="ti ti-search"></i>
+      <input class="palette-input" id="palette-input" placeholder="{% trans 'جستجوی کاربر، سفارش، سرور، پلن…' %}" autocomplete="off">
+    </div>
+    <div class="palette-list" id="palette-list">
+      <div class="palette-empty">{% trans 'برای جستجو تایپ کنید' %}</div>
+    </div>
+    <div class="palette-foot">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> {% trans 'حرکت' %}</span>
+      <span><kbd>Enter</kbd> {% trans 'باز کردن' %}</span>
+      <span><kbd>Esc</kbd> {% trans 'بستن' %}</span>
+    </div>
+  </div>
+</div>
 
 <!-- Notification Stack -->
 <div id="notif-stack" class="notif-stack"></div>
 
+<script>
+window.DIAKO_I18N = {
+  newOrder: "{% trans 'سفارش جدید' %}",
+  newOrders: "{% trans 'سفارش جدید' %}",
+  toman: "{% trans 'تومان' %}",
+  botOnline: "{% trans 'آنلاین' %}",
+  botOffline: "{% trans 'آفلاین' %}",
+  noResults: "{% trans 'چیزی پیدا نشد' %}",
+  typeToSearch: "{% trans 'برای جستجو تایپ کنید' %}",
+  kindUser: "{% trans 'کاربر' %}",
+  kindOrder: "{% trans 'سفارش' %}",
+  kindServer: "{% trans 'سرور' %}",
+  kindPlan: "{% trans 'پلن' %}",
+  error: "{% trans 'خطا' %}",
+  success: "{% trans 'انجام شد' %}",
+};
+</script>
 <script src="{% static 'diako/js/app.js' %}"></script>
 {% block extra_scripts %}{% endblock %}
 </body>

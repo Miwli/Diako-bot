@@ -1,0 +1,1693 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: diako-panel\n"
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid " برای همیشه حذف شود؟ این کار قابل بازگشت نیست."
+msgstr " will be permanently deleted. This cannot be undone."
+
+msgid " حذف شد."
+msgstr " deleted."
+
+msgid " رد شد."
+msgstr " rejected."
+
+msgid " — موقعیت تقریبی"
+msgstr " — approximate location"
+
+msgid "(حباب آبی) کلیک کنید تا آن را ویرایش کنید"
+msgstr "(blue bubble) click to edit it"
+
+msgid "«کاتالوگ دکمه‌ها»"
+msgstr "”Button Catalog”"
+
+msgid "آخرین بروزرسانی: "
+msgstr "Last update: "
+
+msgid "آخرین سفارش‌ها"
+msgstr "Recent Orders"
+
+msgid "آدرس جدید"
+msgstr "New address"
+
+msgid "آدرس پنل"
+msgstr "Panel URL"
+
+msgid "آفلاین"
+msgstr "Offline"
+
+msgid "آفلاین/خطا"
+msgstr "Offline/Error"
+
+msgid "آمار فروش — ۷ روز گذشته"
+msgstr "Sales — Last 7 Days"
+
+msgid "آمار و گزارش"
+msgstr "Stats & Reports"
+
+msgid "آموزش"
+msgstr "Tutorial"
+
+msgid "آموزش جدید"
+msgstr "New tutorial"
+
+msgid "آموزشی ثبت نشده"
+msgstr "No tutorials yet"
+
+msgid "آموزش‌ها"
+msgstr "Tutorials"
+
+msgid "آنبن کردن"
+msgstr "Unban"
+
+msgid "آنلاین"
+msgstr "Online"
+
+msgid "آیدی تلگرام"
+msgstr "Telegram ID"
+
+msgid "آیدی عددی (مثل -1001234567890) یا یوزرنیم (مثل @mychannel)"
+msgstr "Numeric ID (like -1001234567890) or username (like @mychannel)"
+
+msgid "آیدی، نام یا @username..."
+msgstr "ID, name or @username..."
+
+msgid "اتصال اولین سرور"
+msgstr "Connect first server"
+
+msgid "اتصال موفق"
+msgstr "Connected"
+
+msgid "ادمین"
+msgstr "Admin"
+
+msgid "ادمین اصلی"
+msgstr "Super Admin"
+
+msgid "ادمین جنگو"
+msgstr "Django Admin"
+
+msgid "ادیتور متن‌ها"
+msgstr "Text Editor"
+
+msgid "ادیتور کیبورد"
+msgstr "Keyboard Editor"
+
+msgid "ارتباط با سرور برقرار نشد"
+msgstr "Could not reach the server"
+
+msgid "ارسال"
+msgstr "Send"
+
+msgid "ارسال پیام"
+msgstr "Send message"
+
+msgid "از"
+msgstr "from"
+
+msgid "از آن ناحیه، دکمه‌ها را به ردیف‌های کیبورد بکشید."
+msgstr "Drag buttons from that area into keyboard rows."
+
+msgid "از سربرگ هر ردیف، آیکون حذف را بزنید."
+msgstr "Use the delete icon in each row’s header."
+
+msgid "استفاده"
+msgstr "Used"
+
+msgid "اشتراک تأیید شد"
+msgstr "Subscription approved"
+
+msgid "اضافه می‌شوند."
+msgstr "are added."
+
+msgid "اطلاعات VPN"
+msgstr "VPN Info"
+
+msgid "اطلاعات پرداخت"
+msgstr "Payment info"
+
+msgid "اعمال ایمپورت"
+msgstr "Apply import"
+
+msgid "افزودن"
+msgstr "Add"
+
+msgid "افزودن موجودی"
+msgstr "Add balance"
+
+msgid "افزودن کانال"
+msgstr "Add channel"
+
+msgid "انتخاب سرور"
+msgstr "Select server"
+
+msgid "انتخاب همه"
+msgstr "Select all"
+
+msgid "انتخاب پلن"
+msgstr "Select plan"
+
+msgid "انتخاب گروه"
+msgstr "Select group"
+
+msgid "انتخاب‌شده‌ها"
+msgstr "Selected"
+
+msgid "انجام شد"
+msgstr "Done"
+
+msgid "انصراف"
+msgstr "Cancel"
+
+msgid "انقضا"
+msgstr "Expiry"
+
+msgid "اولین آموزش"
+msgstr "First tutorial"
+
+msgid "اولین سرور ربکا رو وصل کن تا بتونی پلن بسازی و فروش رو شروع کنی."
+msgstr ""
+"Connect your first Rebecca server so you can create plans and start selling."
+
+msgid "اولین سوال"
+msgstr "First question"
+
+msgid "اولین فروش 🎉"
+msgstr "First sale 🎉"
+
+msgid "اولین پلن فروش رو بساز"
+msgstr "Create your first plan"
+
+msgid "اگر دکمه زیرمنو داشته باشد (مثل «کیف پول»)، به آن منو منتقل می‌شوید."
+msgstr "If a button has a submenu (like ”Wallet”), you’ll navigate into it."
+
+msgid "ایمپورت با موفقیت اعمال شد"
+msgstr "Import applied successfully"
+
+msgid "این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند"
+msgstr ""
+"This button has no navigation in the editor — it runs an action in the bot"
+
+msgid ""
+"این صفحه به شما امکان می‌دهد چینش دکمه‌های ربات تلگرام را به صورت بصری "
+"ویرایش کنید — دقیقاً همان‌طور که کاربر می‌بیند."
+msgstr ""
+"This page lets you visually edit the Telegram bot’s button layout — exactly "
+"as the user sees it."
+
+msgid "این منو دکمه‌ای ندارد"
+msgstr "This menu has no buttons"
+
+msgid ""
+"با کد تخفیف می‌تونی برای مناسبت‌ها یا کاربرهای خاص، خرید رو ارزون‌تر کنی."
+msgstr ""
+"Discount codes let you make purchases cheaper for occasions or specific "
+"users."
+
+msgid "با کلیک روی آن، یک منوی کشویی از پایین باز می‌شود."
+msgstr "Clicking it opens a bottom sheet menu."
+
+msgid "باز کردن"
+msgstr "Open"
+
+msgid "بازگردانی (Import)"
+msgstr "Restore (Import)"
+
+msgid "بازگشت آموزش‌ها"
+msgstr "Back to tutorials"
+
+msgid "بازگشت سوالات متداول"
+msgstr "Back to FAQ"
+
+msgid "بالا"
+msgstr "Up"
+
+msgid "برای جستجو تایپ کنید"
+msgstr "Type to search"
+
+msgid "برای فعال شدن پرداخت کارت‌به‌کارت، حداقل یک کارت اضافه کن."
+msgstr "Add at least one card to enable card-to-card payments."
+
+msgid ""
+"برای هر سرور، پلن‌هایی با قیمت و حجم دلخواه بساز تا کاربرها بتونن بخرن."
+msgstr ""
+"Create plans with custom pricing and traffic for each server so users can "
+"buy."
+
+msgid "بروزرسانی"
+msgstr "Refresh"
+
+msgid "بستن"
+msgstr "Close"
+
+msgid "بعد از انتخاب، «تایید» را بزنید — دکمه‌ها به ناحیه‌ی"
+msgstr "After selecting, press ”Confirm” — buttons are added to the"
+
+msgid "بعد از سفارش (ادمین)"
+msgstr "Post-order (admin)"
+
+msgid "بن"
+msgstr "Banned"
+
+msgid "بن کردن"
+msgstr "Ban"
+
+msgid "بن‌شده"
+msgstr "Banned"
+
+msgid "به"
+msgstr "to"
+
+msgid "بکاپ"
+msgstr "Backup"
+
+msgid "بکش و بچرخون — روی نود کلیک کن"
+msgstr "Drag to rotate — click a node"
+
+msgid "بیشترین خرید"
+msgstr "Top Buyers"
+
+msgid "تأیید"
+msgstr "Approve"
+
+msgid "تأیید تست رایگان"
+msgstr "Approve free test"
+
+msgid "تأیید حذف سرور"
+msgstr "Confirm server deletion"
+
+msgid "تأیید حذف سرویس"
+msgstr "Confirm service deletion"
+
+msgid "تأیید حذف پلن"
+msgstr "Confirm plan deletion"
+
+msgid "تأیید سفارش"
+msgstr "Approve order"
+
+msgid "تأیید شارژ"
+msgstr "Approve top-up"
+
+msgid "تاریخ"
+msgstr "Date"
+
+msgid "تاریخ انقضا (اختیاری — YYYY-MM-DD)"
+msgstr "Expiry date (optional — YYYY-MM-DD)"
+
+msgid "تاریخ انقضا تخفیف"
+msgstr "Discount expiry date"
+
+msgid "تاریخچه تراکنش‌ها"
+msgstr "Transaction history"
+
+msgid "تایید"
+msgstr "Approved"
+
+msgid "تایید از بات"
+msgstr "Approve via bot"
+
+msgid "تایید درخواست افزودن حجم؟ این عمل حجم را به سرویس کاربر اضافه می‌کند."
+msgstr ""
+"Approve extra volume request? This adds traffic to the user’s service."
+
+msgid ""
+"تایید درخواست افزودن زمان؟ این عمل زمان را به سرویس کاربر اضافه می‌کند."
+msgstr "Approve extra time request? This adds time to the user’s service."
+
+msgid "تایید درخواست شارژ؟"
+msgstr "Approve top-up request?"
+
+msgid "تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود."
+msgstr ""
+"Order approval (VPN account creation) is done via the Telegram bot admin "
+"panel."
+
+msgid "تایید شده"
+msgstr "Approved"
+
+msgid "تایید و انتقال"
+msgstr "Approve & migrate"
+
+msgid ""
+"تایید و انتقال سرویس؟ سرویس روی سرور جدید ساخته و از سرور قبلی حذف می‌شود."
+msgstr ""
+"Approve and migrate service? It will be created on the new server and "
+"removed from the old one."
+
+msgid "تایید‌شده"
+msgstr "Approved"
+
+msgid "ترافیک خروجی"
+msgstr "Upload traffic"
+
+msgid "ترافیک ورودی"
+msgstr "Download traffic"
+
+msgid "تراکنشی وجود ندارد"
+msgstr "No transactions"
+
+msgid "تراکنش‌ها"
+msgstr "Transactions"
+
+msgid "تراکنش‌های اخیر"
+msgstr "Recent Transactions"
+
+msgid "تست رایگان"
+msgstr "Free test"
+
+msgid "تست رایگان +۱"
+msgstr "Free test +1"
+
+msgid "تست رایگان عمومی"
+msgstr "Public free test"
+
+msgid "تصادفی"
+msgstr "Random"
+
+msgid "تغییر تم"
+msgstr "Toggle theme"
+
+msgid "تغییر وضعیت"
+msgstr "Toggle status"
+
+msgid "تمدید"
+msgstr "Renewal"
+
+msgid "تنظیمات"
+msgstr "Settings"
+
+msgid "تنظیمات بنر"
+msgstr "Banner settings"
+
+msgid "تنظیمات عمومی"
+msgstr "General settings"
+
+msgid "تنظیمات متن"
+msgstr "Text settings"
+
+msgid "تنظیمات معرف"
+msgstr "Referral settings"
+
+msgid "تنظیمات پشتیبانی"
+msgstr "Support settings"
+
+msgid "تنظیمات کارت"
+msgstr "Card settings"
+
+msgid "توضیحات"
+msgstr "Description"
+
+msgid "تومان"
+msgstr "Toman"
+
+msgid "توکن API"
+msgstr "API Token"
+
+msgid "توکن جدید"
+msgstr "New token"
+
+msgid "توکن پنل"
+msgstr "Panel token"
+
+msgid "تیکت پشتیبانی"
+msgstr "Support ticket"
+
+msgid "تیکت‌ها"
+msgstr "Tickets"
+
+msgid "تیکت‌های باز"
+msgstr "Open tickets"
+
+msgid "تیکت‌های من"
+msgstr "My tickets"
+
+msgid "ثابت"
+msgstr "Fixed"
+
+msgid "جدیدترین"
+msgstr "Newest"
+
+msgid "جریان خرید"
+msgstr "Purchase flow"
+
+msgid "جزئیات"
+msgstr "Details"
+
+msgid "جزئیات سرویس"
+msgstr "Service details"
+
+msgid "جزئیات سفارش"
+msgstr "Order Details"
+
+msgid "جستجو"
+msgstr "Search"
+
+msgid "جستجو در کلید یا متن..."
+msgstr "Search key or text..."
+
+msgid "جستجو یوزرنیم..."
+msgstr "Search username..."
+
+msgid "جستجو..."
+msgstr "Search..."
+
+msgid "جستجوی کاربر، سفارش، سرور، پلن…"
+msgstr "Search users, orders, servers, plans…"
+
+msgid "جواب"
+msgstr "Answer"
+
+msgid "جواب…"
+msgstr "Answer…"
+
+msgid "جوین اجباری"
+msgstr "Force Join"
+
+msgid "حافظه"
+msgstr "Memory"
+
+msgid "حالت انتخاب کارت:"
+msgstr "Card selection mode:"
+
+msgid "حجم"
+msgstr "Traffic"
+
+msgid "حجم (GB — ۰ = نامحدود)"
+msgstr "Traffic (GB — 0 = unlimited)"
+
+msgid "حجم دیتابیس"
+msgstr "Database size"
+
+msgid "حداقل یک سرویس را انتخاب کنید"
+msgstr "Select at least one service"
+
+msgid "حداقل یک قسمت را انتخاب کنید"
+msgstr "Select at least one section"
+
+msgid "حداکثر استفاده (۰ = نامحدود)"
+msgstr "Max uses (0 = unlimited)"
+
+msgid "حذف"
+msgstr "Delete"
+
+msgid "حذف دکمه"
+msgstr "Delete button"
+
+msgid "حذف دکمه از ردیف"
+msgstr "Remove button from row"
+
+msgid "حذف ردیف"
+msgstr "Delete row"
+
+msgid "حذف ردیف:"
+msgstr "Delete row:"
+
+msgid "حذف سفارش"
+msgstr "Delete order"
+
+msgid "حذف شد"
+msgstr "Deleted"
+
+msgid "حذف کد"
+msgstr "Delete code"
+
+msgid "حرکت"
+msgstr "Navigate"
+
+msgid "خالی"
+msgstr "Empty"
+
+msgid "خالی — از کاتالوگ اینجا رها کن"
+msgstr "Empty — drop from catalog here"
+
+msgid "خروج"
+msgstr "Logout"
+
+msgid "خروجی گرفتن (بکاپ)"
+msgstr "Export (Backup)"
+
+msgid "خرید"
+msgstr "Purchase"
+
+msgid "خرید عادی"
+msgstr "Regular purchase"
+
+msgid "خطا"
+msgstr "Error"
+
+msgid "خطا در ارتباط با سرور ❌"
+msgstr "Failed to reach the server ❌"
+
+msgid "خطا در بارگذاری منو ❌"
+msgstr "Failed to load menu ❌"
+
+msgid "خطا در دریافت وضعیت ❌"
+msgstr "Failed to fetch status ❌"
+
+msgid "خطا: "
+msgstr "Error: "
+
+msgid "خطای شبکه"
+msgstr "Network error"
+
+msgid "خطایی رخ داد"
+msgstr "Something went wrong"
+
+msgid "خلاصه ماه"
+msgstr "Month Summary"
+
+msgid "داشبورد"
+msgstr "Dashboard"
+
+msgid "دانلود خروجی"
+msgstr "Download export"
+
+msgid "داینامیک"
+msgstr "Dynamic"
+
+msgid "در انتظار"
+msgstr "Pending"
+
+msgid "در انتظار تأیید"
+msgstr "Pending Approval"
+
+msgid "در حال اتصال"
+msgstr "Connecting"
+
+msgid "در حال اتصال…"
+msgstr "Connecting…"
+
+msgid "در حال ارسال..."
+msgstr "Sending..."
+
+msgid "در حال بارگذاری..."
+msgstr "Loading..."
+
+msgid "در حال بارگذاری…"
+msgstr "Loading…"
+
+msgid "در حال دریافت سرویس‌ها…"
+msgstr "Fetching services…"
+
+msgid "در حال دریافت وضعیت سرورها…"
+msgstr "Fetching server status…"
+
+msgid "در صفحه‌ی موبایل، سه ستون به یک ستون تبدیل می‌شوند."
+msgstr "On mobile, the three columns collapse into one."
+
+msgid "در پایین صفحه ظاهر می‌شود."
+msgstr "appears at the bottom of the page."
+
+msgid "درآمد"
+msgstr "Revenue"
+
+msgid "درآمد امروز (تومان)"
+msgstr "Today’s revenue (Toman)"
+
+msgid "درآمد این ماه"
+msgstr "This Month"
+
+msgid "درآمد این ماه (تومان)"
+msgstr "This month’s revenue (Toman)"
+
+msgid "درآمد رفرال"
+msgstr "Referral revenue"
+
+msgid "درآمد کل (تومان)"
+msgstr "Total revenue (Toman)"
+
+msgid "درخواست شارژی وجود ندارد"
+msgstr "No top-up requests"
+
+msgid "درخواستی وجود ندارد"
+msgstr "No requests"
+
+msgid "درخواست‌های اضافه"
+msgstr "Extra Requests"
+
+msgid "درخواست‌های افزودن"
+msgstr "Add-on Requests"
+
+msgid "درخواست‌های افزودن حجم"
+msgstr "Extra volume requests"
+
+msgid "درخواست‌های افزودن زمان"
+msgstr "Extra time requests"
+
+msgid "درخواست‌های تغییر لوکیشن"
+msgstr "Location change requests"
+
+msgid "درخواست‌های شارژ حساب"
+msgstr "Wallet Top-up Requests"
+
+msgid "درصدی"
+msgstr "Percent"
+
+msgid "دریافت لیست سرویس‌ها"
+msgstr "Fetch services list"
+
+msgid "دعوت دوستان"
+msgstr "Invite friends"
+
+msgid "دعوت‌شدگان"
+msgstr "Invited users"
+
+msgid "دلیل بن (اختیاری) — برای «—» خالی بگذارید:"
+msgstr "Ban reason (optional) — leave empty for ”—”:"
+
+msgid "دلیل رد"
+msgstr "Rejection reason"
+
+msgid "دلیل رد را وارد کنید (اختیاری). این پیام به کاربر نمایش داده می‌شود."
+msgstr "Enter a rejection reason (optional). It will be shown to the user."
+
+msgid "دلیل رد..."
+msgstr "Rejection reason..."
+
+msgid "دکمه"
+msgstr "button"
+
+msgid "دکمه «+ ردیف جدید» را در پایین کیبورد بزنید."
+msgstr "Press ”+ New Row” at the bottom of the keyboard."
+
+msgid "دکمه‌ای در این دسته‌بندی وجود ندارد"
+msgstr "No buttons in this category"
+
+msgid ""
+"دکمه‌ها را بین ردیف‌ها بکشید و رها کنید. از کاتالوگ هم می‌توانید مستقیم به "
+"ردیف‌ها بکشید."
+msgstr ""
+"Drag and drop buttons between rows. You can also drag straight from the "
+"catalog."
+
+msgid "دکمه‌های انتخاب‌شده"
+msgstr "Selected buttons"
+
+msgid "دکمه‌های جدید را بکشید و در ردیف‌ها رها کنید"
+msgstr "Drag new buttons and drop them into rows"
+
+msgid "دکمه‌ی"
+msgstr "The"
+
+msgid "دیاکو"
+msgstr "Diako"
+
+msgid "دیتابیس"
+msgstr "Database"
+
+msgid "ذخیره"
+msgstr "Save"
+
+msgid "ذخیره شد"
+msgstr "saved"
+
+msgid "ذخیره یادداشت"
+msgstr "Save note"
+
+msgid "را بزنید تا بات آپدیت شود"
+msgstr "button to update the bot"
+
+msgid "راست‌کلیک:"
+msgstr "Right click:"
+
+msgid "راهنما"
+msgstr "Help"
+
+msgid ""
+"راهنمای اتصال و نصب اپلیکیشن‌ها رو اینجا بذار تا کاربرها توی بات ببینن."
+msgstr ""
+"Put connection and app setup guides here so users can see them in the bot."
+
+msgid "راهنمای ادیتور کیبورد"
+msgstr "Keyboard editor guide"
+
+msgid "راه‌اندازی فروشگاه"
+msgstr "Store Setup"
+
+msgid "ربات"
+msgstr "Bot"
+
+msgid "رد"
+msgstr "Rejected"
+
+msgid "رد درخواست افزودن حجم؟"
+msgstr "Reject extra volume request?"
+
+msgid "رد درخواست افزودن زمان؟"
+msgstr "Reject extra time request?"
+
+msgid "رد درخواست تغییر لوکیشن؟"
+msgstr "Reject location change request?"
+
+msgid "رد درخواست شارژ؟"
+msgstr "Reject top-up request?"
+
+msgid "رد شد"
+msgstr "Rejected"
+
+msgid "رد شده"
+msgstr "Rejected"
+
+msgid "رد کردن"
+msgstr "Reject"
+
+msgid "رد کردن سفارش"
+msgstr "Reject Order"
+
+msgid "ردیف"
+msgstr "Row"
+
+msgid "ردیف جدید"
+msgstr "New row"
+
+msgid "ردیف جدید:"
+msgstr "New row:"
+
+msgid "رد‌شده"
+msgstr "Rejected"
+
+msgid "رفرال"
+msgstr "Referral"
+
+msgid "رمز عبور"
+msgstr "Password"
+
+msgid "رو حذف کنی؟"
+msgstr "?"
+
+msgid "روز"
+msgstr "days"
+
+msgid "روشن/خاموش"
+msgstr "On/Off"
+
+msgid "روی"
+msgstr "On"
+
+msgid "روی حباب پیام ربات کلیک کنید، متن را ویرایش کرده و ذخیره کنید."
+msgstr "Click the bot’s message bubble, edit the text and save."
+
+msgid "روی دکمه‌های مورد نظر کلیک کنید تا انتخاب شوند (با رنگ مشخص می‌شوند)."
+msgstr "Click the buttons you want to select them (they get highlighted)."
+
+msgid "زمینه‌ای"
+msgstr "Contextual"
+
+msgid "زیرساخت"
+msgstr "Infrastructure"
+
+msgid "ساخت اولین پلن"
+msgstr "Create first plan"
+
+msgid "ساخت اولین کد"
+msgstr "Create first code"
+
+msgid "ستون راست (کاتالوگ)"
+msgstr "Right column (catalog)"
+
+msgid "ستون چپ"
+msgstr "Left column"
+
+msgid "سرور"
+msgstr "Server"
+
+msgid "سرور / پلن"
+msgstr "Servers / Plans"
+
+msgid "سرور آنلاین"
+msgstr "Online Servers"
+
+msgid "سرور جدید"
+msgstr "New Server"
+
+msgid "سرور ربکا رو وصل کن"
+msgstr "Connect a Rebecca server"
+
+msgid "سرورها"
+msgstr "Servers"
+
+msgid "سرورها رو از پنل ادمین مدیریت کن"
+msgstr "Manage servers from the admin panel"
+
+msgid "سروری ثبت نشده"
+msgstr "No servers yet"
+
+msgid "سرویس"
+msgstr "Service"
+
+msgid "سرویس غیرفعال شد"
+msgstr "Service disabled"
+
+msgid "سرویس فعال شد"
+msgstr "Service enabled"
+
+msgid "سرویس پیدا شد"
+msgstr "services found"
+
+msgid "سرویسی ثبت نشده"
+msgstr "No services"
+
+msgid "سرویس‌ها"
+msgstr "Services"
+
+msgid "سرویس‌ها (حداقل یکی را انتخاب کنید)"
+msgstr "Services (select at least one)"
+
+msgid "سرویس‌های من"
+msgstr "My services"
+
+msgid "سفارش"
+msgstr "Order"
+
+msgid "سفارش #"
+msgstr "Order #"
+
+msgid "سفارش تأیید شده"
+msgstr "Approved orders"
+
+msgid "سفارش تایید شد"
+msgstr "Order approved"
+
+msgid "سفارش جدید"
+msgstr "New order"
+
+msgid "سفارش در انتظار تایید"
+msgstr "Order pending approval"
+
+msgid "سفارش رد شد"
+msgstr "Order rejected"
+
+msgid "سفارشی وجود ندارد"
+msgstr "No orders yet"
+
+msgid "سفارشی یافت نشد"
+msgstr "No orders found"
+
+msgid "سفارش‌ها"
+msgstr "Orders"
+
+msgid "سلام 👋 خوش اومدی"
+msgstr "Hello 👋 welcome"
+
+msgid "سوال"
+msgstr "Question"
+
+msgid "سوال جدید"
+msgstr "New question"
+
+msgid "سوالات متداول"
+msgstr "FAQ"
+
+msgid "سوالات متداول (ادمین)"
+msgstr "FAQ (admin)"
+
+msgid "سوالی ثبت نشده"
+msgstr "No questions yet"
+
+msgid "سوال‌های پرتکرار کاربرها رو با جوابشون اینجا اضافه کن."
+msgstr "Add users’ most frequent questions with their answers here."
+
+msgid "سوال…"
+msgstr "Question…"
+
+msgid "شارژ حساب"
+msgstr "Top-up"
+
+msgid "شبیه‌ساز تلگرام در وسط نمایش می‌دهد که کاربر چه می‌بیند"
+msgstr "The Telegram simulator in the middle shows what the user sees"
+
+msgid "شخصی‌سازی"
+msgstr "Customization"
+
+msgid "شروع کار"
+msgstr "Getting started"
+
+msgid "شماره کارت"
+msgstr "Card number"
+
+msgid "شماره کارت (۱۶ رقم)"
+msgstr "Card number (16 digits)"
+
+msgid "شماره کارت پرداخت رو تنظیم کن"
+msgstr "Set up your payment card"
+
+msgid "صاحب کارت"
+msgstr "Card owner"
+
+msgid "ظاهر ربات"
+msgstr "Bot appearance"
+
+msgid "عضویت"
+msgstr "Joined"
+
+msgid "عضویت امروز"
+msgstr "Joined Today"
+
+msgid "عملیات"
+msgstr "Actions"
+
+msgid "عملیات انجام شد."
+msgstr "Action completed."
+
+msgid "عنوان"
+msgstr "Title"
+
+msgid "عنوان نمایشی"
+msgstr "Display title"
+
+msgid "غیرفعال"
+msgstr "Inactive"
+
+msgid "غیرفعال‌کردن"
+msgstr "Disable"
+
+msgid "فایل JSON را انتخاب کنید"
+msgstr "Choose a JSON file"
+
+msgid "فایل JSON معتبر نیست"
+msgstr "Invalid JSON file"
+
+msgid "فروش امروز"
+msgstr "Today’s Sales"
+
+msgid "فروش ماه جاری"
+msgstr "This month’s sales"
+
+msgid "فعال"
+msgstr "Active"
+
+msgid "فعال / غیرفعال کردن دکمه"
+msgstr "Enable / disable button"
+
+msgid "فعال/غیرفعال"
+msgstr "Enable/disable"
+
+msgid "فعال/غیرفعال کردن سرویس"
+msgstr "Enable/disable service"
+
+msgid "فعالیت"
+msgstr "Activity"
+
+msgid "فعالیت اخیر"
+msgstr "Recent Activity"
+
+msgid "فعال‌کردن"
+msgstr "Enable"
+
+msgid ""
+"قسمت‌هایی که می‌خوای خروجی بگیری رو انتخاب کن، بعد دانلود کن. فایل خروجی "
+"شامل هیچ اطلاعات حساسی (توکن/شماره کارت) نیست."
+msgstr ""
+"Pick the sections you want to export, then download. The export contains no "
+"sensitive data (tokens/card numbers)."
+
+msgid "قیمت"
+msgstr "Price"
+
+msgid "قیمت (تومان)"
+msgstr "Price (Toman)"
+
+msgid "لغو انتخاب همه"
+msgstr "Deselect all"
+
+msgid "لغو عملیات"
+msgstr "Cancel action"
+
+msgid "لیست آموزش‌ها"
+msgstr "Tutorials list"
+
+msgid "لیست کاربران"
+msgstr "Users list"
+
+msgid "لینک"
+msgstr "Link"
+
+msgid "لینک دعوت (فقط برای کانال خصوصی لازمه)"
+msgstr "Invite link (only needed for private channels)"
+
+msgid "مالی"
+msgstr "Finance"
+
+msgid "مانیتورینگ"
+msgstr "Monitoring"
+
+msgid "مانیتورینگ نودها"
+msgstr "Node Monitoring"
+
+msgid "مبلغ"
+msgstr "Amount"
+
+msgid "مبلغ ثابت"
+msgstr "Fixed amount"
+
+msgid "مبلغ را به تومان وارد کنید:"
+msgstr "Enter the amount in Toman:"
+
+msgid "مبلغ کسر را به تومان وارد کنید:"
+msgstr "Enter the deduction amount in Toman:"
+
+msgid "متصل"
+msgstr "Connected"
+
+msgid "متغیر:"
+msgstr "Variables:"
+
+msgid "متن / دکمه"
+msgstr "Texts / Buttons"
+
+msgid "متن آموزش"
+msgstr "Tutorial text"
+
+msgid "متن آموزش…"
+msgstr "Tutorial text…"
+
+msgid "متن پیام ذخیره شد ✅"
+msgstr "Message text saved ✅"
+
+msgid "متن پیام ربات"
+msgstr "Bot message text"
+
+msgid "متن پیام ربات را وارد کنید..."
+msgstr "Enter the bot message text..."
+
+msgid "متن‌ها"
+msgstr "Texts"
+
+msgid "متن‌های بات"
+msgstr "Bot texts"
+
+msgid "مثلاً: راهنمای نصب"
+msgstr "e.g.: Setup guide"
+
+msgid "مثلاً: سرور آلمان 🇩🇪"
+msgstr "e.g.: Germany Server 🇩🇪"
+
+msgid "مثلاً: پلن یک ماهه"
+msgstr "e.g.: 1-Month Plan"
+
+msgid "مدت"
+msgstr "Duration"
+
+msgid "مدت (روز — ۰ = نامحدود)"
+msgstr "Duration (days — 0 = unlimited)"
+
+msgid "مدیریت آموزش‌ها"
+msgstr "Manage tutorials"
+
+msgid "مدیریت سرورها"
+msgstr "Server Management"
+
+msgid "مدیریت پلن‌ها"
+msgstr "Plan Management"
+
+msgid "مدیریت کاربران"
+msgstr "User management"
+
+msgid "مشاهده همه"
+msgstr "See all"
+
+msgid "مشاهده ↗"
+msgstr "View ↗"
+
+msgid "مطمئنی می‌خوای این کارت رو حذف کنی؟"
+msgstr "Are you sure you want to delete this card?"
+
+msgid "مطمئنی می‌خوای این کانال رو حذف کنی؟"
+msgstr "Are you sure you want to delete this channel?"
+
+msgid "مطمئنی می‌خوای سرور"
+msgstr "Are you sure you want to delete server"
+
+msgid "مطمئنی می‌خوای پلن"
+msgstr "Are you sure you want to delete plan"
+
+msgid "معرف"
+msgstr "Referrer"
+
+msgid "مقدار"
+msgstr "Value"
+
+msgid "مقدار (درصد یا مبلغ تومان)"
+msgstr "Value (percent or Toman amount)"
+
+msgid "ممبر"
+msgstr "member"
+
+msgid "منوها"
+msgstr "Menus"
+
+msgid "منوی اصلی کاربر"
+msgstr "User main menu"
+
+msgid "منوی اکشن انیمیشن‌دار باز می‌شود:"
+msgstr "An animated action menu opens:"
+
+msgid "منوی مورد نظر را انتخاب کنید (منوی اصلی، کیف پول، ...)"
+msgstr "Pick the menu you want (main menu, wallet, ...)"
+
+msgid "موبایل"
+msgstr "Mobile"
+
+msgid "موجودی"
+msgstr "Balance"
+
+msgid "موجودی افزوده شد."
+msgstr "Balance added."
+
+msgid "موجودی کسر شد."
+msgstr "Balance deducted."
+
+msgid "موجودی کیف پول‌ها (تومان)"
+msgstr "Wallet balances (Toman)"
+
+msgid "موجودی کیف‌پول‌ها"
+msgstr "Total Wallet"
+
+msgid "نام"
+msgstr "Name"
+
+msgid "نام جدید"
+msgstr "New name"
+
+msgid "نام سرور"
+msgstr "Server name"
+
+msgid "نام صاحب کارت"
+msgstr "Card owner name"
+
+msgid "نام نمی‌تواند خالی باشد"
+msgstr "Name cannot be empty"
+
+msgid "نام و نام خانوادگی"
+msgstr "Full name"
+
+msgid "نام پلن"
+msgstr "Plan name"
+
+msgid "نام کاربری"
+msgstr "Username"
+
+msgid "نام کاربری یا رمز عبور اشتباه است"
+msgstr "Incorrect username or password"
+
+msgid "نامحدود"
+msgstr "Unlimited"
+
+msgid "نامشخص"
+msgstr "Unknown"
+
+msgid "ندارد"
+msgstr "None"
+
+msgid "نسخه پنل"
+msgstr "Panel version"
+
+msgid "نفر"
+msgstr "Users"
+
+msgid "نقشه‌ی زنده‌ی نودها"
+msgstr "Live node map"
+
+msgid "نمایش %(shown)s از %(total)s"
+msgstr "Showing %(shown)s of %(total)s"
+
+msgid "نوبتی"
+msgstr "Round-robin"
+
+msgid "نودها"
+msgstr "Nodes"
+
+msgid "نوع"
+msgstr "Type"
+
+msgid "نوع تخفیف"
+msgstr "Discount type"
+
+msgid "نیاز به تایید ادمین: خاموش"
+msgstr "Admin approval required: off"
+
+msgid "نیاز به تایید ادمین: روشن"
+msgstr "Admin approval required: on"
+
+msgid "همه"
+msgstr "All"
+
+msgid "هنوز سروری ثبت نشده"
+msgstr "No servers yet"
+
+msgid "هنوز فعالیتی ثبت نشده"
+msgstr "No activity yet"
+
+msgid "هنوز کارتی ثبت نشده"
+msgstr "No cards yet"
+
+msgid "هنوز کانالی ثبت نشده"
+msgstr "No channels yet"
+
+msgid "هیچ سرویسی در این پنل تعریف نشده"
+msgstr "No services are defined in this panel"
+
+msgid "ورود"
+msgstr "Login"
+
+msgid "وضعیت"
+msgstr "Status"
+
+msgid "وضعیت ربات"
+msgstr "Bot status"
+
+msgid "وضعیت سرورها"
+msgstr "Server Status"
+
+msgid "وقتی کاربری برای کیف پولش رسید بفرسته، اینجا نشون داده می‌شه."
+msgstr "When a user sends a receipt for their wallet, it shows up here."
+
+msgid "ویرایش"
+msgstr "Edit"
+
+msgid "ویرایش آدرس"
+msgstr "Edit URL"
+
+msgid "ویرایش آدرس پنل"
+msgstr "Edit panel URL"
+
+msgid "ویرایش آموزش"
+msgstr "Edit tutorial"
+
+msgid "ویرایش توکن"
+msgstr "Edit token"
+
+msgid "ویرایش توکن API"
+msgstr "Edit API token"
+
+msgid "ویرایش سرویس‌ها"
+msgstr "Edit services"
+
+msgid "ویرایش سوال"
+msgstr "Edit question"
+
+msgid "ویرایش متن"
+msgstr "Edit text"
+
+msgid "ویرایش متن دکمه (به صورت inline)"
+msgstr "Edit button text (inline)"
+
+msgid "ویرایش متن پیام:"
+msgstr "Edit message text:"
+
+msgid "ویرایش نام"
+msgstr "Edit name"
+
+msgid "ویرایش نام سرور"
+msgstr "Edit server name"
+
+msgid "ویرایش پلن"
+msgstr "Edit plan"
+
+msgid "ویرایش کارت"
+msgstr "Edit card"
+
+msgid "ویرایش کانال"
+msgstr "Edit channel"
+
+msgid "پایین"
+msgstr "Down"
+
+msgid "پردازنده"
+msgstr "CPU"
+
+msgid "پروفایل"
+msgstr "Profile"
+
+msgid "پروفایل کاربر"
+msgstr "User profile"
+
+msgid "پس از تمام تغییرات، حتماً"
+msgstr "After all changes, make sure to press the"
+
+msgid "پشتیبانی"
+msgstr "Support"
+
+msgid "پلن"
+msgstr "Plan"
+
+msgid "پلن جدید"
+msgstr "New Plan"
+
+msgid "پلنی ثبت نشده"
+msgstr "No plans yet"
+
+msgid "پلن‌ها"
+msgstr "Plans"
+
+msgid "پنل ادمین"
+msgstr "Admin Panel"
+
+msgid "پنل مدیریت"
+msgstr "Admin Panel"
+
+msgid "پکیجی ثبت نشده"
+msgstr "No packages"
+
+msgid "پکیج‌های افزودن حجم"
+msgstr "Extra volume packages"
+
+msgid "پکیج‌های افزودن زمان"
+msgstr "Extra time packages"
+
+msgid "پیام ارسال شد."
+msgstr "Message sent."
+
+msgid "پیام برای کاربر در تلگرام:"
+msgstr "Message to the user on Telegram:"
+
+msgid "پیام تلگرام"
+msgstr "Telegram message"
+
+msgid "پیام همگانی"
+msgstr "Broadcast"
+
+msgid "پیش‌فاکتور"
+msgstr "Invoice"
+
+msgid "پیش‌فرض"
+msgstr "Default"
+
+msgid "چپ‌کلیک:"
+msgstr "Left click:"
+
+msgid "چیزی برای نمایش نیست"
+msgstr "Nothing to show"
+
+msgid "چیزی پیدا نشد"
+msgstr "No results"
+
+msgid "چینش کیبوردهای انتخاب‌شده با فایل جایگزین می‌شود. ادامه می‌دهید؟"
+msgstr "Selected keyboard layouts will be replaced by the file. Continue?"
+
+msgid "کاتالوگ اکشن‌های کیبورد"
+msgstr "Keyboard actions catalog"
+
+msgid "کاتالوگ دکمه‌ها"
+msgstr "Button catalog"
+
+msgid "کار با کلیدها"
+msgstr "Working with buttons"
+
+msgid "کاربر"
+msgstr "User"
+
+msgid "کاربر "
+msgstr "User "
+
+msgid "کاربر آنبن شد."
+msgstr "User unbanned."
+
+msgid "کاربر این هفته"
+msgstr "New this week"
+
+msgid "کاربر بن شد."
+msgstr "User banned."
+
+msgid "کاربر جدید"
+msgstr "New user"
+
+msgid "کاربران"
+msgstr "Users"
+
+msgid "کاربران فعال"
+msgstr "Active users"
+
+msgid ""
+"کاربران قبل از استفاده از بات باید عضو این کانال‌ها باشند. بات باید در هر "
+"کانال ادمین باشد."
+msgstr ""
+"Users must join these channels before using the bot. The bot must be an "
+"admin in each channel."
+
+msgid "کاربری یافت نشد"
+msgstr "No users found"
+
+msgid "کارت به کارت"
+msgstr "Card to Card"
+
+msgid "کارت جدید"
+msgstr "New card"
+
+msgid "کارت پیش‌فرض"
+msgstr "Default card"
+
+msgid "کانال"
+msgstr "Channel"
+
+msgid "کانال اصلی"
+msgstr "Main channel"
+
+msgid "کانال تلگرامت رو اضافه کن تا کاربرها قبل از استفاده از بات عضوش بشن."
+msgstr "Add your Telegram channel so users must join it before using the bot."
+
+msgid "کانال جدید"
+msgstr "New channel"
+
+msgid "کد"
+msgstr "Code"
+
+msgid "کد تخفیف"
+msgstr "Discount code"
+
+msgid "کد تخفیف (انگلیسی/عدد)"
+msgstr "Discount code (letters/numbers)"
+
+msgid "کد تخفیف جدید"
+msgstr "New discount code"
+
+msgid "کد تخفیفی ثبت نشده"
+msgstr "No discount codes yet"
+
+msgid "کد جدید"
+msgstr "New code"
+
+msgid "کد دعوت"
+msgstr "Invite code"
+
+msgid "کدهای تخفیف"
+msgstr "Discount Codes"
+
+msgid "کسر"
+msgstr "Deduct"
+
+msgid "کسر موجودی"
+msgstr "Deduct balance"
+
+msgid "کل درآمد:"
+msgstr "Total revenue:"
+
+msgid "کل نقاط"
+msgstr "Total points"
+
+msgid "کل کاربران"
+msgstr "Total Users"
+
+msgid "کلیک کن تا بری به:"
+msgstr "Click to go to:"
+
+msgid "کیبورد"
+msgstr "Keyboard"
+
+msgid "کیبوردها"
+msgstr "Keyboards"
+
+msgid "کیف پول"
+msgstr "Wallet"
+
+msgid "یادداشت"
+msgstr "Note"
+
+msgid "یادداشت با موفقیت ذخیره شد"
+msgstr "Note saved successfully"
+
+msgid ""
+"یه فایل JSON که قبلاً از همین صفحه خروجی گرفتی رو انتخاب کن. بعد از خوندن "
+"فایل، می‌تونی مشخص کنی کدوم قسمت‌ها اعمال بشن."
+msgstr ""
+"Pick a JSON file you previously exported from this page. After it’s read, "
+"you can choose which sections to apply."
+
+msgid "یوزر VPN"
+msgstr "VPN user"
+
+msgid "یوزرنیم"
+msgstr "Username"
+
+msgid "یک تست رایگان اضافه شد."
+msgstr "One free test added."
+
+msgid "یک گروه را از سمت راست انتخاب کنید."
+msgstr "Pick a group from the side."
+
+msgid "— انتخاب سرور —"
+msgstr "— Select server —"
+
+msgid "⚙️ تنظیمات عمومی"
+msgstr "⚙️ General settings"
+
+msgid "⚙️ پنل ادمین"
+msgstr "⚙️ Admin panel"
+
+msgid ""
+"⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال "
+"رو تغییر بده."
+msgstr ""
+"⚡ This keyboard is dynamic — items come from the database. Only change order"
+" and enable/disable."
+
+msgid "✅ اشتراک فعال شد!"
+msgstr "✅ Subscription activated!"
+
+msgid "✅ پیامت دریافت شد."
+msgstr "✅ Your message was received."
+
+msgid "✎ کلیک برای ویرایش متن"
+msgstr "✎ Click to edit text"
+
+msgid "✏️ اطلاعات را وارد کنید:"
+msgstr "✏️ Enter the details:"
+
+msgid "✏️ تنظیمات متن"
+msgstr "✏️ Text settings"
+
+msgid "✓ ذخیره شد"
+msgstr "✓ Saved"
+
+msgid "✗ خطا"
+msgstr "✗ Error"
+
+msgid "❓ سوالات متداول"
+msgstr "❓ FAQ"
+
+msgid "❓ سوالات متداول:"
+msgstr "❓ FAQ:"
+
+msgid "❓ مدیریت سوالات متداول"
+msgstr "❓ Manage FAQ"
+
+msgid "🎁 اطلاعات تست رایگان:"
+msgstr "🎁 Free test info:"
+
+msgid "🎁 تنظیمات تست رایگان"
+msgstr "🎁 Free test settings"
+
+msgid "🎟 نوع تخفیف را انتخاب کنید:"
+msgstr "🎟 Pick the discount type:"
+
+msgid "🎟 کدهای تخفیف"
+msgstr "🎟 Discount codes"
+
+msgid "🎧 تنظیمات پشتیبانی"
+msgstr "🎧 Support settings"
+
+msgid "🎧 پشتیبانی دیاکو:"
+msgstr "🎧 Diako support:"
+
+msgid "🎨 ظاهر ربات"
+msgstr "🎨 Bot appearance"
+
+msgid "👤 پروفایل کاربر"
+msgstr "👤 User profile"
+
+msgid "👥 لیست کاربران"
+msgstr "👥 Users list"
+
+msgid "👥 مدیریت کاربران"
+msgstr "👥 Manage users"
+
+msgid "💎 کیف پول شما:"
+msgstr "💎 Your wallet:"
+
+msgid "💰 دعوت دوستان — لینک شما:"
+msgstr "💰 Invite friends — your link:"
+
+msgid "💳 اطلاعات پرداخت:"
+msgstr "💳 Payment info:"
+
+msgid "💳 تنظیمات کارت‌به‌کارت"
+msgstr "💳 Card-to-card settings"
+
+msgid "💳 مبلغ شارژ را وارد کنید:"
+msgstr "💳 Enter the top-up amount:"
+
+msgid "📅 تاریخ انقضا را وارد کنید:"
+msgstr "📅 Enter the expiry date:"
+
+msgid "📊 آمار دیاکو"
+msgstr "📊 Diako stats"
+
+msgid "📊 جزئیات سرویس"
+msgstr "📊 Service details"
+
+msgid "📋 تیکت‌های من"
+msgstr "📋 My tickets"
+
+msgid "📖 لیست آموزش‌ها"
+msgstr "📖 Tutorials list"
+
+msgid "📚 آموزش‌ها"
+msgstr "📚 Tutorials"
+
+msgid "📚 آموزش‌ها:"
+msgstr "📚 Tutorials:"
+
+msgid "📚 مدیریت آموزش‌ها"
+msgstr "📚 Manage tutorials"
+
+msgid "📜 تاریخچه تراکنش‌ها"
+msgstr "📜 Transaction history"
+
+msgid "📡 سرویس‌های من"
+msgstr "📡 My services"
+
+msgid "📢 پیام همگانی"
+msgstr "📢 Broadcast"
+
+msgid "📦 سفارش پردازش شد"
+msgstr "📦 Order processed"
+
+msgid "📦 مدیریت پلن‌ها"
+msgstr "📦 Manage plans"
+
+msgid "📦 پلن مورد نظر را انتخاب کنید:"
+msgstr "📦 Pick a plan:"
+
+msgid "📸 رسید شارژ کاربر"
+msgstr "📸 User top-up receipt"
+
+msgid "📸 رسید پرداخت کاربر"
+msgstr "📸 User payment receipt"
+
+msgid "🔐 سرور مورد نظر را انتخاب کنید:"
+msgstr "🔐 Pick a server:"
+
+msgid "🖥 مدیریت سرورها"
+msgstr "🖥 Manage servers"
+
+msgid "🖼 تنظیمات بنر"
+msgstr "🖼 Banner settings"
+
+msgid "🗑 آیا مطمئن هستید؟ (سرور)"
+msgstr "🗑 Are you sure? (server)"
+
+msgid "🗑 آیا مطمئن هستید؟ (سرویس)"
+msgstr "🗑 Are you sure? (service)"
+
+msgid "🗑 آیا مطمئن هستید؟ (پلن)"
+msgstr "🗑 Are you sure? (plan)"
+
+msgid "🤝 تنظیمات دعوت دوستان"
+msgstr "🤝 Referral settings"
+
+msgid "🧾 پیش‌فاکتور پرداخت"
+msgstr "🧾 Payment invoice"

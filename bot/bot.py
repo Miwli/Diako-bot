@@ -2,10 +2,11 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from shared_lib.db import init_db, reload_texts_cache, reload_keyboards_cache
+from shared_lib.db import init_db, reload_texts_cache, reload_keyboards_cache, set_setting
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
@@ -65,11 +66,26 @@ async def _texts_refresh_loop():
         await reload_keyboards_cache()
 
 
+async def _heartbeat_loop():
+    try:
+        me = await bot.get_me()
+        await set_setting("bot_username", me.username or "")
+    except Exception:
+        pass
+    while True:
+        try:
+            await set_setting("bot_heartbeat", datetime.now(timezone.utc).isoformat())
+        except Exception:
+            pass
+        await asyncio.sleep(60)
+
+
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")
     await init_db()
     logger.info("دیتابیس آماده شد")
     asyncio.create_task(_texts_refresh_loop())
+    asyncio.create_task(_heartbeat_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

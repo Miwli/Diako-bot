@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.views.generic import RedirectView
 from dashboard import views as v
 from dashboard import api_views
@@ -7,6 +7,7 @@ from dashboard import api_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('i18n/', include('django.conf.urls.i18n')),
     path('diako/', RedirectView.as_view(url='/diako/login/', permanent=False)),
     path('diako/login/', v.login_view, name='diako_login'),
     path('diako/logout/', v.logout_view, name='diako_logout'),
@@ -30,10 +31,12 @@ urlpatterns = [
     path('diako/servers/', v.servers_view, name='diako_servers'),
     path('diako/plans/', v.plans_view, name='diako_plans'),
     path('diako/finance/', v.finance_view, name='diako_finance'),
-    path('diako/discounts/', v.discounts_view, name='diako_discounts'),
-    path('diako/tutorials/', v.tutorials_view, name='diako_tutorials'),
     path('diako/extra-requests/', v.extra_requests_view, name='diako_extra_requests'),
-    path('diako/force-join/', v.force_join_view, name='diako_force_join'),
+    path('diako/settings/bot/', v.settings_bot_view, name='diako_settings_bot'),
+    # مسیرهای قدیمی — این صفحه‌ها داخل مالی/تنظیمات ادغام شدن
+    path('diako/discounts/', RedirectView.as_view(url='/diako/finance/', permanent=False)),
+    path('diako/tutorials/', RedirectView.as_view(url='/diako/settings/bot/', permanent=False)),
+    path('diako/force-join/', RedirectView.as_view(url='/diako/settings/bot/', permanent=False)),
     # New API endpoints
     path('diako/api/server-action/', api_views.server_action, name='diako_server_action'),
     path('diako/api/plan-action/', api_views.plan_action, name='diako_plan_action'),
@@ -45,4 +48,6 @@ urlpatterns = [
     path('diako/api/import-config/', api_views.import_config, name='diako_import_config'),
     path('diako/api/nodes-status/', api_views.nodes_status, name='diako_nodes_status'),
     path('diako/api/force-join-action/', api_views.force_join_action, name='diako_force_join_action'),
+    path('diako/api/bot-status/', api_views.bot_status, name='diako_bot_status'),
+    path('diako/api/search/', api_views.global_search, name='diako_global_search'),
 ]

@@ -34,7 +34,7 @@ from shared_lib.db import (
     get_extra_volume_request, update_extra_volume_request,
     approve_top_up_atomic, update_top_up_status,
 )
-from .models import Orders, Servers, Plans, DiscountCodes, TopUpRequests
+from .models import Orders, Servers, Plans, DiscountCodes, TopUpRequests, Users
 
 
 def _get_bot_token():
@@ -91,6 +91,7 @@ def _user_detail_payload(user_id: int):
     user = async_to_sync(get_user)(user_id)
     if not user:
         return None
+    user = dict(user)
 
     uid = user['user_id']
     order_counts = async_to_sync(get_user_order_counts)(uid)
@@ -1261,3 +1262,75 @@ def force_join_action(request):
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+# ─── وضعیت بات و جستجوی سراسری ───────────────────────────────────────────────
+
+@login_required
+def bot_status(request):
+    from datetime import timezone as _tz
+    heartbeat = async_to_sync(get_setting)('bot_heartbeat')
+    bot_name = async_to_sync(get_setting)('bot_username') or ''
+    online = False
+    if heartbeat:
+        try:
+            last = datetime.fromisoformat(heartbeat)
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=_tz.utc)
+            online = (datetime.now(_tz.utc) - last).total_seconds() < 150
+        except ValueError:
+            pass
+    return JsonResponse({'online': online, 'bot_name': bot_name})
+
+
+@login_required
+def global_search(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'results': []})
+
+    results = []
+    q_clean = q.lstrip('@')
+
+    from django.db.models import Q as _Q
+    users_qs = Users.objects.filter(
+        _Q(username__icontains=q_clean) | _Q(first_name__icontains=q)
+    )
+    if q.lstrip('-').isdigit():
+        users_qs = Users.objects.filter(user_id=int(q)) | users_qs
+    for u in users_qs[:5]:
+        title = u.first_name or (f'@{u.username}' if u.username else f'#{u.user_id}')
+        results.append({
+            'kind': 'user',
+            'title': title,
+            'sub': f'{u.user_id}' + (f' — @{u.username}' if u.username else ''),
+            'url': f'/diako/users/?q={u.user_id}',
+        })
+
+    orders_qs = Orders.objects.select_related('plan').filter(username__icontains=q_clean).order_by('-id')
+    if q.isdigit():
+        orders_qs = Orders.objects.select_related('plan').filter(id=int(q)) | orders_qs
+    for o in orders_qs[:5]:
+        results.append({
+            'kind': 'order',
+            'title': f'#{o.id}' + (f' — @{o.username}' if o.username else ''),
+            'sub': (o.plan.name if o.plan_id else '—') + f' · {o.status}',
+            'url': f'/diako/orders/?q={o.username or ""}',
+        })
+
+    for s in Servers.objects.filter(name__icontains=q)[:4]:
+        results.append({
+            'kind': 'server',
+            'title': s.name,
+            'sub': s.panel_url or '',
+            'url': '/diako/servers/',
+        })
+
+    for p in Plans.objects.filter(name__icontains=q)[:4]:
+        results.append({
+            'kind': 'plan',
+            'title': p.name,
+            'sub': f'{p.price:,}',
+            'url': '/diako/plans/',
+        })
+
+    return JsonResponse({'results': results[:14]})

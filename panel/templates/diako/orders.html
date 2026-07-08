@@ -1,7 +1,7 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}سفارش‌ها — دیاکو{% endblock %}
+{% block title %}{% trans "سفارش‌ها" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -121,7 +121,6 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 5px;
-  direction: rtl;
 }
 
 .orders-table thead th {
@@ -131,10 +130,10 @@
   text-transform: uppercase;
   letter-spacing: 0.6px;
   padding: 4px 14px 8px;
-  text-align: right;
+  text-align: start;
   white-space: nowrap;
 }
-.orders-table thead th.col-actions { text-align: left; }
+.orders-table thead th.col-actions { text-align: end; }
 
 .order-row {
   cursor: pointer;
@@ -653,94 +652,7 @@
 {% endblock %}
 
 
-{% block body %}
-<div class="dash-wrap">
-  <div class="sidebar-overlay"></div>
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-        <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
-        <i class="ti ti-layout-dashboard"></i>
-      </a>
-      <a href="/diako/orders/" class="nav-item active" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
-        <i class="ti ti-package"></i>
-      </a>
-      <a href="/diako/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
-        <i class="ti ti-users"></i>
-      </a>
-      <a href="/diako/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
-        <i class="ti ti-server"></i>
-      </a>
-      <a href="/diako/monitoring/" class="nav-item" data-fa="مانیتورینگ" data-en="Monitoring" data-tooltip="مانیتورینگ">
-        <i class="ti ti-world"></i>
-      </a>
-      <a href="/diako/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
-        <i class="ti ti-list"></i>
-      </a>
-      <a href="/diako/finance/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
-        <i class="ti ti-wallet"></i>
-      </a>
-      <a href="/diako/discounts/" class="nav-item" data-fa="تخفیف‌ها" data-en="Discounts" data-tooltip="تخفیف‌ها">
-        <i class="ti ti-ticket"></i>
-      </a>
-      <a href="/diako/tutorials/" class="nav-item" data-fa="آموزش‌ها" data-en="Tutorials" data-tooltip="آموزش‌ها">
-        <i class="ti ti-book"></i>
-      </a>
-      <a href="/diako/extra-requests/" class="nav-item" data-fa="درخواست‌ها" data-en="Requests" data-tooltip="درخواست‌ها">
-        <i class="ti ti-clock-plus"></i>
-      </a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-fa="کیبورد" data-en="Keyboard" data-tooltip="کیبورد">
-        <i class="ti ti-keyboard"></i>
-      </a>
-      <a href="/diako/texts-editor/" class="nav-item" data-fa="متن‌ها" data-en="Texts" data-tooltip="متن‌ها">
-        <i class="ti ti-text-size"></i>
-      </a>
-      <a href="/diako/import-export/" class="nav-item" data-fa="ایمپورت/اکسپورت" data-en="Import/Export" data-tooltip="ایمپورت/اکسپورت">
-        <i class="ti ti-database-export"></i>
-      </a>
-      <a href="/diako/force-join/" class="nav-item" data-fa="جوین اجباری" data-en="Force Join" data-tooltip="جوین اجباری">
-        <i class="ti ti-lock"></i>
-      </a>
-      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
-        <i class="ti ti-settings"></i>
-      </a>
-    </nav>
-  </aside>
-
-  <!-- Body -->
-  <div class="dash-body">
-
-    <!-- Topbar -->
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title" data-fa="سفارش‌ها" data-en="Orders">سفارش‌ها</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()">
-          <i id="theme-icon" class="ti ti-sun"></i>
-        </button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">
-            {{ admin_username|slice:":1"|upper }}
-          </button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item">
-              <i class="ti ti-logout"></i>
-              <span data-fa="خروج" data-en="Logout">خروج</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Container -->
-    <div class="dash-container">
+{% block content %}
 
       <!-- Toolbar: filters + search -->
       <div class="inner-card orders-toolbar anim-card">
@@ -748,25 +660,25 @@
           <a href="?status=all{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab {% if status_filter == 'all' %}active{% endif %}">
             <i class="ti ti-list" style="font-size:12px"></i>
-            <span data-fa="همه" data-en="All">همه</span>
+            <span>{% trans "همه" %}</span>
             <span class="tab-count">{{ stats.all }}</span>
           </a>
           <a href="?status=pending{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab tab-pending {% if status_filter == 'pending' %}active{% endif %}">
             <i class="ti ti-clock-hour-4" style="font-size:12px"></i>
-            <span data-fa="در انتظار" data-en="Pending">در انتظار</span>
+            <span>{% trans "در انتظار" %}</span>
             <span class="tab-count">{{ stats.pending }}</span>
           </a>
           <a href="?status=approved{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab {% if status_filter == 'approved' %}active{% endif %}">
             <i class="ti ti-check" style="font-size:12px"></i>
-            <span data-fa="تایید‌شده" data-en="Approved">تایید‌شده</span>
+            <span>{% trans "تایید‌شده" %}</span>
             <span class="tab-count">{{ stats.approved }}</span>
           </a>
           <a href="?status=rejected{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab {% if status_filter == 'rejected' %}active{% endif %}">
             <i class="ti ti-x" style="font-size:12px"></i>
-            <span data-fa="رد‌شده" data-en="Rejected">رد‌شده</span>
+            <span>{% trans "رد‌شده" %}</span>
             <span class="tab-count">{{ stats.rejected }}</span>
           </a>
         </div>
@@ -776,7 +688,7 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" type="text" name="q"
-                   placeholder="جستجو یوزرنیم..." value="{{ search }}">
+                   placeholder="{% trans 'جستجو یوزرنیم...' %}" value="{{ search }}">
           </div>
           <button type="submit" class="ctrl-btn" style="height:34px; padding:0 10px;">
             <i class="ti ti-search" style="font-size:14px"></i>
@@ -798,11 +710,11 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th data-fa="کاربر" data-en="User">کاربر</th>
-                <th data-fa="پلن" data-en="Plan">پلن</th>
-                <th data-fa="نوع" data-en="Type">نوع</th>
-                <th data-fa="وضعیت" data-en="Status">وضعیت</th>
-                <th data-fa="تاریخ" data-en="Date">تاریخ</th>
+                <th>{% trans "کاربر" %}</th>
+                <th>{% trans "پلن" %}</th>
+                <th>{% trans "نوع" %}</th>
+                <th>{% trans "وضعیت" %}</th>
+                <th>{% trans "تاریخ" %}</th>
                 <th class="col-actions"></th>
               </tr>
             </thead>
@@ -837,26 +749,26 @@
 
                 <td>
                   <div class="cell-plan-name">{{ order.plan.name|default:"—" }}</div>
-                  <div class="cell-plan-price">{{ order.plan.price|default:0 }} تومان</div>
+                  <div class="cell-plan-price">{{ order.plan.price|default:0 }} {% trans "تومان" %}</div>
                 </td>
 
                 <td>
                   {% if order.order_type == 'free_test' %}
-                    <span class="type-chip" data-fa="تست رایگان" data-en="Free test">تست رایگان</span>
+                    <span class="type-chip">{% trans "تست رایگان" %}</span>
                   {% elif order.order_type == 'renewal' %}
-                    <span class="type-chip" data-fa="تمدید" data-en="Renewal">تمدید</span>
+                    <span class="type-chip">{% trans "تمدید" %}</span>
                   {% else %}
-                    <span class="type-chip" data-fa="خرید" data-en="Purchase">خرید</span>
+                    <span class="type-chip">{% trans "خرید" %}</span>
                   {% endif %}
                 </td>
 
                 <td>
                   {% if order.status == 'pending' %}
-                    <span class="st-badge st-pending" data-fa="در انتظار" data-en="Pending">در انتظار</span>
+                    <span class="st-badge st-pending">{% trans "در انتظار" %}</span>
                   {% elif order.status == 'approved' %}
-                    <span class="st-badge st-approved" data-fa="تایید" data-en="Approved">تایید</span>
+                    <span class="st-badge st-approved">{% trans "تایید" %}</span>
                   {% elif order.status == 'rejected' %}
-                    <span class="st-badge st-rejected" data-fa="رد شده" data-en="Rejected">رد شده</span>
+                    <span class="st-badge st-rejected">{% trans "رد شده" %}</span>
                   {% else %}
                     <span class="st-badge">{{ order.status }}</span>
                   {% endif %}
@@ -867,16 +779,16 @@
                 <td>
                   <div class="row-acts">
                     {% if order.status == 'pending' %}
-                    <button class="row-btn rb-reject" title="رد کردن"
+                    <button class="row-btn rb-reject" title="{% trans 'رد کردن' %}"
                             onclick="event.stopPropagation(); openRejectModal({{ order.id }})">
                       <i class="ti ti-x"></i>
                     </button>
                     {% endif %}
-                    <button class="row-btn rb-reject" title="حذف سفارش"
+                    <button class="row-btn rb-reject" title="{% trans 'حذف سفارش' %}"
                             onclick="event.stopPropagation(); deleteOrder({{ order.id }})">
                       <i class="ti ti-trash"></i>
                     </button>
-                    <button class="row-btn" title="جزئیات">
+                    <button class="row-btn" title="{% trans 'جزئیات' %}">
                       <i class="ti ti-chevron-left"></i>
                     </button>
                   </div>
@@ -891,7 +803,7 @@
         {% if total_pages > 1 %}
         <div class="ord-pagination" style="padding: 10px 16px 4px;">
           <span class="pag-info">
-            نمایش {{ orders|length }} از {{ total }}
+            {% blocktrans with shown=orders|length %}نمایش {{ shown }} از {{ total }}{% endblocktrans %}
           </span>
           <div class="pag-btns">
             {% if page > 1 %}
@@ -924,16 +836,16 @@
         {% else %}
         <div class="ord-empty">
           <i class="ti ti-package-off"></i>
-          <p>سفارشی یافت نشد</p>
+          <p>{% trans "سفارشی یافت نشد" %}</p>
         </div>
         {% endif %}
 
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Drawer overlay -->
+{% endblock %}
+
+{% block modals %}
 <div class="drw-overlay" id="drwOverlay" onclick="closeDrawer()"></div>
 
 <!-- Detail Drawer -->
@@ -941,7 +853,7 @@
   <div class="drw-head">
     <div class="drw-title">
       <i class="ti ti-package"></i>
-      <span id="drwTitle">جزئیات سفارش</span>
+      <span id="drwTitle">{% trans "جزئیات سفارش" %}</span>
     </div>
     <button class="drw-close" onclick="closeDrawer()"><i class="ti ti-x"></i></button>
   </div>
@@ -954,21 +866,20 @@
   <div class="modal-box">
     <div class="modal-title">
       <i class="ti ti-alert-triangle"></i>
-      رد کردن سفارش
+      {% trans "رد کردن سفارش" %}
     </div>
-    <div class="modal-sub">دلیل رد را وارد کنید (اختیاری). این پیام به کاربر نمایش داده می‌شود.</div>
-    <textarea class="modal-ta" id="rejectReason" placeholder="دلیل رد..."></textarea>
+    <div class="modal-sub">{% trans "دلیل رد را وارد کنید (اختیاری). این پیام به کاربر نمایش داده می‌شود." %}</div>
+    <textarea class="modal-ta" id="rejectReason" placeholder="{% trans 'دلیل رد...' %}"></textarea>
     <div class="modal-acts">
       <button class="modal-btn" onclick="closeRejectModal()">
-        <i class="ti ti-arrow-right"></i> انصراف
+        <i class="ti ti-arrow-right"></i> {% trans "انصراف" %}
       </button>
       <button class="modal-btn btn-confirm-reject" id="rejectConfirmBtn" onclick="confirmReject()">
-        <i class="ti ti-x"></i> رد کردن
+        <i class="ti ti-x"></i> {% trans "رد کردن" %}
       </button>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 
@@ -986,48 +897,48 @@ function openDrawer(row) {
   row.classList.add('selected');
 
   const d = row.dataset;
-  document.getElementById('drwTitle').textContent = 'سفارش #' + d.id;
+  document.getElementById('drwTitle').textContent = '{% trans "سفارش #" %}' + d.id;
 
-  const typeLabel = { regular: 'خرید عادی', free_test: 'تست رایگان', renewal: 'تمدید' };
+  const typeLabel = { regular: '{% trans "خرید عادی" %}', free_test: '{% trans "تست رایگان" %}', renewal: '{% trans "تمدید" %}' };
   const statusHtml = {
-    pending:  '<span class="st-badge st-pending">در انتظار</span>',
-    approved: '<span class="st-badge st-approved">تایید شده</span>',
-    rejected: '<span class="st-badge st-rejected">رد شده</span>',
+    pending:  '<span class="st-badge st-pending">{% trans "در انتظار" %}</span>',
+    approved: '<span class="st-badge st-approved">{% trans "تایید شده" %}</span>',
+    rejected: '<span class="st-badge st-rejected">{% trans "رد شده" %}</span>',
   };
 
   let html = `
     <div class="drw-section">
-      <div class="drw-sec-title">کاربر</div>
-      <div class="drw-row"><span class="drw-lbl">یوزرنیم</span><span class="drw-val">${d.uname || '—'}</span></div>
-      <div class="drw-row"><span class="drw-lbl">آیدی تلگرام</span><span class="drw-val">${d.uid}</span></div>
+      <div class="drw-sec-title">{% trans "کاربر" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "یوزرنیم" %}</span><span class="drw-val">${d.uname || '—'}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "آیدی تلگرام" %}</span><span class="drw-val">${d.uid}</span></div>
     </div>
     <div class="drw-section">
-      <div class="drw-sec-title">سفارش</div>
-      <div class="drw-row"><span class="drw-lbl">پلن</span><span class="drw-val">${d.plan}</span></div>
-      <div class="drw-row"><span class="drw-lbl">مبلغ</span><span class="drw-val accent">${Number(d.price).toLocaleString()} تومان</span></div>
-      <div class="drw-row"><span class="drw-lbl">نوع</span><span class="drw-val">${typeLabel[d.type] || d.type}</span></div>
-      <div class="drw-row"><span class="drw-lbl">وضعیت</span><span class="drw-val">${statusHtml[d.status] || d.status}</span></div>
-      <div class="drw-row"><span class="drw-lbl">تاریخ</span><span class="drw-val">${d.date}</span></div>
+      <div class="drw-sec-title">{% trans "سفارش" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "پلن" %}</span><span class="drw-val">${d.plan}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "مبلغ" %}</span><span class="drw-val accent">${Number(d.price).toLocaleString()} تومان</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "نوع" %}</span><span class="drw-val">${typeLabel[d.type] || d.type}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "وضعیت" %}</span><span class="drw-val">${statusHtml[d.status] || d.status}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "تاریخ" %}</span><span class="drw-val">${d.date}</span></div>
     </div>`;
 
   if (d.status === 'approved' && d.vpn) {
     html += `
     <div class="drw-section">
-      <div class="drw-sec-title">اطلاعات VPN</div>
-      <div class="drw-row"><span class="drw-lbl">یوزر VPN</span><span class="drw-val" style="font-size:11px">${d.vpn}</span></div>
-      ${d.sub ? `<div class="drw-row"><span class="drw-lbl">لینک</span><a href="${d.sub}" target="_blank" class="drw-val accent" style="font-size:10px;text-decoration:none;">مشاهده ↗</a></div>` : ''}
+      <div class="drw-sec-title">{% trans "اطلاعات VPN" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "یوزر VPN" %}</span><span class="drw-val" style="font-size:11px">${d.vpn}</span></div>
+      ${d.sub ? `<div class="drw-row"><span class="drw-lbl">{% trans "لینک" %}</span><a href="${d.sub}" target="_blank" class="drw-val accent" style="font-size:10px;text-decoration:none;">{% trans "مشاهده ↗" %}</a></div>` : ''}
       <div class="drw-row">
         <button class="drw-btn" style="width:100%;justify-content:center" onclick="toggleServiceStatus(${d.id})">
-          <i class="ti ti-power"></i> فعال/غیرفعال کردن سرویس
+          <i class="ti ti-power"></i> {% trans "فعال/غیرفعال کردن سرویس" %}
         </button>
       </div>
     </div>
     <div class="drw-section">
-      <div class="drw-sec-title">یادداشت</div>
+      <div class="drw-sec-title">{% trans "یادداشت" %}</div>
       <textarea id="noteInput${d.id}" maxlength="500" rows="3"
                 style="width:100%;resize:vertical;font-family:inherit;font-size:12px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--text)">${d.note || ''}</textarea>
       <button class="drw-btn" style="width:100%;justify-content:center;margin-top:8px" onclick="saveServiceNote(${d.id})">
-        <i class="ti ti-device-floppy"></i> ذخیره یادداشت
+        <i class="ti ti-device-floppy"></i> {% trans "ذخیره یادداشت" %}
       </button>
     </div>`;
   }
@@ -1035,7 +946,7 @@ function openDrawer(row) {
   if (d.status === 'rejected' && d.reason) {
     html += `
     <div class="drw-section">
-      <div class="drw-sec-title">دلیل رد</div>
+      <div class="drw-sec-title">{% trans "دلیل رد" %}</div>
       <div style="font-size:12px;color:var(--red);line-height:1.7">${d.reason}</div>
     </div>`;
   }
@@ -1047,10 +958,10 @@ function openDrawer(row) {
     foot.style.display = 'flex';
     foot.innerHTML = `
       <button class="drw-btn btn-reject" onclick="openRejectModal(${d.id})">
-        <i class="ti ti-x"></i> رد کردن
+        <i class="ti ti-x"></i> {% trans "رد کردن" %}
       </button>
       <button class="drw-btn btn-bot-approve" onclick="showBotApproveNote()">
-        <i class="ti ti-check"></i> تایید از بات
+        <i class="ti ti-check"></i> {% trans "تایید از بات" %}
       </button>`;
   } else {
     foot.style.display = 'none';
@@ -1067,8 +978,8 @@ function closeDrawer() {
 }
 
 function showBotApproveNote() {
-  showNotif('راهنما',
-    'تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود.',
+  showNotif('{% trans "راهنما" %}',
+    '{% trans "تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود." %}',
     'info');
 }
 
@@ -1081,12 +992,12 @@ async function toggleServiceStatus(orderId) {
     });
     const data = await res.json();
     if (data.ok) {
-      showNotif('انجام شد', data.active ? 'سرویس فعال شد' : 'سرویس غیرفعال شد', 'success');
+      showNotif('{% trans "انجام شد" %}', data.active ? '{% trans "سرویس فعال شد" %}' : '{% trans "سرویس غیرفعال شد" %}', 'success');
     } else {
-      showNotif('خطا', data.error || '?', 'error');
+      showNotif('{% trans "خطا" %}', data.error || '?', 'error');
     }
   } catch {
-    showNotif('خطا', 'ارتباط با سرور برقرار نشد', 'error');
+    showNotif('{% trans "خطا" %}', '{% trans "ارتباط با سرور برقرار نشد" %}', 'error');
   }
 }
 
@@ -1100,13 +1011,13 @@ async function saveServiceNote(orderId) {
     });
     const data = await res.json();
     if (data.ok) {
-      showNotif('ذخیره شد', 'یادداشت با موفقیت ذخیره شد', 'success');
+      showNotif('{% trans "ذخیره شد" %}', '{% trans "یادداشت با موفقیت ذخیره شد" %}', 'success');
       if (activeOrderRow) activeOrderRow.dataset.note = note;
     } else {
-      showNotif('خطا', data.error || '?', 'error');
+      showNotif('{% trans "خطا" %}', data.error || '?', 'error');
     }
   } catch {
-    showNotif('خطا', 'ارتباط با سرور برقرار نشد', 'error');
+    showNotif('{% trans "خطا" %}', '{% trans "ارتباط با سرور برقرار نشد" %}', 'error');
   }
 }
 
@@ -1126,7 +1037,7 @@ async function confirmReject() {
   const btn    = document.getElementById('rejectConfirmBtn');
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> در حال ارسال...';
+  btn.innerHTML = '<span class="spin"></span> {% trans "در حال ارسال..." %}';
 
   try {
     const res = await fetch('/diako/api/order-action/', {
@@ -1139,22 +1050,22 @@ async function confirmReject() {
     if (data.ok) {
       closeRejectModal();
       closeDrawer();
-      showNotif('رد شد', 'سفارش #' + activeOrderId + ' رد شد.', 'reject');
+      showNotif('{% trans "رد شد" %}', '{% trans "سفارش #" %}' + activeOrderId + '{% trans " رد شد." %}', 'reject');
       setTimeout(() => location.reload(), 1000);
     } else {
-      showNotif('خطا', data.error || 'خطایی رخ داد', 'error');
+      showNotif('{% trans "خطا" %}', data.error || '{% trans "خطایی رخ داد" %}', 'error');
       btn.disabled = false;
-      btn.innerHTML = '<i class="ti ti-x"></i> رد کردن';
+      btn.innerHTML = '<i class="ti ti-x"></i> {% trans "رد کردن" %}';
     }
   } catch (e) {
-    showNotif('خطا', 'خطای شبکه', 'error');
+    showNotif('{% trans "خطا" %}', '{% trans "خطای شبکه" %}', 'error');
     btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-x"></i> رد کردن';
+    btn.innerHTML = '<i class="ti ti-x"></i> {% trans "رد کردن" %}';
   }
 }
 
 async function deleteOrder(id) {
-  if (!confirm('سفارش #' + id + ' برای همیشه حذف شود؟ این کار قابل بازگشت نیست.')) return;
+  if (!confirm('{% trans "سفارش #" %}' + id + '{% trans " برای همیشه حذف شود؟ این کار قابل بازگشت نیست." %}')) return;
   try {
     const res = await fetch('/diako/api/order-action/', {
       method: 'POST',
@@ -1163,13 +1074,13 @@ async function deleteOrder(id) {
     });
     const data = await res.json();
     if (data.ok) {
-      showNotif('حذف شد', 'سفارش #' + id + ' حذف شد.', 'reject');
+      showNotif('{% trans "حذف شد" %}', '{% trans "سفارش #" %}' + id + '{% trans " حذف شد." %}', 'reject');
       setTimeout(() => location.reload(), 800);
     } else {
-      showNotif('خطا', data.error || 'خطایی رخ داد', 'error');
+      showNotif('{% trans "خطا" %}', data.error || '{% trans "خطایی رخ داد" %}', 'error');
     }
   } catch (e) {
-    showNotif('خطا', 'خطای شبکه', 'error');
+    showNotif('{% trans "خطا" %}', '{% trans "خطای شبکه" %}', 'error');
   }
 }
 

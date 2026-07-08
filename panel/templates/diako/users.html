@@ -1,7 +1,7 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}کاربران — دیاکو{% endblock %}
+{% block title %}{% trans "کاربران" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -46,13 +46,13 @@
 .search-input::placeholder { color: var(--text-muted); }
 
 .users-table-wrap { overflow-x: auto; }
-.users-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
+.users-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
 .users-table thead th {
   font-size: 10px; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.6px;
-  padding: 4px 14px 8px; text-align: right; white-space: nowrap;
+  padding: 4px 14px 8px; text-align: start; white-space: nowrap;
 }
-.users-table thead th.col-actions { text-align: left; }
+.users-table thead th.col-actions { text-align: end; }
 
 .user-row { cursor: pointer; transition: all 180ms ease; }
 .user-row td {
@@ -264,121 +264,43 @@
 {% endblock %}
 
 
-{% block body %}
-<div class="dash-wrap">
-  <div class="sidebar-overlay"></div>
-
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-        <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
-        <i class="ti ti-layout-dashboard"></i>
-      </a>
-      <a href="/diako/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
-        <i class="ti ti-package"></i>
-      </a>
-      <a href="/diako/users/" class="nav-item active" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
-        <i class="ti ti-users"></i>
-      </a>
-      <a href="/diako/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
-        <i class="ti ti-server"></i>
-      </a>
-      <a href="/diako/monitoring/" class="nav-item" data-fa="مانیتورینگ" data-en="Monitoring" data-tooltip="مانیتورینگ">
-        <i class="ti ti-world"></i>
-      </a>
-      <a href="/diako/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
-        <i class="ti ti-list"></i>
-      </a>
-      <a href="/diako/finance/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
-        <i class="ti ti-wallet"></i>
-      </a>
-      <a href="/diako/discounts/" class="nav-item" data-fa="تخفیف‌ها" data-en="Discounts" data-tooltip="تخفیف‌ها">
-        <i class="ti ti-ticket"></i>
-      </a>
-      <a href="/diako/tutorials/" class="nav-item" data-fa="آموزش‌ها" data-en="Tutorials" data-tooltip="آموزش‌ها">
-        <i class="ti ti-book"></i>
-      </a>
-      <a href="/diako/extra-requests/" class="nav-item" data-fa="درخواست‌ها" data-en="Requests" data-tooltip="درخواست‌ها">
-        <i class="ti ti-clock-plus"></i>
-      </a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-fa="کیبورد" data-en="Keyboard" data-tooltip="کیبورد">
-        <i class="ti ti-keyboard"></i>
-      </a>
-      <a href="/diako/texts-editor/" class="nav-item" data-fa="متن‌ها" data-en="Texts" data-tooltip="متن‌ها">
-        <i class="ti ti-text-size"></i>
-      </a>
-      <a href="/diako/import-export/" class="nav-item" data-fa="ایمپورت/اکسپورت" data-en="Import/Export" data-tooltip="ایمپورت/اکسپورت">
-        <i class="ti ti-database-export"></i>
-      </a>
-      <a href="/diako/force-join/" class="nav-item" data-fa="جوین اجباری" data-en="Force Join" data-tooltip="جوین اجباری">
-        <i class="ti ti-lock"></i>
-      </a>
-      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
-        <i class="ti ti-settings"></i>
-      </a>
-    </nav>
-  </aside>
-
-  <div class="dash-body">
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title" data-fa="کاربران" data-en="Users">کاربران</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item">
-              <i class="ti ti-logout"></i>
-              <span data-fa="خروج" data-en="Logout">خروج</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="dash-container">
+{% block content %}
 
       <!-- Stats -->
       <div class="stats-bar inner-card anim-card">
         <div class="sbar-item">
           <div class="sbar-icon users"><i class="ti ti-users"></i></div>
           <div>
-            <div class="sbar-label" data-fa="کل کاربران" data-en="Total Users">کل کاربران</div>
+            <div class="sbar-label">{% trans "کل کاربران" %}</div>
             <div class="sbar-value">{{ stats.all }}</div>
-            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+            <div class="sbar-unit">{% trans "نفر" %}</div>
           </div>
         </div>
         <div class="sbar-sep"></div>
         <div class="sbar-item">
           <div class="sbar-icon online"><i class="ti ti-user-plus"></i></div>
           <div>
-            <div class="sbar-label" data-fa="عضویت امروز" data-en="Joined Today">عضویت امروز</div>
+            <div class="sbar-label">{% trans "عضویت امروز" %}</div>
             <div class="sbar-value">{{ stats.today }}</div>
-            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+            <div class="sbar-unit">{% trans "نفر" %}</div>
           </div>
         </div>
         <div class="sbar-sep"></div>
         <div class="sbar-item">
           <div class="sbar-icon pending"><i class="ti ti-ban"></i></div>
           <div>
-            <div class="sbar-label" data-fa="بن‌شده" data-en="Banned">بن‌شده</div>
+            <div class="sbar-label">{% trans "بن‌شده" %}</div>
             <div class="sbar-value">{{ stats.banned }}</div>
-            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+            <div class="sbar-unit">{% trans "نفر" %}</div>
           </div>
         </div>
         <div class="sbar-sep"></div>
         <div class="sbar-item">
           <div class="sbar-icon users"><i class="ti ti-wallet"></i></div>
           <div>
-            <div class="sbar-label" data-fa="موجودی کیف‌پول‌ها" data-en="Total Wallet">موجودی کیف‌پول‌ها</div>
+            <div class="sbar-label">{% trans "موجودی کیف‌پول‌ها" %}</div>
             <div class="sbar-value">{{ stats.wallet|floatformat:0 }}</div>
-            <div class="sbar-unit" data-fa="تومان" data-en="Toman">تومان</div>
+            <div class="sbar-unit">{% trans "تومان" %}</div>
           </div>
         </div>
       </div>
@@ -389,18 +311,18 @@
           <a href="?filter=newest{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab {% if filter_type == 'newest' and not search %}active{% endif %}">
             <i class="ti ti-clock-hour-4" style="font-size:12px"></i>
-            <span data-fa="جدیدترین" data-en="Newest">جدیدترین</span>
+            <span>{% trans "جدیدترین" %}</span>
             <span class="tab-count">{{ stats.all }}</span>
           </a>
           <a href="?filter=topbuyers{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab {% if filter_type == 'topbuyers' and not search %}active{% endif %}">
             <i class="ti ti-trophy" style="font-size:12px"></i>
-            <span data-fa="بیشترین خرید" data-en="Top Buyers">بیشترین خرید</span>
+            <span>{% trans "بیشترین خرید" %}</span>
           </a>
           <a href="?filter=banned{% if search %}&q={{ search }}{% endif %}"
              class="filter-tab tab-banned {% if filter_type == 'banned' and not search %}active{% endif %}">
             <i class="ti ti-ban" style="font-size:12px"></i>
-            <span data-fa="بن‌شده" data-en="Banned">بن‌شده</span>
+            <span>{% trans "بن‌شده" %}</span>
             <span class="tab-count">{{ stats.banned }}</span>
           </a>
         </div>
@@ -410,7 +332,7 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" type="text" name="q"
-                   placeholder="آیدی، نام یا @username..."
+                   placeholder="{% trans 'آیدی، نام یا @username...' %}"
                    value="{{ search }}">
           </div>
           <button type="submit" class="ctrl-btn" style="height:34px;padding:0 10px;">
@@ -431,11 +353,11 @@
           <table class="users-table">
             <thead>
               <tr>
-                <th data-fa="کاربر" data-en="User">کاربر</th>
-                <th data-fa="یوزرنیم" data-en="Username">یوزرنیم</th>
-                <th data-fa="موجودی" data-en="Balance">موجودی</th>
-                <th data-fa="عضویت" data-en="Joined">عضویت</th>
-                <th data-fa="وضعیت" data-en="Status">وضعیت</th>
+                <th>{% trans "کاربر" %}</th>
+                <th>{% trans "یوزرنیم" %}</th>
+                <th>{% trans "موجودی" %}</th>
+                <th>{% trans "عضویت" %}</th>
+                <th>{% trans "وضعیت" %}</th>
                 <th class="col-actions"></th>
               </tr>
             </thead>
@@ -460,14 +382,14 @@
                 <td><span class="cell-date">{{ u.created_at|default:"—"|slice:":16" }}</span></td>
                 <td>
                   {% if u.is_banned %}
-                    <span class="st-badge st-banned" data-fa="بن" data-en="Banned">بن</span>
+                    <span class="st-badge st-banned">{% trans "بن" %}</span>
                   {% else %}
-                    <span class="st-badge st-active" data-fa="فعال" data-en="Active">فعال</span>
+                    <span class="st-badge st-active">{% trans "فعال" %}</span>
                   {% endif %}
                 </td>
                 <td>
                   <div class="row-acts">
-                    <button class="row-btn" title="جزئیات" onclick="event.stopPropagation(); openUserDrawer({{ u.user_id }}, this.closest('.user-row'))">
+                    <button class="row-btn" title="{% trans 'جزئیات' %}" onclick="event.stopPropagation(); openUserDrawer({{ u.user_id }}, this.closest('.user-row'))">
                       <i class="ti ti-chevron-left"></i>
                     </button>
                   </div>
@@ -480,7 +402,7 @@
 
         {% if not search and total_pages > 1 %}
         <div class="ord-pagination" style="padding:10px 16px 4px;">
-          <span class="pag-info">نمایش {{ users|length }} از {{ total }}</span>
+          <span class="pag-info">{% blocktrans with shown=users|length %}نمایش {{ shown }} از {{ total }}{% endblocktrans %}</span>
           <div class="pag-btns">
             {% if page > 1 %}
             <a class="pg-btn" href="?filter={{ filter_type }}&q={{ search }}&page={{ page|add:'-1' }}"><i class="ti ti-chevron-right"></i></a>
@@ -503,34 +425,33 @@
         {% else %}
         <div class="ord-empty">
           <i class="ti ti-users-minus"></i>
-          <p data-fa="کاربری یافت نشد" data-en="No users found">کاربری یافت نشد</p>
+          <p>{% trans "کاربری یافت نشد" %}</p>
         </div>
         {% endif %}
       </div>
-    </div>
-  </div>
-</div>
+{% endblock %}
 
+{% block modals %}
 <div class="drw-overlay" id="drwOverlay" onclick="closeDrawer()"></div>
 <div class="drw" id="drw">
   <div class="drw-head">
-    <div class="drw-title"><i class="ti ti-user"></i><span id="drwTitle">پروفایل کاربر</span></div>
+    <div class="drw-title"><i class="ti ti-user"></i><span id="drwTitle">{% trans "پروفایل کاربر" %}</span></div>
     <button class="drw-close" onclick="closeDrawer()"><i class="ti ti-x"></i></button>
   </div>
   <div class="drw-body" id="drwBody">
-    <div class="drw-loading"><span class="spin"></span><span>در حال بارگذاری...</span></div>
+    <div class="drw-loading"><span class="spin"></span><span>{% trans "در حال بارگذاری..." %}</span></div>
   </div>
 </div>
 
 <div class="modal-bg" id="actionModal">
   <div class="modal-box">
-    <div class="modal-title" id="modalTitle"><i class="ti ti-wallet"></i><span>عملیات</span></div>
+    <div class="modal-title" id="modalTitle"><i class="ti ti-wallet"></i><span>{% trans "عملیات" %}</span></div>
     <div class="modal-sub" id="modalSub"></div>
     <input class="modal-input" id="modalInput" type="text" inputmode="numeric" style="display:none">
     <textarea class="modal-ta" id="modalText" style="display:none"></textarea>
     <div class="modal-acts">
-      <button class="modal-btn" onclick="closeActionModal()"><i class="ti ti-arrow-right"></i> انصراف</button>
-      <button class="modal-btn btn-confirm" id="modalConfirmBtn" onclick="confirmAction()">تایید</button>
+      <button class="modal-btn" onclick="closeActionModal()"><i class="ti ti-arrow-right"></i> {% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="modalConfirmBtn" onclick="confirmAction()">{% trans "تایید" %}</button>
     </div>
   </div>
 </div>
@@ -553,15 +474,15 @@ function openUserDrawer(uid, row) {
   if (row) row.classList.add('selected');
   activeUserId = uid;
 
-  document.getElementById('drwTitle').textContent = 'کاربر ' + uid;
-  document.getElementById('drwBody').innerHTML = '<div class="drw-loading"><span class="spin"></span><span>در حال بارگذاری...</span></div>';
+  document.getElementById('drwTitle').textContent = '{% trans "کاربر " %}' + uid;
+  document.getElementById('drwBody').innerHTML = '<div class="drw-loading"><span class="spin"></span><span>{% trans "در حال بارگذاری..." %}</span></div>';
   document.getElementById('drwOverlay').classList.add('open');
   document.getElementById('drw').classList.add('open');
 
   fetch('/diako/api/user-detail/' + uid + '/')
     .then(r => r.json())
     .then(data => {
-      if (!data.ok) throw new Error(data.error || 'خطا');
+      if (!data.ok) throw new Error(data.error || '{% trans "خطا" %}');
       activeUserData = data.user;
       renderUserDrawer(data.user);
     })
@@ -572,12 +493,12 @@ function openUserDrawer(uid, row) {
 
 function renderUserDrawer(u) {
   const initial = (u.first_name || u.username || String(u.user_id)).charAt(0).toUpperCase();
-  const uname = u.username ? '@' + u.username : 'ندارد';
+  const uname = u.username ? '@' + u.username : '{% trans "ندارد" %}';
   const statusBadge = u.is_banned
-    ? '<span class="st-badge st-banned">بن‌شده</span>'
-    : '<span class="st-badge st-active">فعال</span>';
+    ? '<span class="st-badge st-banned">{% trans "بن‌شده" %}</span>'
+    : '<span class="st-badge st-active">{% trans "فعال" %}</span>';
 
-  let referrerHtml = 'ندارد';
+  let referrerHtml = '{% trans "ندارد" %}';
   if (u.referrer) {
     const rn = u.referrer.first_name || u.referrer.user_id;
     const ru = u.referrer.username ? ' (@' + u.referrer.username + ')' : '';
@@ -589,18 +510,18 @@ function renderUserDrawer(u) {
     servicesHtml = u.services.map(s =>
       `<div class="svc-item">
         <div><div class="svc-plan">${s.plan_name}</div><div class="svc-vpn">${s.vpn_username}</div></div>
-        <span class="st-badge st-active" style="font-size:9px;padding:2px 7px">فعال</span>
+        <span class="st-badge st-active" style="font-size:9px;padding:2px 7px">{% trans "فعال" %}</span>
       </div>`
     ).join('');
   } else {
-    servicesHtml = '<div style="font-size:11px;color:var(--text-muted)">سرویسی ثبت نشده</div>';
+    servicesHtml = '<div style="font-size:11px;color:var(--text-muted)">{% trans "سرویسی ثبت نشده" %}</div>';
   }
 
   const banBtn = u.is_banned
-    ? `<button class="usr-act-btn primary" onclick="doQuickAction('unban')"><i class="ti ti-lock-open"></i> آنبن کردن</button>`
-    : `<button class="usr-act-btn danger" onclick="openActionModal('ban')"><i class="ti ti-ban"></i> بن کردن</button>`;
+    ? `<button class="usr-act-btn primary" onclick="doQuickAction('unban')"><i class="ti ti-lock-open"></i> {% trans "آنبن کردن" %}</button>`
+    : `<button class="usr-act-btn danger" onclick="openActionModal('ban')"><i class="ti ti-ban"></i> {% trans "بن کردن" %}</button>`;
 
-  document.getElementById('drwTitle').textContent = u.first_name || 'کاربر ' + u.user_id;
+  document.getElementById('drwTitle').textContent = u.first_name || '{% trans "کاربر " %}' + u.user_id;
   document.getElementById('drwBody').innerHTML = `
     <div class="drw-section">
       <div class="drw-hero">
@@ -610,43 +531,43 @@ function renderUserDrawer(u) {
           <div class="drw-hero-sub">${uname} · ${u.user_id}</div>
         </div>
       </div>
-      <div class="drw-row"><span class="drw-lbl">وضعیت</span><span class="drw-val">${statusBadge}</span></div>
-      <div class="drw-row"><span class="drw-lbl">عضویت</span><span class="drw-val">${u.created_at}</span></div>
-      <div class="drw-row"><span class="drw-lbl">کد دعوت</span><span class="drw-val">${u.referral_code || '—'}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "وضعیت" %}</span><span class="drw-val">${statusBadge}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "عضویت" %}</span><span class="drw-val">${u.created_at}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "کد دعوت" %}</span><span class="drw-val">${u.referral_code || '—'}</span></div>
     </div>
 
     <div class="drw-section">
-      <div class="drw-sec-title">مالی</div>
-      <div class="drw-row"><span class="drw-lbl">موجودی</span><span class="drw-val accent">${fmt(u.balance)} تومان</span></div>
-      <div class="drw-row"><span class="drw-lbl">تراکنش‌ها</span><span class="drw-val">${u.tx_count} مورد</span></div>
+      <div class="drw-sec-title">{% trans "مالی" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "موجودی" %}</span><span class="drw-val accent">${fmt(u.balance)} تومان</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "تراکنش‌ها" %}</span><span class="drw-val">${u.tx_count} مورد</span></div>
     </div>
 
     <div class="drw-section">
-      <div class="drw-sec-title">فعالیت</div>
-      <div class="drw-row"><span class="drw-lbl">سفارش‌ها</span><span class="drw-val">${u.orders.approved} تایید · ${u.orders.pending} انتظار · ${u.orders.rejected} رد</span></div>
-      <div class="drw-row"><span class="drw-lbl">تیکت‌ها</span><span class="drw-val">${u.tickets.open} باز · ${u.tickets.closed} بسته</span></div>
-      <div class="drw-row"><span class="drw-lbl">تست رایگان</span><span class="drw-val">${u.free_test_uses} بار استفاده</span></div>
+      <div class="drw-sec-title">{% trans "فعالیت" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "سفارش‌ها" %}</span><span class="drw-val">${u.orders.approved} تایید · ${u.orders.pending} انتظار · ${u.orders.rejected} رد</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "تیکت‌ها" %}</span><span class="drw-val">${u.tickets.open} باز · ${u.tickets.closed} بسته</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "تست رایگان" %}</span><span class="drw-val">${u.free_test_uses} بار استفاده</span></div>
     </div>
 
     <div class="drw-section">
-      <div class="drw-sec-title">رفرال</div>
-      <div class="drw-row"><span class="drw-lbl">معرف</span><span class="drw-val">${referrerHtml}</span></div>
-      <div class="drw-row"><span class="drw-lbl">دعوت‌شدگان</span><span class="drw-val">${u.referral_stats.count} نفر</span></div>
-      <div class="drw-row"><span class="drw-lbl">درآمد رفرال</span><span class="drw-val accent">${fmt(u.referral_stats.total)} تومان</span></div>
+      <div class="drw-sec-title">{% trans "رفرال" %}</div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "معرف" %}</span><span class="drw-val">${referrerHtml}</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "دعوت‌شدگان" %}</span><span class="drw-val">${u.referral_stats.count} نفر</span></div>
+      <div class="drw-row"><span class="drw-lbl">{% trans "درآمد رفرال" %}</span><span class="drw-val accent">${fmt(u.referral_stats.total)} تومان</span></div>
     </div>
 
     <div class="drw-section">
-      <div class="drw-sec-title">سرویس‌ها</div>
+      <div class="drw-sec-title">{% trans "سرویس‌ها" %}</div>
       ${servicesHtml}
     </div>
 
     <div class="drw-section">
-      <div class="drw-sec-title">عملیات</div>
+      <div class="drw-sec-title">{% trans "عملیات" %}</div>
       <div class="usr-act-grid">
-        <button class="usr-act-btn" onclick="openActionModal('add_balance')"><i class="ti ti-plus"></i> افزودن موجودی</button>
-        <button class="usr-act-btn" onclick="openActionModal('deduct_balance')"><i class="ti ti-minus"></i> کسر موجودی</button>
-        <button class="usr-act-btn" onclick="openActionModal('send_message')"><i class="ti ti-send"></i> پیام تلگرام</button>
-        <button class="usr-act-btn" onclick="doQuickAction('grant_free_test')"><i class="ti ti-gift"></i> تست رایگان +۱</button>
+        <button class="usr-act-btn" onclick="openActionModal('add_balance')"><i class="ti ti-plus"></i> {% trans "افزودن موجودی" %}</button>
+        <button class="usr-act-btn" onclick="openActionModal('deduct_balance')"><i class="ti ti-minus"></i> {% trans "کسر موجودی" %}</button>
+        <button class="usr-act-btn" onclick="openActionModal('send_message')"><i class="ti ti-send"></i> {% trans "پیام تلگرام" %}</button>
+        <button class="usr-act-btn" onclick="doQuickAction('grant_free_test')"><i class="ti ti-gift"></i> {% trans "تست رایگان +۱" %}</button>
         ${banBtn}
       </div>
     </div>`;
@@ -659,10 +580,10 @@ function closeDrawer() {
 }
 
 const MODAL_CFG = {
-  add_balance:    { title: 'افزودن موجودی', sub: 'مبلغ را به تومان وارد کنید:', icon: 'ti-plus', input: true, confirm: 'افزودن' },
-  deduct_balance: { title: 'کسر موجودی', sub: 'مبلغ کسر را به تومان وارد کنید:', icon: 'ti-minus', input: true, confirm: 'کسر' },
-  send_message:   { title: 'ارسال پیام', sub: 'پیام برای کاربر در تلگرام:', icon: 'ti-send', text: true, confirm: 'ارسال' },
-  ban:            { title: 'بن کردن', sub: 'دلیل بن (اختیاری) — برای «—» خالی بگذارید:', icon: 'ti-ban', text: true, confirm: 'بن کردن', danger: true },
+  add_balance:    { title: '{% trans "افزودن موجودی" %}', sub: '{% trans "مبلغ را به تومان وارد کنید:" %}', icon: 'ti-plus', input: true, confirm: '{% trans "افزودن" %}' },
+  deduct_balance: { title: '{% trans "کسر موجودی" %}', sub: '{% trans "مبلغ کسر را به تومان وارد کنید:" %}', icon: 'ti-minus', input: true, confirm: '{% trans "کسر" %}' },
+  send_message:   { title: '{% trans "ارسال پیام" %}', sub: '{% trans "پیام برای کاربر در تلگرام:" %}', icon: 'ti-send', text: true, confirm: '{% trans "ارسال" %}' },
+  ban:            { title: '{% trans "بن کردن" %}', sub: '{% trans "دلیل بن (اختیاری) — برای «—» خالی بگذارید:" %}', icon: 'ti-ban', text: true, confirm: '{% trans "بن کردن" %}', danger: true },
 };
 
 function openActionModal(action) {
@@ -709,9 +630,9 @@ async function confirmAction() {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'خطا');
+    if (!data.ok) throw new Error(data.error || '{% trans "خطا" %}');
     closeActionModal();
-    showNotif('انجام شد', cfgMsg(action), 'info');
+    showNotif('{% trans "انجام شد" %}', cfgMsg(action), 'info');
     if (data.user) {
       activeUserData = data.user;
       renderUserDrawer(data.user);
@@ -720,22 +641,22 @@ async function confirmAction() {
       setTimeout(() => location.reload(), 1200);
     }
   } catch (e) {
-    showNotif('خطا', e.message, 'error');
+    showNotif('{% trans "خطا" %}', e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = MODAL_CFG[action]?.confirm || 'تایید';
+    btn.textContent = MODAL_CFG[action]?.confirm || '{% trans "تایید" %}';
   }
 }
 
 function cfgMsg(action) {
   return {
-    add_balance: 'موجودی افزوده شد.',
-    deduct_balance: 'موجودی کسر شد.',
-    send_message: 'پیام ارسال شد.',
-    ban: 'کاربر بن شد.',
-    unban: 'کاربر آنبن شد.',
-    grant_free_test: 'یک تست رایگان اضافه شد.',
-  }[action] || 'عملیات انجام شد.';
+    add_balance: '{% trans "موجودی افزوده شد." %}',
+    deduct_balance: '{% trans "موجودی کسر شد." %}',
+    send_message: '{% trans "پیام ارسال شد." %}',
+    ban: '{% trans "کاربر بن شد." %}',
+    unban: '{% trans "کاربر آنبن شد." %}',
+    grant_free_test: '{% trans "یک تست رایگان اضافه شد." %}',
+  }[action] || '{% trans "عملیات انجام شد." %}';
 }
 
 async function doQuickAction(action) {
@@ -747,12 +668,12 @@ async function doQuickAction(action) {
       body: JSON.stringify({ user_id: activeUserId, action }),
     });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'خطا');
-    showNotif('انجام شد', cfgMsg(action), 'info');
+    if (!data.ok) throw new Error(data.error || '{% trans "خطا" %}');
+    showNotif('{% trans "انجام شد" %}', cfgMsg(action), 'info');
     if (data.user) { activeUserData = data.user; renderUserDrawer(data.user); }
     if (action === 'unban') setTimeout(() => location.reload(), 1200);
   } catch (e) {
-    showNotif('خطا', e.message, 'error');
+    showNotif('{% trans "خطا" %}', e.message, 'error');
   }
 }
 

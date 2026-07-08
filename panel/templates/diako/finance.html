@@ -1,248 +1,263 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}مالی — دیاکو{% endblock %}
+{% block title %}{% trans "مالی" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
-.card-section { margin-bottom: 16px; }
-.section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-.section-title i { color: var(--accent); }
-.mgmt-table-wrap { overflow-x: auto; }
-.mgmt-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
-.mgmt-table thead th { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 4px 14px 8px; text-align: right; white-space: nowrap; }
-.mgmt-table thead th.col-actions { text-align: left; }
-.mgmt-row td { padding: 12px 14px; vertical-align: middle; background: rgba(255,255,255,0.018); border-top: 1px solid rgba(255,255,255,0.038); border-bottom: 1px solid rgba(0,0,0,0.18); font-size: 12px; color: var(--text); white-space: nowrap; }
-.mgmt-row td:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid rgba(255,255,255,0.038); }
-.mgmt-row td:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid rgba(255,255,255,0.038); }
-.mgmt-row:hover td { background: rgba(var(--accent-rgb),0.045); }
-.cell-name { font-size: 12px; font-weight: 600; }
-.cell-price { font-size: 12px; font-weight: 700; color: var(--accent); }
-.cell-muted { font-size: 10px; color: var(--text-muted); }
-.st-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-.st-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-.st-badge.st-pending { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); color: var(--warn); }
-.st-badge.st-pending::before { background: var(--warn); }
-.st-badge.st-approved { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
-.st-badge.st-approved::before { background: var(--green); }
-.st-badge.st-rejected { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
-.st-badge.st-rejected::before { background: var(--red); }
-.st-badge.st-active { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: var(--green); }
-.st-badge.st-active::before { background: var(--green); }
-.st-badge.st-inactive { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.28); color: var(--red); }
-.st-badge.st-inactive::before { background: var(--red); }
-.row-acts { display: flex; gap: 4px; justify-content: flex-end; }
-.row-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 150ms; }
-.row-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
-.row-btn.approve:hover { background: rgba(52,211,153,0.15); color: var(--green); }
-.row-btn.reject:hover { background: rgba(248,113,113,0.15); color: var(--red); }
-.btn-primary { padding: 8px 16px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: opacity 180ms; }
-.btn-primary:hover { opacity: 0.85; }
-.ord-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-.ord-empty i { font-size: 36px; display: block; margin-bottom: 8px; opacity: 0.35; }
-.ord-empty p { font-size: 12px; }
-.card-info { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(var(--accent-rgb),0.04); border: 1px solid rgba(var(--accent-rgb),0.12); border-radius: 12px; margin-bottom: 12px; }
-.mode-row { display: flex; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-.mode-seg { display: inline-flex; gap: 4px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 4px; }
-.mode-btn { padding: 7px 13px; border-radius: 9px; border: none; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
-.mode-btn:hover { color: var(--text); }
-.mode-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; }
-.card-num-cell { font-family: monospace; direction: ltr; display: inline-block; }
+.card-num-cell { font-family: monospace; direction: ltr; unicode-bidi: embed; display: inline-block; }
 .star-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 15px; display: flex; align-items: center; }
 .star-btn.filled { color: var(--accent); }
-.card-info-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent); flex-shrink: 0; }
-.card-info-text { font-size: 13px; }
-.card-info-text .num { font-family: monospace; font-size: 14px; font-weight: 700; color: var(--accent); }
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.52); backdrop-filter: blur(10px); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
-.modal-bg.open { opacity: 1; pointer-events: all; }
-.modal-box { width: min(440px, 100%); background: var(--bg-base); backdrop-filter: blur(60px) saturate(160%); -webkit-backdrop-filter: blur(60px) saturate(160%); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05); transform: translateY(12px); transition: transform 220ms ease; }
-.modal-bg.open .modal-box { transform: translateY(0); }
-.modal-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-.modal-title i { color: var(--accent); }
-.modal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
-.modal-input { width: 100%; padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); color: var(--text); font-size: 13px; font-family: inherit; outline: none; margin-bottom: 12px; }
-.modal-input:focus { border-color: rgba(var(--accent-rgb),0.4); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08); }
-.modal-input::placeholder { color: var(--text-muted); }
-.modal-acts { display: flex; gap: 8px; justify-content: flex-end; }
-.modal-btn { padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: all 150ms; }
-.modal-btn:hover { background: rgba(255,255,255,0.09); color: var(--text); }
-.modal-btn.btn-confirm { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #000; border: none; }
-.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.mode-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 </style>
 {% endblock %}
 
-{% block body %}
-<div class="dash-wrap">
-  <div class="sidebar-overlay"></div>
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-    <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
-      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
-      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
-      <a href="/diako/servers/" class="nav-item" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
-      <a href="/diako/monitoring/" class="nav-item" data-tooltip="مانیتورینگ"><i class="ti ti-world"></i></a>
-      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
-      <a href="/diako/finance/" class="nav-item active" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
-      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
-      <a href="/diako/tutorials/" class="nav-item" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
-      <a href="/diako/extra-requests/" class="nav-item" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
-      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
-      <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
-      <a href="/diako/force-join/" class="nav-item" data-tooltip="جوین اجباری"><i class="ti ti-lock"></i></a>
-      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
-    </nav>
-  </aside>
-
-  <div class="dash-body">
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title">مدیریت مالی</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
-          </div>
-        </div>
-      </div>
+{% block content %}
+<div class="kpi-row anim-card">
+  <div class="kpi-card">
+    <div class="kpi-ico green"><i class="ti ti-coin"></i></div>
+    <div class="kpi-info">
+      <div class="kpi-value">{{ rev_today|toman }}</div>
+      <div class="kpi-label">{% trans "درآمد امروز (تومان)" %}</div>
     </div>
-
-    <div class="dash-container">
-      <div class="inner-card anim-card card-section">
-        <div class="section-title"><i class="ti ti-credit-card"></i> کارت به کارت</div>
-        <div class="card-info">
-          <div class="card-info-icon"><i class="ti ti-credit-card"></i></div>
-          <div class="card-info-text" style="flex:1">وضعیت پرداخت کارت به کارت</div>
-          {% if card_active %}
-          <span class="st-badge st-approved" style="cursor:pointer" onclick="toggleCardActive()"><i class="ti ti-check"></i> روشن</span>
-          {% else %}
-          <span class="st-badge st-rejected" style="cursor:pointer" onclick="toggleCardActive()"><i class="ti ti-x"></i> خاموش</span>
-          {% endif %}
-        </div>
-
-        <div class="mode-row">
-          <span class="cell-muted">حالت انتخاب کارت:</span>
-          <div class="mode-seg">
-            <button class="mode-btn {% if card_mode == 'round_robin' %}active{% endif %}" onclick="setCardMode('round_robin')"><i class="ti ti-repeat"></i> نوبتی</button>
-            <button class="mode-btn {% if card_mode == 'random' %}active{% endif %}" onclick="setCardMode('random')"><i class="ti ti-dice-5"></i> تصادفی</button>
-            <button class="mode-btn {% if card_mode == 'fixed' %}active{% endif %}" onclick="setCardMode('fixed')"><i class="ti ti-pin"></i> ثابت</button>
-          </div>
-        </div>
-
-        {% if cards %}
-        <div class="mgmt-table-wrap">
-          <table class="mgmt-table">
-            <thead><tr>
-              <th>#</th><th>شماره کارت</th><th>صاحب کارت</th><th>وضعیت</th>
-              {% if card_mode == 'fixed' %}<th>پیش‌فرض</th>{% endif %}
-              <th class="col-actions"></th>
-            </tr></thead>
-            <tbody>
-              {% for c in cards %}
-              <tr class="mgmt-row">
-                <td><span class="cell-muted">#{{ c.id }}</span></td>
-                <td><span class="card-num-cell">{{ c.number }}</span></td>
-                <td><span class="cell-muted">{{ c.owner|default:"—" }}</span></td>
-                <td>
-                  {% if c.is_active %}<span class="st-badge st-active" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">فعال</span>
-                  {% else %}<span class="st-badge st-inactive" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">غیرفعال</span>{% endif %}
-                </td>
-                {% if card_mode == 'fixed' %}
-                <td>
-                  {% if c.id == card_fixed_id %}<span class="star-btn filled"><i class="ti ti-star-filled"></i></span>
-                  {% else %}<button class="star-btn" title="تنظیم به‌عنوان کارت پیش‌فرض" onclick="setFixedCard({{ c.id }})"><i class="ti ti-star"></i></button>{% endif %}
-                </td>
-                {% endif %}
-                <td>
-                  <div class="row-acts">
-                    <button class="row-btn" title="ویرایش" onclick="openEditCardModal({{ c.id }}, '{{ c.number|escapejs }}', '{{ c.owner|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
-                    <button class="row-btn reject" title="حذف" onclick="deleteCard({{ c.id }})"><i class="ti ti-trash"></i></button>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="ord-empty"><i class="ti ti-credit-card-off"></i><p>هنوز کارتی ثبت نشده</p></div>
-        {% endif %}
-
-        <button class="btn-primary" style="margin-top:12px" onclick="openAddCardModal()"><i class="ti ti-plus"></i> کارت جدید</button>
-      </div>
-
-      <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-wallet"></i> درخواست‌های شارژ حساب</div></div>
-        {% if topups %}
-        <div class="mgmt-table-wrap" style="padding:0 6px;">
-          <table class="mgmt-table">
-            <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ</th><th class="col-actions"></th></tr></thead>
-            <tbody>
-              {% for t in topups %}
-              <tr class="mgmt-row">
-                <td><span class="cell-muted">#{{ t.id }}</span></td>
-                <td><span class="cell-name">{{ t.username|default:t.user_id }}</span></td>
-                <td><span class="cell-price">{{ t.amount|default:0 }} تومان</span></td>
-                <td>{% if t.status == 'pending' %}<span class="st-badge st-pending">در انتظار</span>{% elif t.status == 'approved' %}<span class="st-badge st-approved">تایید</span>{% else %}<span class="st-badge st-rejected">رد</span>{% endif %}</td>
-                <td><span class="cell-muted">{{ t.created_at|default:"—"|slice:":16" }}</span></td>
-                <td>{% if t.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="تایید" onclick="approveTopup({{ t.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="رد" onclick="rejectTopup({{ t.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="ord-empty"><i class="ti ti-wallet-off"></i><p>درخواست شارژی وجود ندارد</p></div>
-        {% endif %}
-      </div>
-
-      <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-receipt"></i> تراکنش‌های اخیر</div></div>
-        {% if transactions %}
-        <div class="mgmt-table-wrap" style="padding:0 6px;">
-          <table class="mgmt-table">
-            <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>نوع</th><th>توضیحات</th><th>تاریخ</th></tr></thead>
-            <tbody>
-              {% for tx in transactions %}
-              <tr class="mgmt-row">
-                <td><span class="cell-muted">#{{ tx.id }}</span></td>
-                <td><span class="cell-name">{{ tx.user.first_name|default:tx.user_id }}</span></td>
-                <td><span class="cell-price">{{ tx.amount|default:0 }} تومان</span></td>
-                <td><span class="cell-muted">{{ tx.type }}</span></td>
-                <td><span class="cell-muted">{{ tx.description|default:"—" }}</span></td>
-                <td><span class="cell-muted">{{ tx.created_at|default:"—"|slice:":16" }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="ord-empty"><i class="ti ti-receipt-off"></i><p>تراکنشی وجود ندارد</p></div>
-        {% endif %}
-      </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-ico"><i class="ti ti-calendar-stats"></i></div>
+    <div class="kpi-info">
+      <div class="kpi-value">{{ rev_month|toman }}</div>
+      <div class="kpi-label">{% trans "درآمد این ماه (تومان)" %}</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-ico blue"><i class="ti ti-chart-bar"></i></div>
+    <div class="kpi-info">
+      <div class="kpi-value">{{ rev_total|toman }}</div>
+      <div class="kpi-label">{% trans "درآمد کل (تومان)" %}</div>
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-ico warn"><i class="ti ti-wallet"></i></div>
+    <div class="kpi-info">
+      <div class="kpi-value">{{ total_wallet|toman }}</div>
+      <div class="kpi-label">{% trans "موجودی کیف پول‌ها (تومان)" %}</div>
     </div>
   </div>
 </div>
 
+<div class="widget-grid anim-card">
+  <!-- کارت به کارت -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-credit-card"></i>{% trans "کارت به کارت" %}</div>
+      <div class="widget-head-acts">
+        <label class="switch" title="{% trans 'روشن/خاموش' %}">
+          <input type="checkbox" {% if card_active %}checked{% endif %} onchange="toggleCardActive()">
+          <span class="track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="mode-row">
+        <span class="cell-muted">{% trans "حالت انتخاب کارت:" %}</span>
+        <div class="seg">
+          <button class="seg-btn {% if card_mode == 'round_robin' %}active{% endif %}" onclick="setCardMode('round_robin')"><i class="ti ti-repeat"></i> {% trans "نوبتی" %}</button>
+          <button class="seg-btn {% if card_mode == 'random' %}active{% endif %}" onclick="setCardMode('random')"><i class="ti ti-dice-5"></i> {% trans "تصادفی" %}</button>
+          <button class="seg-btn {% if card_mode == 'fixed' %}active{% endif %}" onclick="setCardMode('fixed')"><i class="ti ti-pin"></i> {% trans "ثابت" %}</button>
+        </div>
+      </div>
+
+      {% if cards %}
+      <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+          <thead><tr>
+            <th>{% trans "شماره کارت" %}</th><th>{% trans "صاحب کارت" %}</th><th>{% trans "وضعیت" %}</th>
+            {% if card_mode == 'fixed' %}<th>{% trans "پیش‌فرض" %}</th>{% endif %}
+            <th class="col-actions"></th>
+          </tr></thead>
+          <tbody>
+            {% for c in cards %}
+            <tr class="mgmt-row">
+              <td><span class="card-num-cell">{{ c.number }}</span></td>
+              <td><span class="cell-muted">{{ c.owner|default:"—" }}</span></td>
+              <td>
+                {% if c.is_active %}<span class="st-badge st-active" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">{% trans "فعال" %}</span>
+                {% else %}<span class="st-badge st-inactive" style="cursor:pointer" onclick="toggleCardItem({{ c.id }})">{% trans "غیرفعال" %}</span>{% endif %}
+              </td>
+              {% if card_mode == 'fixed' %}
+              <td>
+                {% if c.id == card_fixed_id %}<span class="star-btn filled"><i class="ti ti-star-filled"></i></span>
+                {% else %}<button class="star-btn" title="{% trans 'کارت پیش‌فرض' %}" onclick="setFixedCard({{ c.id }})"><i class="ti ti-star"></i></button>{% endif %}
+              </td>
+              {% endif %}
+              <td>
+                <div class="row-acts">
+                  <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditCardModal({{ c.id }}, '{{ c.number|escapejs }}', '{{ c.owner|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
+                  <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deleteCard({{ c.id }})"><i class="ti ti-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-credit-card-off"></i></div>
+        <div class="empty-title">{% trans "هنوز کارتی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "برای فعال شدن پرداخت کارت‌به‌کارت، حداقل یک کارت اضافه کن." %}</div>
+      </div>
+      {% endif %}
+
+      <button class="btn-primary" style="margin-top:12px" onclick="openAddCardModal()"><i class="ti ti-plus"></i> {% trans "کارت جدید" %}</button>
+    </div>
+  </div>
+
+  <!-- کدهای تخفیف -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-ticket"></i>{% trans "کدهای تخفیف" %}</div>
+      <div class="widget-head-acts">
+        <button class="btn-primary" onclick="openDiscountModal()"><i class="ti ti-plus"></i> {% trans "کد جدید" %}</button>
+      </div>
+    </div>
+    <div class="widget-body {% if discounts %}flush{% endif %}">
+      {% if discounts %}
+      <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+          <thead><tr><th>{% trans "کد" %}</th><th>{% trans "مقدار" %}</th><th>{% trans "استفاده" %}</th><th>{% trans "انقضا" %}</th><th>{% trans "وضعیت" %}</th><th class="col-actions"></th></tr></thead>
+          <tbody>
+            {% for d in discounts %}
+            <tr class="mgmt-row">
+              <td><span class="cell-code">{{ d.code }}</span></td>
+              <td><span class="cell-muted">{% if d.type == 'percent' %}{{ d.value }}٪{% else %}{{ d.value|toman }} {% trans "تومان" %}{% endif %}</span></td>
+              <td><span class="cell-muted">{{ d.used_count|default:0 }} / {% if d.max_uses %}{{ d.max_uses }}{% else %}∞{% endif %}</span></td>
+              <td><span class="cell-muted">{{ d.expires_at|default:_("نامحدود") }}</span></td>
+              <td>{% if d.is_active %}<span class="st-badge st-active">{% trans "فعال" %}</span>{% else %}<span class="st-badge st-inactive">{% trans "غیرفعال" %}</span>{% endif %}</td>
+              <td>
+                <div class="row-acts">
+                  <button class="row-btn" title="{% trans 'تغییر وضعیت' %}" onclick="toggleDiscount({{ d.id }})"><i class="ti ti-power"></i></button>
+                  <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deleteDiscount({{ d.id }}, '{{ d.code|escapejs }}')"><i class="ti ti-trash"></i></button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-ticket-off"></i></div>
+        <div class="empty-title">{% trans "کد تخفیفی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "با کد تخفیف می‌تونی برای مناسبت‌ها یا کاربرهای خاص، خرید رو ارزون‌تر کنی." %}</div>
+        <button class="btn-primary" onclick="openDiscountModal()"><i class="ti ti-plus"></i> {% trans "ساخت اولین کد" %}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- شارژ حساب -->
+<div class="widget-card anim-card">
+  <div class="widget-head">
+    <div class="widget-title"><i class="ti ti-wallet"></i>{% trans "درخواست‌های شارژ حساب" %}</div>
+  </div>
+  <div class="widget-body flush">
+    {% if topups %}
+    <div class="mgmt-table-wrap">
+      <table class="mgmt-table">
+        <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "مبلغ" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
+        <tbody>
+          {% for t in topups %}
+          <tr class="mgmt-row">
+            <td><span class="cell-muted">#{{ t.id }}</span></td>
+            <td><span class="cell-strong">{{ t.username|default:t.user_id }}</span></td>
+            <td><span class="cell-accent">{{ t.amount|toman }} {% trans "تومان" %}</span></td>
+            <td>{% if t.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif t.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
+            <td><span class="cell-muted">{{ t.created_at|jdate }}</span></td>
+            <td>{% if t.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveTopup({{ t.id }})"><i class="ti ti-check"></i></button><button class="row-btn danger" title="{% trans 'رد' %}" onclick="rejectTopup({{ t.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-ico"><i class="ti ti-wallet-off"></i></div>
+      <div class="empty-title">{% trans "درخواست شارژی وجود ندارد" %}</div>
+      <div class="empty-sub">{% trans "وقتی کاربری برای کیف پولش رسید بفرسته، اینجا نشون داده می‌شه." %}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- تراکنش‌ها -->
+<div class="widget-card anim-card">
+  <div class="widget-head">
+    <div class="widget-title"><i class="ti ti-receipt"></i>{% trans "تراکنش‌های اخیر" %}</div>
+  </div>
+  <div class="widget-body flush">
+    {% if transactions %}
+    <div class="mgmt-table-wrap">
+      <table class="mgmt-table">
+        <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "مبلغ" %}</th><th>{% trans "نوع" %}</th><th>{% trans "توضیحات" %}</th><th>{% trans "تاریخ" %}</th></tr></thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr class="mgmt-row">
+            <td><span class="cell-muted">#{{ tx.id }}</span></td>
+            <td><span class="cell-strong">{{ tx.user.first_name|default:tx.user_id }}</span></td>
+            <td><span class="cell-accent">{{ tx.amount|toman }} {% trans "تومان" %}</span></td>
+            <td><span class="cell-muted">{{ tx.type }}</span></td>
+            <td><span class="cell-muted">{{ tx.description|default:"—" }}</span></td>
+            <td><span class="cell-muted">{{ tx.created_at|jdate }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-ico"><i class="ti ti-receipt-off"></i></div>
+      <div class="empty-title">{% trans "تراکنشی وجود ندارد" %}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- مودال کارت -->
+{% endblock %}
+
+{% block modals %}
 <div class="modal-bg" id="cardModal">
   <div class="modal-box">
-    <div class="modal-title"><i class="ti ti-credit-card"></i><span id="cardModalTitle">کارت جدید</span></div>
-    <label class="modal-label">شماره کارت (۱۶ رقم)</label>
-    <input class="modal-input" id="cardNumber" placeholder="6219861034529876" maxlength="16">
-    <label class="modal-label">نام صاحب کارت</label>
-    <input class="modal-input" id="cardOwner" placeholder="نام و نام خانوادگی">
+    <div class="modal-title"><i class="ti ti-credit-card"></i><span id="cardModalTitle">{% trans "کارت جدید" %}</span></div>
+    <label class="modal-label">{% trans "شماره کارت (۱۶ رقم)" %}</label>
+    <input class="modal-input" id="cardNumber" placeholder="6219861034529876" maxlength="16" style="direction:ltr;text-align:left">
+    <label class="modal-label">{% trans "نام صاحب کارت" %}</label>
+    <input class="modal-input" id="cardOwner" placeholder="{% trans 'نام و نام خانوادگی' %}">
     <div class="modal-acts">
-      <button class="modal-btn" onclick="closeModal('cardModal')">انصراف</button>
-      <button class="modal-btn btn-confirm" id="cardConfirmBtn" onclick="confirmCard()">ذخیره</button>
+      <button class="modal-btn" onclick="closeModal('cardModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="cardConfirmBtn" onclick="confirmCard()">{% trans "ذخیره" %}</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال کد تخفیف -->
+<div class="modal-bg" id="discountModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-ticket"></i><span>{% trans "کد تخفیف جدید" %}</span></div>
+    <label class="modal-label">{% trans "کد تخفیف (انگلیسی/عدد)" %}</label>
+    <input class="modal-input" id="discCode" placeholder="SUMMER30" style="direction:ltr;text-align:left">
+    <label class="modal-label">{% trans "نوع تخفیف" %}</label>
+    <select class="modal-select" id="discType"><option value="percent">{% trans "درصدی" %}</option><option value="fixed">{% trans "مبلغ ثابت" %}</option></select>
+    <label class="modal-label">{% trans "مقدار (درصد یا مبلغ تومان)" %}</label>
+    <input class="modal-input" id="discValue" type="number" placeholder="30">
+    <label class="modal-label">{% trans "حداکثر استفاده (۰ = نامحدود)" %}</label>
+    <input class="modal-input" id="discMaxUses" type="number" placeholder="0" value="0">
+    <label class="modal-label">{% trans "تاریخ انقضا (اختیاری — YYYY-MM-DD)" %}</label>
+    <input class="modal-input" id="discExpiry" placeholder="2026-12-31" style="direction:ltr;text-align:left">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('discountModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="discConfirmBtn" onclick="confirmDiscount()">{% trans "افزودن" %}</button>
     </div>
   </div>
 </div>
@@ -250,14 +265,13 @@
 
 {% block extra_scripts %}
 <script>
-const CSRF = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || '';
 let editCardId = null;
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 function openAddCardModal() {
   editCardId = null;
-  document.getElementById('cardModalTitle').textContent = 'کارت جدید';
+  document.getElementById('cardModalTitle').textContent = '{% trans "کارت جدید" %}';
   document.getElementById('cardNumber').value = '';
   document.getElementById('cardOwner').value = '';
   document.getElementById('cardModal').classList.add('open');
@@ -265,19 +279,10 @@ function openAddCardModal() {
 
 function openEditCardModal(id, number, owner) {
   editCardId = id;
-  document.getElementById('cardModalTitle').textContent = 'ویرایش کارت';
+  document.getElementById('cardModalTitle').textContent = '{% trans "ویرایش کارت" %}';
   document.getElementById('cardNumber').value = number.replace(/\s/g, '');
   document.getElementById('cardOwner').value = owner;
   document.getElementById('cardModal').classList.add('open');
-}
-
-async function apiCall(body) {
-  const res = await fetch('/diako/api/finance-action/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-    body: JSON.stringify(body),
-  });
-  return res.json();
 }
 
 async function confirmCard() {
@@ -286,61 +291,57 @@ async function confirmCard() {
   var body = editCardId
     ? { action: 'update_card', card_id: editCardId, number: document.getElementById('cardNumber').value, owner: document.getElementById('cardOwner').value }
     : { action: 'add_card', number: document.getElementById('cardNumber').value, owner: document.getElementById('cardOwner').value };
-  var data = await apiCall(body);
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
-  btn.disabled = false; btn.innerHTML = 'ذخیره';
+  var data = await apiPost('/diako/api/finance-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '{% trans "ذخیره" %}';
 }
 
-async function toggleCardActive() {
-  var data = await apiCall({ action: 'toggle_card_active' });
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+async function financeAction(body, confirmMsg) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  var data = await apiPost('/diako/api/finance-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
 }
 
-async function setCardMode(mode) {
-  var data = await apiCall({ action: 'set_card_mode', mode: mode });
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+function toggleCardActive() { financeAction({ action: 'toggle_card_active' }); }
+function setCardMode(mode) { financeAction({ action: 'set_card_mode', mode: mode }); }
+function setFixedCard(id) { financeAction({ action: 'set_fixed_card', card_id: id }); }
+function toggleCardItem(id) { financeAction({ action: 'toggle_card_item', card_id: id }); }
+function deleteCard(id) { financeAction({ action: 'delete_card', card_id: id }, '{% trans "مطمئنی می‌خوای این کارت رو حذف کنی؟" %}'); }
+function approveTopup(id) { financeAction({ action: 'approve_topup', topup_id: id }, '{% trans "تایید درخواست شارژ؟" %}'); }
+function rejectTopup(id) { financeAction({ action: 'reject_topup', topup_id: id }, '{% trans "رد درخواست شارژ؟" %}'); }
+
+function openDiscountModal() { document.getElementById('discountModal').classList.add('open'); }
+
+async function confirmDiscount() {
+  var btn = document.getElementById('discConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var data = await apiPost('/diako/api/discount-action/', {
+    action: 'add',
+    code: document.getElementById('discCode').value,
+    type: document.getElementById('discType').value,
+    value: document.getElementById('discValue').value,
+    max_uses: document.getElementById('discMaxUses').value,
+    expires_at: document.getElementById('discExpiry').value,
+  });
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '{% trans "افزودن" %}';
 }
 
-async function setFixedCard(id) {
-  var data = await apiCall({ action: 'set_fixed_card', card_id: id });
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+async function toggleDiscount(id) {
+  var data = await apiPost('/diako/api/discount-action/', { action: 'toggle', code_id: id });
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
 }
 
-async function toggleCardItem(id) {
-  var data = await apiCall({ action: 'toggle_card_item', card_id: id });
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
+async function deleteDiscount(id, code) {
+  if (!confirm('{% trans "حذف کد" %} «' + code + '»؟')) return;
+  var data = await apiPost('/diako/api/discount-action/', { action: 'delete', code_id: id });
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
 }
 
-async function deleteCard(id) {
-  if (!confirm('مطمئنی می‌خوای این کارت رو حذف کنی؟')) return;
-  var data = await apiCall({ action: 'delete_card', card_id: id });
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
-}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal('cardModal'); closeModal('discountModal'); }
+});
 
-async function approveTopup(id) {
-  if (!confirm('تایید درخواست شارژ؟')) return;
-  var res = await fetch('/diako/api/finance-action/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify({ action: 'approve_topup', topup_id: id }) });
-  var data = await res.json();
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
-}
-
-async function rejectTopup(id) {
-  if (!confirm('رد درخواست شارژ؟')) return;
-  var res = await fetch('/diako/api/finance-action/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify({ action: 'reject_topup', topup_id: id }) });
-  var data = await res.json();
-  if (data.ok) { location.reload(); } else { showNotif('خطا', data.error, 'error'); }
-}
-
-function showNotif(title, body, type) {
-  var stack = document.getElementById('notif-stack');
-  var card = document.createElement('div');
-  card.className = 'notif-card';
-  var colors = { info: 'var(--accent)', error: 'var(--red)' };
-  card.innerHTML = '<div class="notif-header" style="color:' + (colors[type] || 'var(--accent)') + '">' + title + '</div><div class="notif-body">' + body + '</div>';
-  stack.appendChild(card);
-  setTimeout(function() { card.classList.add('hiding'); setTimeout(function() { card.remove(); }, 300); }, 3500);
-}
-
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal('cardModal'); });
+if (location.hash === '#discount') openDiscountModal();
 </script>
 {% endblock %}

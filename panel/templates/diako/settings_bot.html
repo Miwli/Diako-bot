@@ -1,0 +1,295 @@
+{% extends 'diako/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "تنظیمات" %} — {% trans "دیاکو" %}{% endblock %}
+
+{% block content %}
+<div class="widget-grid anim-card">
+  <!-- جوین اجباری -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-lock"></i>{% trans "جوین اجباری" %}</div>
+      <div class="widget-head-acts">
+        <button class="btn-ghost" onclick="openAddChannelModal()"><i class="ti ti-plus"></i> {% trans "کانال" %}</button>
+        <label class="switch" title="{% trans 'روشن/خاموش' %}">
+          <input type="checkbox" {% if force_join_enabled %}checked{% endif %} onchange="toggleForceJoin()">
+          <span class="track"></span>
+        </label>
+      </div>
+    </div>
+    <div class="widget-body">
+      <p class="cell-muted" style="margin-bottom:12px">{% trans "کاربران قبل از استفاده از بات باید عضو این کانال‌ها باشند. بات باید در هر کانال ادمین باشد." %}</p>
+      {% if channels %}
+      <div class="item-list">
+        {% for c in channels %}
+        <div class="item-row {% if not c.is_active %}inactive{% endif %}">
+          <div class="item-ico"><i class="ti ti-brand-telegram"></i></div>
+          <div class="item-text">
+            <div class="item-title">{{ c.title|default:c.chat_id }}</div>
+            <div class="item-sub">{{ c.chat_id }}</div>
+          </div>
+          <div class="row-acts">
+            <button class="row-btn" title="{% trans 'فعال/غیرفعال' %}" onclick="toggleChannel({{ c.id }})"><i class="ti ti-power"></i></button>
+            <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditChannelModal({{ c.id }}, '{{ c.chat_id|escapejs }}', '{{ c.title|default:''|escapejs }}', '{{ c.invite_link|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
+            <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deleteChannel({{ c.id }})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-lock-off"></i></div>
+        <div class="empty-title">{% trans "هنوز کانالی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "کانال تلگرامت رو اضافه کن تا کاربرها قبل از استفاده از بات عضوش بشن." %}</div>
+        <button class="btn-primary" onclick="openAddChannelModal()"><i class="ti ti-plus"></i> {% trans "افزودن کانال" %}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- آموزش‌ها -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-book"></i>{% trans "آموزش‌ها" %}</div>
+      <div class="widget-head-acts">
+        <button class="btn-ghost" onclick="openAddTutorialModal()"><i class="ti ti-plus"></i> {% trans "آموزش" %}</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      {% if tutorials %}
+      <div class="item-list">
+        {% for t in tutorials %}
+        <div class="item-row {% if not t.is_active %}inactive{% endif %}">
+          <div class="item-ico"><i class="ti {% if t.content_type == 'video' %}ti-video{% elif t.content_type == 'photo' %}ti-photo{% else %}ti-file-text{% endif %}"></i></div>
+          <div class="item-text">
+            <div class="item-title">{{ t.title }}</div>
+          </div>
+          <div class="row-acts">
+            <button class="row-btn" title="{% trans 'بالا' %}" onclick="tutAction({action:'move_tutorial', id:{{ t.id }}, direction:'up'})"><i class="ti ti-chevron-up"></i></button>
+            <button class="row-btn" title="{% trans 'پایین' %}" onclick="tutAction({action:'move_tutorial', id:{{ t.id }}, direction:'down'})"><i class="ti ti-chevron-down"></i></button>
+            <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditTutorialModal({{ t.id }}, '{{ t.title|escapejs }}', '{{ t.caption|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
+            <button class="row-btn" title="{% trans 'فعال/غیرفعال' %}" onclick="tutAction({action:'toggle_tutorial', id:{{ t.id }}})"><i class="ti ti-power"></i></button>
+            <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deleteTutorial({{ t.id }}, '{{ t.title|escapejs }}')"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-book-off"></i></div>
+        <div class="empty-title">{% trans "آموزشی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "راهنمای اتصال و نصب اپلیکیشن‌ها رو اینجا بذار تا کاربرها توی بات ببینن." %}</div>
+        <button class="btn-primary" onclick="openAddTutorialModal()"><i class="ti ti-plus"></i> {% trans "اولین آموزش" %}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- سوالات متداول -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-help"></i>{% trans "سوالات متداول" %}</div>
+      <div class="widget-head-acts">
+        <button class="btn-ghost" onclick="openAddFaqModal()"><i class="ti ti-plus"></i> {% trans "سوال" %}</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      {% if faqs %}
+      <div class="item-list">
+        {% for f in faqs %}
+        <div class="item-row {% if not f.is_active %}inactive{% endif %}">
+          <div class="item-ico"><i class="ti ti-message-question"></i></div>
+          <div class="item-text">
+            <div class="item-title">{{ f.question|truncatechars:60 }}</div>
+          </div>
+          <div class="row-acts">
+            <button class="row-btn" title="{% trans 'بالا' %}" onclick="tutAction({action:'move_faq', id:{{ f.id }}, direction:'up'})"><i class="ti ti-chevron-up"></i></button>
+            <button class="row-btn" title="{% trans 'پایین' %}" onclick="tutAction({action:'move_faq', id:{{ f.id }}, direction:'down'})"><i class="ti ti-chevron-down"></i></button>
+            <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditFaqModal({{ f.id }}, '{{ f.question|escapejs }}', '{{ f.answer|default:''|escapejs }}')"><i class="ti ti-edit"></i></button>
+            <button class="row-btn" title="{% trans 'فعال/غیرفعال' %}" onclick="tutAction({action:'toggle_faq', id:{{ f.id }}})"><i class="ti ti-power"></i></button>
+            <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deleteFaq({{ f.id }}, '{{ f.question|truncatechars:20|escapejs }}')"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-help-off"></i></div>
+        <div class="empty-title">{% trans "سوالی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "سوال‌های پرتکرار کاربرها رو با جوابشون اینجا اضافه کن." %}</div>
+        <button class="btn-primary" onclick="openAddFaqModal()"><i class="ti ti-plus"></i> {% trans "اولین سوال" %}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- مودال کانال -->
+{% endblock %}
+
+{% block modals %}
+<div class="modal-bg" id="channelModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-lock"></i><span id="channelModalTitle">{% trans "کانال جدید" %}</span></div>
+    <label class="modal-label">{% trans "آیدی عددی (مثل -1001234567890) یا یوزرنیم (مثل @mychannel)" %}</label>
+    <input class="modal-input" id="channelChatId" placeholder="@mychannel" style="direction:ltr;text-align:left">
+    <label class="modal-label">{% trans "عنوان نمایشی" %}</label>
+    <input class="modal-input" id="channelTitle" placeholder="{% trans 'کانال اصلی' %}">
+    <label class="modal-label">{% trans "لینک دعوت (فقط برای کانال خصوصی لازمه)" %}</label>
+    <input class="modal-input" id="channelLink" placeholder="https://t.me/+xxxxxxx" style="direction:ltr;text-align:left">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('channelModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="channelConfirmBtn" onclick="confirmChannel()">{% trans "ذخیره" %}</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال آموزش -->
+<div class="modal-bg" id="tutorialModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-book"></i><span id="tutModalTitle">{% trans "آموزش جدید" %}</span></div>
+    <label class="modal-label">{% trans "عنوان" %}</label>
+    <input class="modal-input" id="tutTitle" placeholder="{% trans 'مثلاً: راهنمای نصب' %}">
+    <label class="modal-label">{% trans "متن آموزش" %}</label>
+    <textarea class="modal-textarea" id="tutCaption" placeholder="{% trans 'متن آموزش…' %}"></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('tutorialModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="tutConfirmBtn" onclick="confirmTutorial()">{% trans "ذخیره" %}</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال سوال -->
+<div class="modal-bg" id="faqModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-help"></i><span id="faqModalTitle">{% trans "سوال جدید" %}</span></div>
+    <label class="modal-label">{% trans "سوال" %}</label>
+    <input class="modal-input" id="faqQuestion" placeholder="{% trans 'سوال…' %}">
+    <label class="modal-label">{% trans "جواب" %}</label>
+    <textarea class="modal-textarea" id="faqAnswer" placeholder="{% trans 'جواب…' %}"></textarea>
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeModal('faqModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="faqConfirmBtn" onclick="confirmFaq()">{% trans "ذخیره" %}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let editChannelId = null;
+let editTutId = null;
+let editFaqId = null;
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ─── جوین اجباری ─── */
+function openAddChannelModal() {
+  editChannelId = null;
+  document.getElementById('channelModalTitle').textContent = '{% trans "کانال جدید" %}';
+  document.getElementById('channelChatId').value = '';
+  document.getElementById('channelTitle').value = '';
+  document.getElementById('channelLink').value = '';
+  document.getElementById('channelModal').classList.add('open');
+}
+
+function openEditChannelModal(id, chatId, title, link) {
+  editChannelId = id;
+  document.getElementById('channelModalTitle').textContent = '{% trans "ویرایش کانال" %}';
+  document.getElementById('channelChatId').value = chatId;
+  document.getElementById('channelTitle').value = title;
+  document.getElementById('channelLink').value = link;
+  document.getElementById('channelModal').classList.add('open');
+}
+
+async function fjAction(body, confirmMsg) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  var data = await apiPost('/diako/api/force-join-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+}
+
+async function confirmChannel() {
+  var btn = document.getElementById('channelConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var body = {
+    action: editChannelId ? 'update' : 'add',
+    chat_id: document.getElementById('channelChatId').value,
+    title: document.getElementById('channelTitle').value,
+    invite_link: document.getElementById('channelLink').value,
+  };
+  if (editChannelId) { body.channel_id = editChannelId; }
+  var data = await apiPost('/diako/api/force-join-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '{% trans "ذخیره" %}';
+}
+
+function toggleForceJoin() { fjAction({ action: 'toggle_enabled' }); }
+function toggleChannel(id) { fjAction({ action: 'toggle', channel_id: id }); }
+function deleteChannel(id) { fjAction({ action: 'delete', channel_id: id }, '{% trans "مطمئنی می‌خوای این کانال رو حذف کنی؟" %}'); }
+
+/* ─── آموزش‌ها و سوالات ─── */
+async function tutAction(body, confirmMsg) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  var data = await apiPost('/diako/api/tutorial-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+}
+
+function openAddTutorialModal() {
+  editTutId = null;
+  document.getElementById('tutModalTitle').textContent = '{% trans "آموزش جدید" %}';
+  document.getElementById('tutTitle').value = '';
+  document.getElementById('tutCaption').value = '';
+  document.getElementById('tutorialModal').classList.add('open');
+}
+function openEditTutorialModal(id, title, caption) {
+  editTutId = id;
+  document.getElementById('tutModalTitle').textContent = '{% trans "ویرایش آموزش" %}';
+  document.getElementById('tutTitle').value = title;
+  document.getElementById('tutCaption').value = caption;
+  document.getElementById('tutorialModal').classList.add('open');
+}
+
+async function confirmTutorial() {
+  var btn = document.getElementById('tutConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var body = { action: editTutId ? 'update_tutorial' : 'add_tutorial', title: document.getElementById('tutTitle').value, caption: document.getElementById('tutCaption').value };
+  if (editTutId) body.id = editTutId;
+  var data = await apiPost('/diako/api/tutorial-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '{% trans "ذخیره" %}';
+}
+
+function deleteTutorial(id, title) { tutAction({ action: 'delete_tutorial', id: id }, '{% trans "حذف" %} «' + title + '»؟'); }
+
+function openAddFaqModal() {
+  editFaqId = null;
+  document.getElementById('faqModalTitle').textContent = '{% trans "سوال جدید" %}';
+  document.getElementById('faqQuestion').value = '';
+  document.getElementById('faqAnswer').value = '';
+  document.getElementById('faqModal').classList.add('open');
+}
+function openEditFaqModal(id, question, answer) {
+  editFaqId = id;
+  document.getElementById('faqModalTitle').textContent = '{% trans "ویرایش سوال" %}';
+  document.getElementById('faqQuestion').value = question;
+  document.getElementById('faqAnswer').value = answer;
+  document.getElementById('faqModal').classList.add('open');
+}
+
+async function confirmFaq() {
+  var btn = document.getElementById('faqConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var body = { action: editFaqId ? 'update_faq' : 'add_faq', question: document.getElementById('faqQuestion').value, answer: document.getElementById('faqAnswer').value };
+  if (editFaqId) body.id = editFaqId;
+  var data = await apiPost('/diako/api/tutorial-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '{% trans "ذخیره" %}';
+}
+
+function deleteFaq(id, q) { tutAction({ action: 'delete_faq', id: id }, '{% trans "حذف" %} «' + q + '»؟'); }
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal('channelModal'); closeModal('tutorialModal'); closeModal('faqModal'); }
+});
+</script>
+{% endblock %}

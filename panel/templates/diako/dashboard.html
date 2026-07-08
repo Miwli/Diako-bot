@@ -1,289 +1,253 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}داشبورد — دیاکو{% endblock %}
+{% block title %}{% trans "داشبورد" %} — {% trans "دیاکو" %}{% endblock %}
 
-{% block body %}
-<div class="dash-wrap">
+{% block content %}
+<!-- Stats bar -->
+<div class="stats-bar inner-card anim-card">
+  <div class="sbar-item">
+    <div class="sbar-icon"><i class="ti ti-trending-up"></i></div>
+    <div>
+      <div class="sbar-label">{% trans "فروش امروز" %}</div>
+      <div class="sbar-value">{{ stats.rev_today|toman }}</div>
+      <div class="sbar-unit">{% trans "تومان" %}</div>
+    </div>
+  </div>
+  <div class="sbar-sep"></div>
+  <div class="sbar-item">
+    <div class="sbar-icon pending"><i class="ti ti-clock-hour-4"></i></div>
+    <div>
+      <div class="sbar-label">{% trans "در انتظار تأیید" %}</div>
+      <div class="sbar-value">{{ stats.pending_orders|default:0 }}</div>
+      <div class="sbar-unit">{% trans "سفارش" %}</div>
+    </div>
+  </div>
+  <div class="sbar-sep"></div>
+  <div class="sbar-item">
+    <div class="sbar-icon users"><i class="ti ti-users"></i></div>
+    <div>
+      <div class="sbar-label">{% trans "کاربران" %}</div>
+      <div class="sbar-value">{{ stats.total_users|default:0 }}</div>
+      <div class="sbar-unit">{% trans "نفر" %}</div>
+    </div>
+  </div>
+  <div class="sbar-sep"></div>
+  <div class="sbar-item">
+    <div class="sbar-icon online"><i class="ti ti-server"></i></div>
+    <div>
+      <div class="sbar-label">{% trans "سرور آنلاین" %}</div>
+      <div class="sbar-value">{{ online_count }}</div>
+      <div class="sbar-unit">/ {{ servers|length }}</div>
+    </div>
+  </div>
+</div>
 
-  <div class="sidebar-overlay"></div>
+<!-- چک‌لیست راه‌اندازی -->
+{% if not setup_done %}
+<div class="inner-card anim-card">
+  <div class="section-title">{% trans "راه‌اندازی فروشگاه" %}</div>
+  <div class="checklist-steps">
+    <a href="{% url 'diako_servers' %}#add" class="check-step {% if checklist.server %}done{% endif %}">
+      <span class="step-ico"><i class="ti ti-check"></i></span>
+      <span class="step-label">{% trans "سرور ربکا رو وصل کن" %}</span>
+      <i class="ti ti-chevron-left step-go"></i>
+    </a>
+    <a href="{% url 'diako_plans' %}#add" class="check-step {% if checklist.plan %}done{% endif %}">
+      <span class="step-ico"><i class="ti ti-check"></i></span>
+      <span class="step-label">{% trans "اولین پلن فروش رو بساز" %}</span>
+      <i class="ti ti-chevron-left step-go"></i>
+    </a>
+    <a href="{% url 'diako_finance' %}" class="check-step {% if checklist.card %}done{% endif %}">
+      <span class="step-ico"><i class="ti ti-check"></i></span>
+      <span class="step-label">{% trans "شماره کارت پرداخت رو تنظیم کن" %}</span>
+      <i class="ti ti-chevron-left step-go"></i>
+    </a>
+    <a href="{% url 'diako_orders' %}" class="check-step {% if checklist.sale %}done{% endif %}">
+      <span class="step-ico"><i class="ti ti-check"></i></span>
+      <span class="step-label">{% trans "اولین فروش 🎉" %}</span>
+      <i class="ti ti-chevron-left step-go"></i>
+    </a>
+  </div>
+</div>
+{% endif %}
 
-  <!-- Sidebar pill -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-        <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item active" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
-        <i class="ti ti-layout-dashboard"></i>
-      </a>
-      <a href="/diako/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
-        <i class="ti ti-package"></i>
-      </a>
-      <a href="/diako/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
-        <i class="ti ti-users"></i>
-      </a>
-      <a href="/diako/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
-        <i class="ti ti-server"></i>
-      </a>
-      <a href="/diako/monitoring/" class="nav-item" data-fa="مانیتورینگ" data-en="Monitoring" data-tooltip="مانیتورینگ">
-        <i class="ti ti-world"></i>
-      </a>
-      <a href="/diako/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
-        <i class="ti ti-list"></i>
-      </a>
-      <a href="/diako/finance/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
-        <i class="ti ti-wallet"></i>
-      </a>
-      <a href="/diako/discounts/" class="nav-item" data-fa="تخفیف‌ها" data-en="Discounts" data-tooltip="تخفیف‌ها">
-        <i class="ti ti-ticket"></i>
-      </a>
-      <a href="/diako/tutorials/" class="nav-item" data-fa="آموزش‌ها" data-en="Tutorials" data-tooltip="آموزش‌ها">
-        <i class="ti ti-book"></i>
-      </a>
-      <a href="/diako/extra-requests/" class="nav-item" data-fa="درخواست‌ها" data-en="Requests" data-tooltip="درخواست‌ها">
-        <i class="ti ti-clock-plus"></i>
-      </a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-fa="کیبورد" data-en="Keyboard" data-tooltip="کیبورد">
-        <i class="ti ti-keyboard"></i>
-      </a>
-      <a href="/diako/texts-editor/" class="nav-item" data-fa="متن‌ها" data-en="Texts" data-tooltip="متن‌ها">
-        <i class="ti ti-text-size"></i>
-      </a>
-      <a href="/diako/import-export/" class="nav-item" data-fa="ایمپورت/اکسپورت" data-en="Import/Export" data-tooltip="ایمپورت/اکسپورت">
-        <i class="ti ti-database-export"></i>
-      </a>
-      <a href="/diako/force-join/" class="nav-item" data-fa="جوین اجباری" data-en="Force Join" data-tooltip="جوین اجباری">
-        <i class="ti ti-lock"></i>
-      </a>
-      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
-        <i class="ti ti-settings"></i>
-      </a>
-    </nav>
-  </aside>
+<!-- Grid -->
+<div class="dash-grid">
 
-  <!-- Body -->
-  <div class="dash-body">
+  <!-- ستون اصلی -->
+  <div class="dash-main">
 
-    <!-- Top bar — بیرون از container -->
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title" data-fa="داشبورد" data-en="My Dashboard">داشبورد</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()">
-          <i id="theme-icon" class="ti ti-sun"></i>
-        </button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">
-            {{ admin_username|slice:":1"|upper }}
-          </button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item">
-              <i class="ti ti-logout"></i>
-              <span data-fa="خروج" data-en="Logout">خروج</span>
-            </a>
+    <!-- Chart -->
+    <div class="inner-card anim-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">{% trans "آمار فروش — ۷ روز گذشته" %}</div>
+          <div class="chart-sub">
+            <span>{% trans "کل درآمد:" %}</span>
+            <span id="chart-total" style="color:var(--accent);font-weight:600">{{ stats.rev_total|toman }}</span>
+            <span> {% trans "تومان" %}</span>
           </div>
         </div>
+        <div class="chart-legend">
+          <span class="legend-dot" style="background:var(--accent)"></span>
+          <span class="legend-label">{% trans "درآمد" %}</span>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="revenue-chart"></canvas>
       </div>
     </div>
 
-    <!-- Container با border دور همه کارت‌ها -->
-    <div class="dash-container">
+    <!-- Bottom row -->
+    <div class="bottom-row">
 
-      <!-- Stats bar — بالا، عرض کامل -->
-      <div class="stats-bar inner-card anim-card">
-        <div class="sbar-item">
-          <div class="sbar-icon"><i class="ti ti-trending-up"></i></div>
-          <div>
-            <div class="sbar-label" data-fa="فروش امروز" data-en="Today's Sales">فروش امروز</div>
-            <div class="sbar-value">{{ stats.rev_today|default:0 }}</div>
-            <div class="sbar-unit" data-fa="تومان" data-en="Toman">تومان</div>
+      <div class="inner-card anim-card">
+        <div class="section-title">{% trans "وضعیت سرورها" %}</div>
+        <div class="server-list">
+          {% for server in servers %}
+          <div class="server-row">
+            <div class="server-left">
+              <span class="dot {% if server.is_active %}dot-green{% else %}dot-red{% endif %}"></span>
+              <span>{{ server.name }}</span>
+            </div>
+            <span class="server-status {% if server.is_active %}online{% else %}offline{% endif %}">
+              {% if server.is_active %}{% trans "آنلاین" %}{% else %}{% trans "آفلاین" %}{% endif %}
+            </span>
           </div>
+          {% empty %}
+          <div class="empty-msg">{% trans "سروری ثبت نشده" %}</div>
+          {% endfor %}
         </div>
-        <div class="sbar-sep"></div>
-        <div class="sbar-item">
-          <div class="sbar-icon pending"><i class="ti ti-clock-hour-4"></i></div>
-          <div>
-            <div class="sbar-label" data-fa="در انتظار تأیید" data-en="Pending Orders">در انتظار تأیید</div>
-            <div class="sbar-value">{{ stats.pending_orders|default:0 }}</div>
-            <div class="sbar-unit" data-fa="سفارش" data-en="Orders">سفارش</div>
+      </div>
+
+      <div class="inner-card anim-card">
+        <div class="section-title">{% trans "خلاصه ماه" %}</div>
+        <div class="summary-list">
+          <div class="summary-row">
+            <span class="summary-label">{% trans "فروش ماه جاری" %}</span>
+            <span class="summary-val accent">{{ stats.rev_month|toman }}</span>
           </div>
-        </div>
-        <div class="sbar-sep"></div>
-        <div class="sbar-item">
-          <div class="sbar-icon users"><i class="ti ti-users"></i></div>
-          <div>
-            <div class="sbar-label" data-fa="کاربران" data-en="Total Users">کاربران</div>
-            <div class="sbar-value">{{ stats.total_users|default:0 }}</div>
-            <div class="sbar-unit" data-fa="نفر" data-en="Users">نفر</div>
+          <div class="summary-row">
+            <span class="summary-label">{% trans "سفارش تأیید شده" %}</span>
+            <span class="summary-val">{{ stats.total_orders|default:0 }}</span>
           </div>
-        </div>
-        <div class="sbar-sep"></div>
-        <div class="sbar-item">
-          <div class="sbar-icon online"><i class="ti ti-server"></i></div>
-          <div>
-            <div class="sbar-label" data-fa="سرور آنلاین" data-en="Online Servers">سرور آنلاین</div>
-            <div class="sbar-value">{{ online_count }}</div>
-            <div class="sbar-unit">/ {{ servers|length }}</div>
+          <div class="summary-row">
+            <span class="summary-label">{% trans "تست رایگان" %}</span>
+            <span class="summary-val">{{ stats.free_tests|default:0 }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">{% trans "تیکت‌های باز" %}</span>
+            <span class="summary-val {% if stats.open_tickets %}warn{% endif %}">{{ stats.open_tickets|default:0 }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">{% trans "کاربر این هفته" %}</span>
+            <span class="summary-val">{{ stats.users_week|default:0 }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Grid: ستون اصلی + ستون راست -->
-      <div class="dash-grid">
+    </div>
 
-        <!-- ستون اصلی -->
-        <div class="dash-main">
-
-          <!-- Chart -->
-          <div class="inner-card anim-card">
-            <div class="chart-header">
-              <div>
-                <div class="chart-title" data-fa="آمار فروش — ۷ روز گذشته" data-en="Sales — Last 7 Days">آمار فروش — ۷ روز گذشته</div>
-                <div class="chart-sub">
-                  <span data-fa="کل درآمد:" data-en="Total Revenue:">کل درآمد:</span>
-                  <span id="chart-total" style="color:var(--accent);font-weight:600">{{ stats.rev_total|default:0 }}</span>
-                  <span data-fa=" تومان" data-en=" Toman"> تومان</span>
-                </div>
-              </div>
-              <div class="chart-legend">
-                <span class="legend-dot" style="background:var(--accent)"></span>
-                <span class="legend-label" data-fa="درآمد" data-en="Revenue">درآمد</span>
-              </div>
-            </div>
-            <div class="chart-canvas-wrap">
-              <canvas id="revenue-chart"></canvas>
-            </div>
-          </div>
-
-          <!-- Bottom row -->
-          <div class="bottom-row">
-
-            <div class="inner-card anim-card">
-              <div class="section-title" data-fa="وضعیت سرورها" data-en="Server Status">وضعیت سرورها</div>
-              <div class="server-list">
-                {% for server in servers %}
-                <div class="server-row">
-                  <div class="server-left">
-                    <span class="dot {% if server.is_active %}dot-green{% else %}dot-red{% endif %}"></span>
-                    <span>{{ server.name }}</span>
-                  </div>
-                  <span class="server-status {% if server.is_active %}online{% else %}offline{% endif %}">
-                    {% if server.is_active %}<span data-fa="آنلاین" data-en="Online">آنلاین</span>
-                    {% else %}<span data-fa="آفلاین" data-en="Offline">آفلاین</span>{% endif %}
-                  </span>
-                </div>
-                {% empty %}
-                <div class="empty-msg" data-fa="سروری ثبت نشده" data-en="No servers">سروری ثبت نشده</div>
-                {% endfor %}
-              </div>
-            </div>
-
-            <div class="inner-card anim-card">
-              <div class="section-title" data-fa="خلاصه ماه" data-en="Month Summary">خلاصه ماه</div>
-              <div class="summary-list">
-                <div class="summary-row">
-                  <span class="summary-label" data-fa="فروش ماه جاری" data-en="This month">فروش ماه جاری</span>
-                  <span class="summary-val accent">{{ stats.rev_month|default:0 }}</span>
-                </div>
-                <div class="summary-row">
-                  <span class="summary-label" data-fa="سفارش تأیید شده" data-en="Approved">سفارش تأیید شده</span>
-                  <span class="summary-val">{{ stats.total_orders|default:0 }}</span>
-                </div>
-                <div class="summary-row">
-                  <span class="summary-label" data-fa="تست رایگان" data-en="Free tests">تست رایگان</span>
-                  <span class="summary-val">{{ stats.free_tests|default:0 }}</span>
-                </div>
-                <div class="summary-row">
-                  <span class="summary-label" data-fa="تیکت‌های باز" data-en="Open tickets">تیکت‌های باز</span>
-                  <span class="summary-val {% if stats.open_tickets %}warn{% endif %}">{{ stats.open_tickets|default:0 }}</span>
-                </div>
-                <div class="summary-row">
-                  <span class="summary-label" data-fa="کاربر این هفته" data-en="New this week">کاربر این هفته</span>
-                  <span class="summary-val">{{ stats.users_week|default:0 }}</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
+    <!-- فعالیت اخیر -->
+    <div class="inner-card anim-card">
+      <div class="section-title">{% trans "فعالیت اخیر" %}</div>
+      <div class="feed-list">
+        {% for f in feed %}
+        <div class="feed-item">
+          {% if f.kind == 'user' %}
+          <div class="feed-ico" style="background:rgba(79,195,247,0.12);color:var(--accent-2)"><i class="ti ti-user-plus"></i></div>
+          <div class="feed-text">{{ f.title }}<small>{% trans "کاربر جدید" %}</small></div>
+          {% elif f.status == 'pending' %}
+          <div class="feed-ico warn"><i class="ti ti-clock-hour-4"></i></div>
+          <div class="feed-text">{{ f.title }} — {{ f.sub }}<small>{% trans "سفارش در انتظار تایید" %}</small></div>
+          {% elif f.status == 'approved' %}
+          <div class="feed-ico green"><i class="ti ti-check"></i></div>
+          <div class="feed-text">{{ f.title }} — {{ f.sub }}<small>{% trans "سفارش تایید شد" %}</small></div>
+          {% else %}
+          <div class="feed-ico red"><i class="ti ti-x"></i></div>
+          <div class="feed-text">{{ f.title }} — {{ f.sub }}<small>{% trans "سفارش رد شد" %}</small></div>
+          {% endif %}
+          <span class="feed-time">{{ f.time|jdate }}</span>
         </div>
-
-        <!-- ستون راست: admin + orders — شروع از زیر stats-bar -->
-        <div class="dash-side">
-
-          <div class="inner-card admin-card anim-card">
-            <div class="admin-card-top">
-              <a href="/diako/orders/?status=pending" class="ctrl-btn" style="position:relative">
-                <i class="ti ti-bell"></i>
-                <span class="header-badge order-badge hidden">0</span>
-              </a>
-              <a href="/admin/" class="ctrl-btn"><i class="ti ti-dots-vertical"></i></a>
-            </div>
-            <div class="admin-avatar-big">{{ admin_username|slice:":1"|upper }}</div>
-            <div class="admin-name">{{ admin_username }}</div>
-            <div class="admin-role" data-fa="ادمین اصلی" data-en="Super Admin">ادمین اصلی</div>
-            <div class="admin-actions">
-              <a href="/diako/orders/" class="action-btn">
-                <i class="ti ti-package"></i>
-                <span data-fa="سفارش‌ها" data-en="Orders">سفارش‌ها</span>
-              </a>
-              <a href="/diako/users/" class="action-btn">
-                <i class="ti ti-users"></i>
-                <span data-fa="کاربران" data-en="Users">کاربران</span>
-              </a>
-              <a href="/diako/plans/" class="action-btn">
-                <i class="ti ti-list"></i>
-                <span data-fa="پلن‌ها" data-en="Plans">پلن‌ها</span>
-              </a>
-              <a href="/diako/logout/" class="action-btn danger">
-                <i class="ti ti-logout"></i>
-                <span data-fa="خروج" data-en="Logout">خروج</span>
-              </a>
-            </div>
-            <div class="revenue-mini">
-              <div class="revenue-mini-label" data-fa="درآمد این ماه" data-en="This Month">درآمد این ماه</div>
-              <div class="revenue-mini-val">{{ stats.rev_month|default:0 }}</div>
-              <div class="revenue-mini-unit" data-fa="تومان" data-en="Toman">تومان</div>
-            </div>
-          </div>
-
-          <div class="inner-card orders-side anim-card">
-            <div class="section-title" data-fa="آخرین سفارش‌ها" data-en="Recent Orders">آخرین سفارش‌ها</div>
-            <div class="orders-side-list">
-              {% for order in recent_orders %}
-              <div class="order-side-row">
-                <div class="order-side-avatar">{{ order.username|default:order.user_id|slice:":1"|upper }}</div>
-                <div class="order-side-info">
-                  <div class="order-side-user">{{ order.username|default:order.user_id }}</div>
-                  <div class="order-side-plan">{{ order.plan.name|default:"—" }}</div>
-                </div>
-                <div class="order-side-right">
-                  <div class="order-side-amount">{{ order.plan.price|default:0 }}</div>
-                  {% if order.status == 'pending' %}
-                    <span class="badge pending" data-fa="در انتظار" data-en="Pending">در انتظار</span>
-                  {% elif order.status == 'approved' %}
-                    <span class="badge approved" data-fa="تأیید" data-en="OK">تأیید</span>
-                  {% elif order.status == 'rejected' %}
-                    <span class="badge rejected" data-fa="رد" data-en="Rejected">رد</span>
-                  {% endif %}
-                </div>
-              </div>
-              {% empty %}
-              <div class="empty-msg" data-fa="سفارشی وجود ندارد" data-en="No orders yet">سفارشی وجود ندارد</div>
-              {% endfor %}
-            </div>
-            <a href="/diako/orders/" class="see-all">
-              <span data-fa="مشاهده همه" data-en="See all">مشاهده همه</span>
-              <i class="ti ti-arrow-left"></i>
-            </a>
-          </div>
-
-        </div>
+        {% empty %}
+        <div class="empty-msg">{% trans "هنوز فعالیتی ثبت نشده" %}</div>
+        {% endfor %}
       </div>
     </div>
+
+  </div>
+
+  <!-- ستون کناری -->
+  <div class="dash-side">
+
+    <div class="inner-card admin-card anim-card">
+      <div class="admin-card-top">
+        <a href="{% url 'diako_orders' %}?status=pending" class="ctrl-btn" style="position:relative">
+          <i class="ti ti-bell"></i>
+          <span class="header-badge order-badge hidden">0</span>
+        </a>
+        <a href="/admin/" class="ctrl-btn"><i class="ti ti-dots-vertical"></i></a>
+      </div>
+      <div class="admin-avatar-big">{{ admin_username|slice:":1"|upper }}</div>
+      <div class="admin-name">{{ admin_username }}</div>
+      <div class="admin-role">{% trans "ادمین اصلی" %}</div>
+      <div class="admin-actions">
+        <a href="{% url 'diako_servers' %}#add" class="action-btn">
+          <i class="ti ti-server-2"></i>
+          <span>{% trans "سرور جدید" %}</span>
+        </a>
+        <a href="{% url 'diako_plans' %}#add" class="action-btn">
+          <i class="ti ti-playlist-add"></i>
+          <span>{% trans "پلن جدید" %}</span>
+        </a>
+        <a href="{% url 'diako_finance' %}#discount" class="action-btn">
+          <i class="ti ti-ticket"></i>
+          <span>{% trans "کد تخفیف" %}</span>
+        </a>
+        <a href="{% url 'diako_import_export' %}" class="action-btn">
+          <i class="ti ti-database-export"></i>
+          <span>{% trans "بکاپ" %}</span>
+        </a>
+      </div>
+      <div class="revenue-mini">
+        <div class="revenue-mini-label">{% trans "درآمد این ماه" %}</div>
+        <div class="revenue-mini-val">{{ stats.rev_month|toman }}</div>
+        <div class="revenue-mini-unit">{% trans "تومان" %}</div>
+      </div>
+    </div>
+
+    <div class="inner-card orders-side anim-card">
+      <div class="section-title">{% trans "آخرین سفارش‌ها" %}</div>
+      <div class="orders-side-list">
+        {% for order in recent_orders %}
+        <div class="order-side-row">
+          <div class="order-side-avatar">{{ order.username|default:order.user_id|slice:":1"|upper }}</div>
+          <div class="order-side-info">
+            <div class="order-side-user">{{ order.username|default:order.user_id }}</div>
+            <div class="order-side-plan">{{ order.plan.name|default:"—" }}</div>
+          </div>
+          <div class="order-side-right">
+            <div class="order-side-amount">{{ order.plan.price|toman }}</div>
+            {% if order.status == 'pending' %}
+              <span class="badge pending">{% trans "در انتظار" %}</span>
+            {% elif order.status == 'approved' %}
+              <span class="badge approved">{% trans "تأیید" %}</span>
+            {% elif order.status == 'rejected' %}
+              <span class="badge rejected">{% trans "رد" %}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-msg">{% trans "سفارشی وجود ندارد" %}</div>
+        {% endfor %}
+      </div>
+      <a href="{% url 'diako_orders' %}" class="see-all">
+        <span>{% trans "مشاهده همه" %}</span>
+        <i class="ti ti-arrow-left"></i>
+      </a>
+    </div>
+
   </div>
 </div>
 {% endblock %}

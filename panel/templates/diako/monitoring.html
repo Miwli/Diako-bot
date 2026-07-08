@@ -1,7 +1,7 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}مانیتورینگ نودها — دیاکو{% endblock %}
+{% block title %}{% trans "مانیتورینگ نودها" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -81,51 +81,7 @@
 </style>
 {% endblock %}
 
-{% block body %}
-<div class="dash-wrap">
-  <div class="sidebar-overlay"></div>
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-    <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
-      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
-      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
-      <a href="/diako/servers/" class="nav-item" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
-      <a href="/diako/monitoring/" class="nav-item active" data-tooltip="مانیتورینگ"><i class="ti ti-world"></i></a>
-      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
-      <a href="/diako/finance/" class="nav-item" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
-      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
-      <a href="/diako/tutorials/" class="nav-item" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
-      <a href="/diako/extra-requests/" class="nav-item" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
-      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
-      <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
-      <a href="/diako/force-join/" class="nav-item" data-tooltip="جوین اجباری"><i class="ti ti-lock"></i></a>
-      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
-    </nav>
-  </aside>
-
-  <div class="dash-body">
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title">مانیتورینگ نودها</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="dash-container">
+{% block content %}
       <div class="mon-grid">
 
         <!-- کره زمین -->
@@ -135,34 +91,31 @@
             <div id="hitDots"></div>
           </div>
           <div class="globe-overlay">
-            <div class="globe-title"><i class="ti ti-world"></i> نقشه‌ی زنده‌ی نودها</div>
-            <div class="globe-sub">بکش و بچرخون — روی نود کلیک کن</div>
+            <div class="globe-title"><i class="ti ti-world"></i> {% trans "نقشه‌ی زنده‌ی نودها" %}</div>
+            <div class="globe-sub">{% trans "بکش و بچرخون — روی نود کلیک کن" %}</div>
           </div>
           <div class="globe-stats" id="globeStats"></div>
           <div class="globe-legend">
-            <div class="lg-item"><span class="lg-dot on"></span> آنلاین</div>
-            <div class="lg-item"><span class="lg-dot warn"></span> در حال اتصال</div>
-            <div class="lg-item"><span class="lg-dot off"></span> آفلاین/خطا</div>
-            <div class="lg-item"><span class="lg-dot na"></span> غیرفعال</div>
+            <div class="lg-item"><span class="lg-dot on"></span> {% trans "آنلاین" %}</div>
+            <div class="lg-item"><span class="lg-dot warn"></span> {% trans "در حال اتصال" %}</div>
+            <div class="lg-item"><span class="lg-dot off"></span> {% trans "آفلاین/خطا" %}</div>
+            <div class="lg-item"><span class="lg-dot na"></span> {% trans "غیرفعال" %}</div>
           </div>
         </div>
 
         <!-- لیست سرورها و نودها -->
         <div>
           <div class="mon-refresh">
-            <span class="mon-refresh-lbl" id="lastUpdate">در حال بارگذاری…</span>
+            <span class="mon-refresh-lbl" id="lastUpdate">{% trans "در حال بارگذاری…" %}</span>
             <button class="refresh-btn" id="refreshBtn" onclick="loadNodes(true)">
-              <i class="ti ti-refresh" id="refreshIcon"></i> بروزرسانی
+              <i class="ti ti-refresh" id="refreshIcon"></i> {% trans "بروزرسانی" %}
             </button>
           </div>
           <div class="srv-list" id="srvList">
-            <div class="mon-empty"><i class="ti ti-loader-2"></i><br>در حال دریافت وضعیت سرورها…</div>
+            <div class="mon-empty"><i class="ti ti-loader-2"></i><br>{% trans "در حال دریافت وضعیت سرورها…" %}</div>
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -399,7 +352,7 @@ async function loadNodes(manual) {
         tooltip: s.name + (s.city ? ' — ' + s.city : ''),
       });
       (s.nodes || []).forEach(n => {
-        const loc = n.geo_is_fallback ? ' — موقعیت تقریبی' : (n.city ? ' — ' + n.city : '');
+        const loc = n.geo_is_fallback ? '{% trans " — موقعیت تقریبی" %}' : (n.city ? ' — ' + n.city : '');
         points.push({
           key: 's' + s.id + 'n' + n.id, kind: 'node', is_active: s.is_active, status: n.status,
           lat: n.lat, lon: n.lon,
@@ -412,9 +365,9 @@ async function loadNodes(manual) {
     renderList();
     renderStats();
     document.getElementById('lastUpdate').textContent =
-      'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+      '{% trans "آخرین بروزرسانی: " %}' + new Date().toLocaleTimeString('fa-IR');
   } catch {
-    document.getElementById('lastUpdate').textContent = 'خطا در دریافت وضعیت ❌';
+    document.getElementById('lastUpdate').textContent = '{% trans "خطا در دریافت وضعیت ❌" %}';
   }
   icon.classList.remove('spinning');
 }
@@ -424,9 +377,9 @@ function renderStats() {
   const on  = points.filter(p => p.status === 'online' && p.is_active).length;
   const off = points.length - on;
   document.getElementById('globeStats').innerHTML = `
-    <div class="gstat"><div class="gstat-num all">${points.length}</div><div class="gstat-lbl">کل نقاط</div></div>
-    <div class="gstat"><div class="gstat-num on">${on}</div><div class="gstat-lbl">آنلاین</div></div>
-    <div class="gstat"><div class="gstat-num off">${off}</div><div class="gstat-lbl">آفلاین</div></div>`;
+    <div class="gstat"><div class="gstat-num all">${points.length}</div><div class="gstat-lbl">{% trans "کل نقاط" %}</div></div>
+    <div class="gstat"><div class="gstat-num on">${on}</div><div class="gstat-lbl">{% trans "آنلاین" %}</div></div>
+    <div class="gstat"><div class="gstat-num off">${off}</div><div class="gstat-lbl">{% trans "آفلاین" %}</div></div>`;
 }
 
 /* ── لیست سرورها ── */
@@ -449,19 +402,19 @@ function fmtBytes(b) {
   while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
   return b.toFixed(b >= 100 ? 0 : 1) + ' <span class="unit">' + units[i] + '</span>';
 }
-const NODE_ST_FA = { online: 'متصل', connecting: 'در حال اتصال', error: 'خطا', disabled: 'غیرفعال' };
+const NODE_ST_FA = { online: '{% trans "متصل" %}', connecting: '{% trans "در حال اتصال" %}', error: '{% trans "خطا" %}', disabled: '{% trans "غیرفعال" %}' };
 
 function renderList() {
   const list = document.getElementById('srvList');
   if (!servers.length) {
-    list.innerHTML = '<div class="mon-empty"><i class="ti ti-server-off"></i><br>هنوز سروری ثبت نشده</div>';
+    list.innerHTML = '<div class="mon-empty"><i class="ti ti-server-off"></i><br>{% trans "هنوز سروری ثبت نشده" %}</div>';
     return;
   }
   list.innerHTML = servers.map(s => {
     const key = 's' + s.id;
     const sp = { is_active: s.is_active, status: s.status };
-    const stTxt = !s.is_active ? 'غیرفعال' : (s.status === 'online' ? 'آنلاین' : 'آفلاین');
-    const loc = [s.city, s.country].filter(Boolean).join('، ') || 'نامشخص';
+    const stTxt = !s.is_active ? '{% trans "غیرفعال" %}' : (s.status === 'online' ? '{% trans "آنلاین" %}' : '{% trans "آفلاین" %}');
+    const loc = [s.city, s.country].filter(Boolean).join('، ') || '{% trans "نامشخص" %}';
     const lat = s.latency != null
       ? `<span class="srv-latency ${latencyClass(s.latency)}">${s.latency} ms</span>`
       : `<span class="srv-latency slow">${stTxt}</span>`;
@@ -473,12 +426,12 @@ function renderList() {
         ? `${fmtBytes(st.mem_used)} / ${fmtBytes(st.mem_total)}` : '—';
       statsHtml = `
       <div class="srv-stats">
-        <div class="sstat"><div class="sstat-lbl">کاربران فعال</div><div class="sstat-val">${st.users_active ?? '—'} / ${st.users_total ?? '—'}</div></div>
-        <div class="sstat"><div class="sstat-lbl">نسخه پنل</div><div class="sstat-val">${st.version || '—'}</div></div>
-        <div class="sstat"><div class="sstat-lbl">پردازنده</div><div class="sstat-val">${st.cpu_usage != null ? st.cpu_usage + '<span class="unit">%</span>' : '—'} <span class="unit">(${st.cpu_cores ?? '?'} core)</span></div></div>
-        <div class="sstat"><div class="sstat-lbl">حافظه</div><div class="sstat-val">${mem}</div></div>
-        <div class="sstat"><div class="sstat-lbl">ترافیک ورودی</div><div class="sstat-val">${fmtBytes(st.incoming_bandwidth)}</div></div>
-        <div class="sstat"><div class="sstat-lbl">ترافیک خروجی</div><div class="sstat-val">${fmtBytes(st.outgoing_bandwidth)}</div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "کاربران فعال" %}</div><div class="sstat-val">${st.users_active ?? '—'} / ${st.users_total ?? '—'}</div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "نسخه پنل" %}</div><div class="sstat-val">${st.version || '—'}</div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "پردازنده" %}</div><div class="sstat-val">${st.cpu_usage != null ? st.cpu_usage + '<span class="unit">%</span>' : '—'} <span class="unit">(${st.cpu_cores ?? '?'} core)</span></div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "حافظه" %}</div><div class="sstat-val">${mem}</div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "ترافیک ورودی" %}</div><div class="sstat-val">${fmtBytes(st.incoming_bandwidth)}</div></div>
+        <div class="sstat"><div class="sstat-lbl">{% trans "ترافیک خروجی" %}</div><div class="sstat-val">${fmtBytes(st.outgoing_bandwidth)}</div></div>
       </div>`;
     }
 
@@ -488,7 +441,7 @@ function renderList() {
     } else if ((s.nodes || []).length) {
       nodesHtml = `
       <div class="srv-nodes">
-        <div class="srv-nodes-title"><i class="ti ti-topology-star-3"></i> نودها (${s.nodes.length})</div>
+        <div class="srv-nodes-title"><i class="ti ti-topology-star-3"></i> {% trans "نودها" %} (${s.nodes.length})</div>
         ${s.nodes.map(n => {
           const nkey = key + 'n' + n.id;
           const np = { is_active: s.is_active, status: n.status };

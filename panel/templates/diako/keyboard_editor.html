@@ -1,7 +1,7 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}ادیتور کیبورد — دیاکو{% endblock %}
+{% block title %}{% trans "ادیتور کیبورد" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -981,120 +981,28 @@
 </style>
 {% endblock %}
 
-{% block body %}
-<div class="dash-wrap">
-
-  <div class="sidebar-overlay"></div>
-
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-        <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-fa="داشبورد" data-en="Dashboard" data-tooltip="داشبورد">
-        <i class="ti ti-layout-dashboard"></i>
-      </a>
-      <a href="/diako/orders/" class="nav-item" data-fa="سفارش‌ها" data-en="Orders" data-tooltip="سفارش‌ها">
-        <i class="ti ti-package"></i>
-      </a>
-      <a href="/diako/users/" class="nav-item" data-fa="کاربران" data-en="Users" data-tooltip="کاربران">
-        <i class="ti ti-users"></i>
-      </a>
-      <a href="/diako/servers/" class="nav-item" data-fa="سرورها" data-en="Servers" data-tooltip="سرورها">
-        <i class="ti ti-server"></i>
-      </a>
-      <a href="/diako/monitoring/" class="nav-item" data-fa="مانیتورینگ" data-en="Monitoring" data-tooltip="مانیتورینگ">
-        <i class="ti ti-world"></i>
-      </a>
-      <a href="/diako/plans/" class="nav-item" data-fa="پلن‌ها" data-en="Plans" data-tooltip="پلن‌ها">
-        <i class="ti ti-list"></i>
-      </a>
-      <a href="/diako/finance/" class="nav-item" data-fa="مالی" data-en="Finance" data-tooltip="مالی">
-        <i class="ti ti-wallet"></i>
-      </a>
-      <a href="/diako/discounts/" class="nav-item" data-fa="تخفیف‌ها" data-en="Discounts" data-tooltip="تخفیف‌ها">
-        <i class="ti ti-ticket"></i>
-      </a>
-      <a href="/diako/tutorials/" class="nav-item" data-fa="آموزش‌ها" data-en="Tutorials" data-tooltip="آموزش‌ها">
-        <i class="ti ti-book"></i>
-      </a>
-      <a href="/diako/extra-requests/" class="nav-item" data-fa="درخواست‌ها" data-en="Requests" data-tooltip="درخواست‌ها">
-        <i class="ti ti-clock-plus"></i>
-      </a>
-      <a href="/diako/keyboard-editor/" class="nav-item active" data-fa="کیبورد" data-en="Keyboard" data-tooltip="کیبورد">
-        <i class="ti ti-keyboard"></i>
-      </a>
-      <a href="/diako/texts-editor/" class="nav-item" data-fa="متن‌ها" data-en="Texts" data-tooltip="متن‌ها">
-        <i class="ti ti-text-size"></i>
-      </a>
-      <a href="/diako/import-export/" class="nav-item" data-fa="ایمپورت/اکسپورت" data-en="Import/Export" data-tooltip="ایمپورت/اکسپورت">
-        <i class="ti ti-database-export"></i>
-      </a>
-      <a href="/diako/force-join/" class="nav-item" data-fa="جوین اجباری" data-en="Force Join" data-tooltip="جوین اجباری">
-        <i class="ti ti-lock"></i>
-      </a>
-      <a href="/admin/" class="nav-item" data-fa="تنظیمات" data-en="Settings" data-tooltip="تنظیمات">
-        <i class="ti ti-settings"></i>
-      </a>
-    </nav>
-  </aside>
-
-  <div class="dash-body">
-
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title">ادیتور کیبورد</h1>
-        <select id="kb-dropdown" class="kb-dropdown" onchange="switchKeyboard(this.value)"></select>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" title="راهنما" onclick="openHelp()">
-          <i class="ti ti-help"></i>
-        </button>
-        <button class="ke-save-btn" onclick="saveLayout()">
-          <i class="ti ti-device-floppy"></i>
-          <span>ذخیره</span>
-        </button>
-        <button class="ctrl-btn" onclick="toggleTheme()">
-          <i id="theme-icon" class="ti ti-sun"></i>
-        </button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">
-            {{ admin_username|slice:":1"|upper }}
-          </button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item">
-              <i class="ti ti-logout"></i>
-              <span>خروج</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="dash-container">
+{% block content %}
 
       <!-- نوار آمار -->
       <div class="ke-stats-bar">
         <div class="ke-stat">
           <span class="ke-stat-val clr-accent" id="s-rows">0</span>
-          <span class="ke-stat-lbl">ردیف</span>
+          <span class="ke-stat-lbl">{% trans "ردیف" %}</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val" id="s-btns">0</span>
-          <span class="ke-stat-lbl">دکمه</span>
+          <span class="ke-stat-lbl">{% trans "دکمه" %}</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val clr-green" id="s-active">0</span>
-          <span class="ke-stat-lbl">فعال</span>
+          <span class="ke-stat-lbl">{% trans "فعال" %}</span>
         </div>
         <div class="ke-stat-sep"></div>
         <div class="ke-stat">
           <span class="ke-stat-val clr-muted" id="s-inactive">0</span>
-          <span class="ke-stat-lbl">غیرفعال</span>
+          <span class="ke-stat-lbl">{% trans "غیرفعال" %}</span>
         </div>
       </div>
 
@@ -1103,7 +1011,7 @@
 
         <!-- ستون چپ: تب‌های منو -->
         <div class="ke-col-left">
-          <div class="ke-col-title">منوها</div>
+          <div class="ke-col-title">{% trans "منوها" %}</div>
           <div id="menu-list"></div>
         </div>
 
@@ -1116,8 +1024,8 @@
             <div class="ke-sim-header">
               <div class="ke-sim-avatar" id="sim-avatar">د</div>
               <div class="ke-sim-info">
-                <div class="ke-sim-name" id="sim-name">دیاکو</div>
-                <div class="ke-sim-online">آنلاین</div>
+                <div class="ke-sim-name" id="sim-name">{% trans "دیاکو" %}</div>
+                <div class="ke-sim-online">{% trans "آنلاین" %}</div>
               </div>
             </div>
 
@@ -1127,16 +1035,16 @@
               <!-- حباب پیام -->
               <div class="ke-bubble-area">
                 <div class="ke-bubble" id="ke-bubble" onclick="startBubbleEdit()">
-                  <span id="ke-bubble-text">در حال بارگذاری...</span>
-                  <span class="ke-bubble-hint">✎ کلیک برای ویرایش متن</span>
+                  <span id="ke-bubble-text">{% trans "در حال بارگذاری..." %}</span>
+                  <span class="ke-bubble-hint">{% trans "✎ کلیک برای ویرایش متن" %}</span>
                 </div>
                 <div class="ke-bubble-editor" id="ke-bubble-editor" style="display:none">
-                  <textarea id="ke-bubble-ta" placeholder="متن پیام ربات را وارد کنید..."></textarea>
+                  <textarea id="ke-bubble-ta" placeholder="{% trans 'متن پیام ربات را وارد کنید...' %}"></textarea>
                   <div class="ke-bubble-edit-btns">
                     <button class="btn-primary" onclick="saveBubbleEdit()">
-                      <i class="ti ti-check"></i> ذخیره
+                      <i class="ti ti-check"></i> {% trans "ذخیره" %}
                     </button>
-                    <button onclick="cancelBubbleEdit()">انصراف</button>
+                    <button onclick="cancelBubbleEdit()">{% trans "انصراف" %}</button>
                   </div>
                 </div>
               </div>
@@ -1147,10 +1055,10 @@
             <div class="ke-sim-kb-wrap">
               <div class="ke-sim-board" id="board"></div>
               <button class="ke-sim-add-row" id="add-row-btn" onclick="addRow()">
-                <i class="ti ti-plus"></i> ردیف جدید
+                <i class="ti ti-plus"></i> {% trans "ردیف جدید" %}
               </button>
               <div class="ke-dyn-banner" id="ke-dyn-banner" style="display:none">
-                ⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده.
+                {% trans "⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده." %}
               </div>
             </div>
           </div><!-- /ke-sim -->
@@ -1158,14 +1066,14 @@
 
         <!-- ستون راست: کاتالوگ -->
         <div class="ke-col-right">
-          <div class="ke-col-title">کاتالوگ دکمه‌ها</div>
+          <div class="ke-col-title">{% trans "کاتالوگ دکمه‌ها" %}</div>
           <div class="ke-cat-tabs">
-            <button class="ke-cat-tab active" data-tab="all"    onclick="setCatTab('all')">همه</button>
-            <button class="ke-cat-tab"         data-tab="admin"  onclick="setCatTab('admin')">ادمین</button>
-            <button class="ke-cat-tab"         data-tab="member" onclick="setCatTab('member')">ممبر</button>
+            <button class="ke-cat-tab active" data-tab="all"    onclick="setCatTab('all')">{% trans "همه" %}</button>
+            <button class="ke-cat-tab"         data-tab="admin"  onclick="setCatTab('admin')">{% trans "ادمین" %}</button>
+            <button class="ke-cat-tab"         data-tab="member" onclick="setCatTab('member')">{% trans "ممبر" %}</button>
           </div>
           <input class="ke-cat-search" id="cat-search" type="search"
-                 placeholder="جستجو..." oninput="filterCatalog(this.value)">
+                 placeholder="{% trans 'جستجو...' %}" oninput="filterCatalog(this.value)">
           <div class="ke-cat-items" id="catalog"></div>
         </div>
 
@@ -1173,62 +1081,62 @@
 
       <!-- دکمه کاتالوگ موبایل -->
       <button class="ke-mobile-cat-btn" onclick="openBottomSheet()">
-        <i class="ti ti-layout-grid"></i> کاتالوگ دکمه‌ها
+        <i class="ti ti-layout-grid"></i> {% trans "کاتالوگ دکمه‌ها" %}
       </button>
 
       <!-- استیجینگ موبایل -->
       <div class="ke-staging" id="staging" style="display:none">
-        <div class="ke-staging-title">دکمه‌های انتخاب‌شده</div>
+        <div class="ke-staging-title">{% trans "دکمه‌های انتخاب‌شده" %}</div>
         <div class="ke-staging-items" id="staging-items"></div>
       </div>
 
-    </div><!-- /dash-container -->
-  </div><!-- /dash-body -->
-</div><!-- /dash-wrap -->
 
 <!-- مودال راهنما -->
+{% endblock %}
+
+{% block modals %}
 <div class="ke-modal-overlay" id="help-overlay" onclick="closeHelp()"></div>
 <div class="ke-modal" id="help-modal">
   <button class="ke-modal-close" onclick="closeHelp()"><i class="ti ti-x"></i></button>
-  <h2 class="ke-modal-title">راهنمای ادیتور کیبورد</h2>
+  <h2 class="ke-modal-title">{% trans "راهنمای ادیتور کیبورد" %}</h2>
   <div class="ke-modal-tabs">
-    <button class="ke-modal-tab active" onclick="setHelpTab(0)">شروع کار</button>
-    <button class="ke-modal-tab"        onclick="setHelpTab(1)">کار با کلیدها</button>
-    <button class="ke-modal-tab"        onclick="setHelpTab(2)">موبایل</button>
+    <button class="ke-modal-tab active" onclick="setHelpTab(0)">{% trans "شروع کار" %}</button>
+    <button class="ke-modal-tab"        onclick="setHelpTab(1)">{% trans "کار با کلیدها" %}</button>
+    <button class="ke-modal-tab"        onclick="setHelpTab(2)">{% trans "موبایل" %}</button>
   </div>
   <div id="help-panels">
     <div class="ke-help-pnl active" id="help-0">
-      <p>این صفحه به شما امکان می‌دهد چینش دکمه‌های ربات تلگرام را به صورت بصری ویرایش کنید — دقیقاً همان‌طور که کاربر می‌بیند.</p>
+      <p>{% trans "این صفحه به شما امکان می‌دهد چینش دکمه‌های ربات تلگرام را به صورت بصری ویرایش کنید — دقیقاً همان‌طور که کاربر می‌بیند." %}</p>
       <ul>
-        <li>از <strong>ستون چپ</strong> منوی مورد نظر را انتخاب کنید (منوی اصلی، کیف پول، ...)</li>
-        <li>شبیه‌ساز تلگرام در وسط نمایش می‌دهد که کاربر چه می‌بیند</li>
-        <li>از <strong>ستون راست (کاتالوگ)</strong> دکمه‌های جدید را بکشید و در ردیف‌ها رها کنید</li>
-        <li>روی <strong>متن پیام ربات</strong> (حباب آبی) کلیک کنید تا آن را ویرایش کنید</li>
-        <li>پس از تمام تغییرات، حتماً <strong>ذخیره</strong> را بزنید تا بات آپدیت شود</li>
+        <li>{% trans "از" %} <strong>{% trans "ستون چپ" %}</strong> {% trans "منوی مورد نظر را انتخاب کنید (منوی اصلی، کیف پول، ...)" %}</li>
+        <li>{% trans "شبیه‌ساز تلگرام در وسط نمایش می‌دهد که کاربر چه می‌بیند" %}</li>
+        <li>{% trans "از" %} <strong>{% trans "ستون راست (کاتالوگ)" %}</strong> {% trans "دکمه‌های جدید را بکشید و در ردیف‌ها رها کنید" %}</li>
+        <li>{% trans "روی" %} <strong>{% trans "متن پیام ربات" %}</strong> {% trans "(حباب آبی) کلیک کنید تا آن را ویرایش کنید" %}</li>
+        <li>{% trans "پس از تمام تغییرات، حتماً" %} <strong>{% trans "ذخیره" %}</strong> {% trans "را بزنید تا بات آپدیت شود" %}</li>
       </ul>
     </div>
     <div class="ke-help-pnl" id="help-1" style="display:none">
       <ul>
-        <li><strong>Drag & Drop:</strong> دکمه‌ها را بین ردیف‌ها بکشید و رها کنید. از کاتالوگ هم می‌توانید مستقیم به ردیف‌ها بکشید.</li>
-        <li><strong>چپ‌کلیک:</strong> اگر دکمه زیرمنو داشته باشد (مثل «کیف پول»)، به آن منو منتقل می‌شوید.</li>
-        <li><strong>راست‌کلیک:</strong> منوی اکشن انیمیشن‌دار باز می‌شود:
-          <br>— ✎ ویرایش متن دکمه (به صورت inline)
-          <br>— 🗑 حذف دکمه از ردیف
-          <br>— 👁 فعال / غیرفعال کردن دکمه
+        <li><strong>Drag & Drop:</strong> {% trans "دکمه‌ها را بین ردیف‌ها بکشید و رها کنید. از کاتالوگ هم می‌توانید مستقیم به ردیف‌ها بکشید." %}</li>
+        <li><strong>{% trans "چپ‌کلیک:" %}</strong> {% trans "اگر دکمه زیرمنو داشته باشد (مثل «کیف پول»)، به آن منو منتقل می‌شوید." %}</li>
+        <li><strong>{% trans "راست‌کلیک:" %}</strong> {% trans "منوی اکشن انیمیشن‌دار باز می‌شود:" %}
+          <br>— ✎ {% trans "ویرایش متن دکمه (به صورت inline)" %}
+          <br>— 🗑 {% trans "حذف دکمه از ردیف" %}
+          <br>— 👁 {% trans "فعال / غیرفعال کردن دکمه" %}
         </li>
-        <li><strong>ردیف جدید:</strong> دکمه «+ ردیف جدید» را در پایین کیبورد بزنید.</li>
-        <li><strong>حذف ردیف:</strong> از سربرگ هر ردیف، آیکون حذف را بزنید.</li>
-        <li><strong>ویرایش متن پیام:</strong> روی حباب پیام ربات کلیک کنید، متن را ویرایش کرده و ذخیره کنید.</li>
+        <li><strong>{% trans "ردیف جدید:" %}</strong> {% trans "دکمه «+ ردیف جدید» را در پایین کیبورد بزنید." %}</li>
+        <li><strong>{% trans "حذف ردیف:" %}</strong> {% trans "از سربرگ هر ردیف، آیکون حذف را بزنید." %}</li>
+        <li><strong>{% trans "ویرایش متن پیام:" %}</strong> {% trans "روی حباب پیام ربات کلیک کنید، متن را ویرایش کرده و ذخیره کنید." %}</li>
       </ul>
     </div>
     <div class="ke-help-pnl" id="help-2" style="display:none">
       <ul>
-        <li>در صفحه‌ی موبایل، سه ستون به یک ستون تبدیل می‌شوند.</li>
-        <li>دکمه‌ی <strong>«کاتالوگ دکمه‌ها»</strong> در پایین صفحه ظاهر می‌شود.</li>
-        <li>با کلیک روی آن، یک منوی کشویی از پایین باز می‌شود.</li>
-        <li>روی دکمه‌های مورد نظر کلیک کنید تا انتخاب شوند (با رنگ مشخص می‌شوند).</li>
-        <li>بعد از انتخاب، «تایید» را بزنید — دکمه‌ها به ناحیه‌ی <strong>انتخاب‌شده‌ها</strong> اضافه می‌شوند.</li>
-        <li>از آن ناحیه، دکمه‌ها را به ردیف‌های کیبورد بکشید.</li>
+        <li>{% trans "در صفحه‌ی موبایل، سه ستون به یک ستون تبدیل می‌شوند." %}</li>
+        <li>{% trans "دکمه‌ی" %} <strong>{% trans "«کاتالوگ دکمه‌ها»" %}</strong> {% trans "در پایین صفحه ظاهر می‌شود." %}</li>
+        <li>{% trans "با کلیک روی آن، یک منوی کشویی از پایین باز می‌شود." %}</li>
+        <li>{% trans "روی دکمه‌های مورد نظر کلیک کنید تا انتخاب شوند (با رنگ مشخص می‌شوند)." %}</li>
+        <li>{% trans "بعد از انتخاب، «تایید» را بزنید — دکمه‌ها به ناحیه‌ی" %} <strong>{% trans "انتخاب‌شده‌ها" %}</strong> {% trans "اضافه می‌شوند." %}</li>
+        <li>{% trans "از آن ناحیه، دکمه‌ها را به ردیف‌های کیبورد بکشید." %}</li>
       </ul>
     </div>
   </div>
@@ -1240,16 +1148,15 @@
   <div class="ke-bs-handle"></div>
   <div class="ke-bs-header">
     <div class="ke-bs-tab-bar">
-      <button class="ke-bs-tab active" onclick="setBsTab('member')">ممبر</button>
-      <button class="ke-bs-tab"        onclick="setBsTab('admin')">ادمین</button>
+      <button class="ke-bs-tab active" onclick="setBsTab('member')">{% trans "ممبر" %}</button>
+      <button class="ke-bs-tab"        onclick="setBsTab('admin')">{% trans "ادمین" %}</button>
     </div>
     <button class="ke-bs-confirm" id="bs-confirm" style="display:none" onclick="confirmBsSelection()">
-      تایید (<span id="bs-count">0</span>)
+      {% trans "تایید" %} (<span id="bs-count">0</span>)
     </button>
   </div>
   <div class="ke-bs-items" id="bs-items"></div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
@@ -1263,74 +1170,74 @@ const BOT_TEXTS       = {{ bot_texts_json|safe }};
 // ── متادیتای هر منو ────────────────────────────────
 const KB_META = {
   // کاربر — منوی اصلی
-  user_main:              { label: 'منوی اصلی کاربر',      icon: 'ti-home',          text_key: 'start_welcome_default',   fallback: 'سلام 👋 خوش اومدی' },
-  wallet:                 { label: 'کیف پول',               icon: 'ti-wallet',        text_key: 'wallet_menu',             fallback: '💎 کیف پول شما:' },
-  support:                { label: 'پشتیبانی',              icon: 'ti-headset',       text_key: 'support_menu',            fallback: '🎧 پشتیبانی دیاکو:' },
-  free_test_confirm:      { label: 'تأیید تست رایگان',      icon: 'ti-gift',          text_key: 'free_test_confirm_text',  fallback: '🎁 اطلاعات تست رایگان:' },
-  payment_info:           { label: 'اطلاعات پرداخت',        icon: 'ti-credit-card',   text_key: 'payment_card_info',       fallback: '💳 اطلاعات پرداخت:' },
-  subscription_approved:  { label: 'اشتراک تأیید شد',       icon: 'ti-circle-check',  text_key: 'order_approved',          fallback: '✅ اشتراک فعال شد!' },
-  ticket:                 { label: 'تیکت پشتیبانی',         icon: 'ti-ticket',        text_key: null,                      fallback: '✅ پیامت دریافت شد.' },
-  back_to_tutorials:      { label: 'بازگشت آموزش‌ها',       icon: 'ti-book',          text_key: 'tutorial_has_list',       fallback: '📚 آموزش‌ها:' },
-  back_to_faqs:           { label: 'بازگشت سوالات متداول',  icon: 'ti-help-circle',   text_key: 'faq_has_list',            fallback: '❓ سوالات متداول:' },
-  cancel:                 { label: 'لغو عملیات',             icon: 'ti-x',             text_key: null,                      fallback: '✏️ اطلاعات را وارد کنید:' },
+  user_main:              { label: '{% trans "منوی اصلی کاربر" %}',      icon: 'ti-home',          text_key: 'start_welcome_default',   fallback: '{% trans "سلام 👋 خوش اومدی" %}' },
+  wallet:                 { label: '{% trans "کیف پول" %}',               icon: 'ti-wallet',        text_key: 'wallet_menu',             fallback: '{% trans "💎 کیف پول شما:" %}' },
+  support:                { label: '{% trans "پشتیبانی" %}',              icon: 'ti-headset',       text_key: 'support_menu',            fallback: '{% trans "🎧 پشتیبانی دیاکو:" %}' },
+  free_test_confirm:      { label: '{% trans "تأیید تست رایگان" %}',      icon: 'ti-gift',          text_key: 'free_test_confirm_text',  fallback: '{% trans "🎁 اطلاعات تست رایگان:" %}' },
+  payment_info:           { label: '{% trans "اطلاعات پرداخت" %}',        icon: 'ti-credit-card',   text_key: 'payment_card_info',       fallback: '{% trans "💳 اطلاعات پرداخت:" %}' },
+  subscription_approved:  { label: '{% trans "اشتراک تأیید شد" %}',       icon: 'ti-circle-check',  text_key: 'order_approved',          fallback: '{% trans "✅ اشتراک فعال شد!" %}' },
+  ticket:                 { label: '{% trans "تیکت پشتیبانی" %}',         icon: 'ti-ticket',        text_key: null,                      fallback: '{% trans "✅ پیامت دریافت شد." %}' },
+  back_to_tutorials:      { label: '{% trans "بازگشت آموزش‌ها" %}',       icon: 'ti-book',          text_key: 'tutorial_has_list',       fallback: '{% trans "📚 آموزش‌ها:" %}' },
+  back_to_faqs:           { label: '{% trans "بازگشت سوالات متداول" %}',  icon: 'ti-help-circle',   text_key: 'faq_has_list',            fallback: '{% trans "❓ سوالات متداول:" %}' },
+  cancel:                 { label: '{% trans "لغو عملیات" %}',             icon: 'ti-x',             text_key: null,                      fallback: '{% trans "✏️ اطلاعات را وارد کنید:" %}' },
   // جریان خرید
-  buy_vpn:                { label: 'انتخاب سرور',           icon: 'ti-server',        text_key: 'buy_select_server',       fallback: '🔐 سرور مورد نظر را انتخاب کنید:' },
-  user_plans:             { label: 'انتخاب پلن',            icon: 'ti-package',       text_key: 'buy_select_plan',         fallback: '📦 پلن مورد نظر را انتخاب کنید:' },
-  user_proforma:          { label: 'پیش‌فاکتور',            icon: 'ti-receipt',       text_key: null,                      fallback: '🧾 پیش‌فاکتور پرداخت' },
+  buy_vpn:                { label: '{% trans "انتخاب سرور" %}',           icon: 'ti-server',        text_key: 'buy_select_server',       fallback: '{% trans "🔐 سرور مورد نظر را انتخاب کنید:" %}' },
+  user_plans:             { label: '{% trans "انتخاب پلن" %}',            icon: 'ti-package',       text_key: 'buy_select_plan',         fallback: '{% trans "📦 پلن مورد نظر را انتخاب کنید:" %}' },
+  user_proforma:          { label: '{% trans "پیش‌فاکتور" %}',            icon: 'ti-receipt',       text_key: null,                      fallback: '{% trans "🧾 پیش‌فاکتور پرداخت" %}' },
   // سرویس‌های من
-  my_services:            { label: 'سرویس‌های من',          icon: 'ti-wifi',          text_key: 'services_menu_title',     fallback: '📡 سرویس‌های من' },
-  user_service_detail:    { label: 'جزئیات سرویس',          icon: 'ti-info-circle',   text_key: null,                      fallback: '📊 جزئیات سرویس' },
+  my_services:            { label: '{% trans "سرویس‌های من" %}',          icon: 'ti-wifi',          text_key: 'services_menu_title',     fallback: '{% trans "📡 سرویس‌های من" %}' },
+  user_service_detail:    { label: '{% trans "جزئیات سرویس" %}',          icon: 'ti-info-circle',   text_key: null,                      fallback: '{% trans "📊 جزئیات سرویس" %}' },
   // پشتیبانی
-  my_tickets:             { label: 'تیکت‌های من',           icon: 'ti-ticket',        text_key: null,                      fallback: '📋 تیکت‌های من' },
+  my_tickets:             { label: '{% trans "تیکت‌های من" %}',           icon: 'ti-ticket',        text_key: null,                      fallback: '{% trans "📋 تیکت‌های من" %}' },
   // آموزش
-  user_tutorials:         { label: 'آموزش‌ها',              icon: 'ti-book',          text_key: null,                      fallback: '📚 آموزش‌ها' },
-  user_faqs:              { label: 'سوالات متداول',          icon: 'ti-help-circle',   text_key: null,                      fallback: '❓ سوالات متداول' },
+  user_tutorials:         { label: '{% trans "آموزش‌ها" %}',              icon: 'ti-book',          text_key: null,                      fallback: '{% trans "📚 آموزش‌ها" %}' },
+  user_faqs:              { label: '{% trans "سوالات متداول" %}',          icon: 'ti-help-circle',   text_key: null,                      fallback: '{% trans "❓ سوالات متداول" %}' },
   // کاربر — صفحات ساده
-  profile:                { label: 'پروفایل',                icon: 'ti-user',          text_key: 'profile_text',            fallback: '👤 پروفایل کاربر' },
-  referral:               { label: 'دعوت دوستان',            icon: 'ti-gift',          text_key: null,                      fallback: '💰 دعوت دوستان — لینک شما:' },
-  wallet_history:         { label: 'تاریخچه تراکنش‌ها',     icon: 'ti-list',          text_key: null,                      fallback: '📜 تاریخچه تراکنش‌ها' },
-  top_up:                 { label: 'شارژ حساب',              icon: 'ti-credit-card',   text_key: null,                      fallback: '💳 مبلغ شارژ را وارد کنید:' },
+  profile:                { label: '{% trans "پروفایل" %}',                icon: 'ti-user',          text_key: 'profile_text',            fallback: '{% trans "👤 پروفایل کاربر" %}' },
+  referral:               { label: '{% trans "دعوت دوستان" %}',            icon: 'ti-gift',          text_key: null,                      fallback: '{% trans "💰 دعوت دوستان — لینک شما:" %}' },
+  wallet_history:         { label: '{% trans "تاریخچه تراکنش‌ها" %}',     icon: 'ti-list',          text_key: null,                      fallback: '{% trans "📜 تاریخچه تراکنش‌ها" %}' },
+  top_up:                 { label: '{% trans "شارژ حساب" %}',              icon: 'ti-credit-card',   text_key: null,                      fallback: '{% trans "💳 مبلغ شارژ را وارد کنید:" %}' },
   // ادمین
-  admin_plans:            { label: 'مدیریت پلن‌ها',         icon: 'ti-package',       text_key: null,                      fallback: '📦 مدیریت پلن‌ها' },
-  admin_discount:         { label: 'کدهای تخفیف',           icon: 'ti-discount',      text_key: null,                      fallback: '🎟 کدهای تخفیف' },
-  admin_referral:         { label: 'تنظیمات معرف',           icon: 'ti-gift',          text_key: null,                      fallback: '🤝 تنظیمات دعوت دوستان' },
-  admin_panel:            { label: 'پنل ادمین',             icon: 'ti-shield',        text_key: 'admin_panel_title',       fallback: '⚙️ پنل ادمین' },
-  admin_general:          { label: 'تنظیمات عمومی',         icon: 'ti-settings',      text_key: 'admin_general_title',     fallback: '⚙️ تنظیمات عمومی' },
-  admin_banner_and_text:  { label: 'ظاهر ربات',             icon: 'ti-palette',       text_key: 'admin_banner_and_text_title', fallback: '🎨 ظاهر ربات' },
-  admin_banner_settings:  { label: 'تنظیمات بنر',           icon: 'ti-photo',         text_key: null,                      fallback: '🖼 تنظیمات بنر' },
-  admin_text_settings:    { label: 'تنظیمات متن',           icon: 'ti-file-text',     text_key: 'admin_text_settings_title', fallback: '✏️ تنظیمات متن' },
-  admin_servers:          { label: 'مدیریت سرورها',         icon: 'ti-server-2',      text_key: 'admin_servers_title',     fallback: '🖥 مدیریت سرورها' },
-  admin_free_test_global: { label: 'تست رایگان عمومی',      icon: 'ti-gift',          text_key: null,                      fallback: '🎁 تنظیمات تست رایگان' },
-  admin_support_settings: { label: 'تنظیمات پشتیبانی',     icon: 'ti-headset',       text_key: null,                      fallback: '🎧 تنظیمات پشتیبانی' },
-  admin_tutorials:        { label: 'مدیریت آموزش‌ها',       icon: 'ti-book',          text_key: 'admin_tutorials_title',   fallback: '📚 مدیریت آموزش‌ها' },
-  admin_tutorial_list:    { label: 'لیست آموزش‌ها',         icon: 'ti-list',          text_key: null,                      fallback: '📖 لیست آموزش‌ها' },
-  admin_faqs:             { label: 'سوالات متداول (ادمین)', icon: 'ti-help-circle',   text_key: null,                      fallback: '❓ مدیریت سوالات متداول' },
-  admin_stats:            { label: 'آمار و گزارش',          icon: 'ti-chart-bar',     text_key: null,                      fallback: '📊 آمار دیاکو' },
-  admin_broadcast:        { label: 'پیام همگانی',           icon: 'ti-send',          text_key: 'admin_broadcast_title',   fallback: '📢 پیام همگانی' },
-  admin_users:            { label: 'مدیریت کاربران',        icon: 'ti-users',         text_key: null,                      fallback: '👥 مدیریت کاربران' },
-  admin_user_list:        { label: 'لیست کاربران',          icon: 'ti-list',          text_key: null,                      fallback: '👥 لیست کاربران' },
-  card_settings:          { label: 'تنظیمات کارت',          icon: 'ti-credit-card',   text_key: null,                      fallback: '💳 تنظیمات کارت‌به‌کارت' },
+  admin_plans:            { label: '{% trans "مدیریت پلن‌ها" %}',         icon: 'ti-package',       text_key: null,                      fallback: '{% trans "📦 مدیریت پلن‌ها" %}' },
+  admin_discount:         { label: '{% trans "کدهای تخفیف" %}',           icon: 'ti-discount',      text_key: null,                      fallback: '{% trans "🎟 کدهای تخفیف" %}' },
+  admin_referral:         { label: '{% trans "تنظیمات معرف" %}',           icon: 'ti-gift',          text_key: null,                      fallback: '{% trans "🤝 تنظیمات دعوت دوستان" %}' },
+  admin_panel:            { label: '{% trans "پنل ادمین" %}',             icon: 'ti-shield',        text_key: 'admin_panel_title',       fallback: '{% trans "⚙️ پنل ادمین" %}' },
+  admin_general:          { label: '{% trans "تنظیمات عمومی" %}',         icon: 'ti-settings',      text_key: 'admin_general_title',     fallback: '{% trans "⚙️ تنظیمات عمومی" %}' },
+  admin_banner_and_text:  { label: '{% trans "ظاهر ربات" %}',             icon: 'ti-palette',       text_key: 'admin_banner_and_text_title', fallback: '{% trans "🎨 ظاهر ربات" %}' },
+  admin_banner_settings:  { label: '{% trans "تنظیمات بنر" %}',           icon: 'ti-photo',         text_key: null,                      fallback: '{% trans "🖼 تنظیمات بنر" %}' },
+  admin_text_settings:    { label: '{% trans "تنظیمات متن" %}',           icon: 'ti-file-text',     text_key: 'admin_text_settings_title', fallback: '{% trans "✏️ تنظیمات متن" %}' },
+  admin_servers:          { label: '{% trans "مدیریت سرورها" %}',         icon: 'ti-server-2',      text_key: 'admin_servers_title',     fallback: '{% trans "🖥 مدیریت سرورها" %}' },
+  admin_free_test_global: { label: '{% trans "تست رایگان عمومی" %}',      icon: 'ti-gift',          text_key: null,                      fallback: '{% trans "🎁 تنظیمات تست رایگان" %}' },
+  admin_support_settings: { label: '{% trans "تنظیمات پشتیبانی" %}',     icon: 'ti-headset',       text_key: null,                      fallback: '{% trans "🎧 تنظیمات پشتیبانی" %}' },
+  admin_tutorials:        { label: '{% trans "مدیریت آموزش‌ها" %}',       icon: 'ti-book',          text_key: 'admin_tutorials_title',   fallback: '{% trans "📚 مدیریت آموزش‌ها" %}' },
+  admin_tutorial_list:    { label: '{% trans "لیست آموزش‌ها" %}',         icon: 'ti-list',          text_key: null,                      fallback: '{% trans "📖 لیست آموزش‌ها" %}' },
+  admin_faqs:             { label: '{% trans "سوالات متداول (ادمین)" %}', icon: 'ti-help-circle',   text_key: null,                      fallback: '{% trans "❓ مدیریت سوالات متداول" %}' },
+  admin_stats:            { label: '{% trans "آمار و گزارش" %}',          icon: 'ti-chart-bar',     text_key: null,                      fallback: '{% trans "📊 آمار دیاکو" %}' },
+  admin_broadcast:        { label: '{% trans "پیام همگانی" %}',           icon: 'ti-send',          text_key: 'admin_broadcast_title',   fallback: '{% trans "📢 پیام همگانی" %}' },
+  admin_users:            { label: '{% trans "مدیریت کاربران" %}',        icon: 'ti-users',         text_key: null,                      fallback: '{% trans "👥 مدیریت کاربران" %}' },
+  admin_user_list:        { label: '{% trans "لیست کاربران" %}',          icon: 'ti-list',          text_key: null,                      fallback: '{% trans "👥 لیست کاربران" %}' },
+  card_settings:          { label: '{% trans "تنظیمات کارت" %}',          icon: 'ti-credit-card',   text_key: null,                      fallback: '{% trans "💳 تنظیمات کارت‌به‌کارت" %}' },
   // زمینه‌ای
-  after_order:            { label: 'بعد از سفارش (ادمین)',  icon: 'ti-package',       text_key: null,                      fallback: '📦 سفارش پردازش شد' },
-  admin_order:            { label: 'تأیید سفارش',           icon: 'ti-circle-check',  text_key: null,                      fallback: '📸 رسید پرداخت کاربر' },
-  admin_topup:            { label: 'تأیید شارژ',            icon: 'ti-wallet',        text_key: null,                      fallback: '📸 رسید شارژ کاربر' },
-  discount_type:          { label: 'نوع تخفیف',             icon: 'ti-discount',      text_key: null,                      fallback: '🎟 نوع تخفیف را انتخاب کنید:' },
-  discount_expiry:        { label: 'تاریخ انقضا تخفیف',    icon: 'ti-calendar',      text_key: null,                      fallback: '📅 تاریخ انقضا را وارد کنید:' },
-  confirm_delete_server:  { label: 'تأیید حذف سرور',        icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (سرور)' },
-  confirm_delete_plan:    { label: 'تأیید حذف پلن',         icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (پلن)' },
-  confirm_delete_service: { label: 'تأیید حذف سرویس',       icon: 'ti-trash',         text_key: null,                      fallback: '🗑 آیا مطمئن هستید؟ (سرویس)' },
+  after_order:            { label: '{% trans "بعد از سفارش (ادمین)" %}',  icon: 'ti-package',       text_key: null,                      fallback: '{% trans "📦 سفارش پردازش شد" %}' },
+  admin_order:            { label: '{% trans "تأیید سفارش" %}',           icon: 'ti-circle-check',  text_key: null,                      fallback: '{% trans "📸 رسید پرداخت کاربر" %}' },
+  admin_topup:            { label: '{% trans "تأیید شارژ" %}',            icon: 'ti-wallet',        text_key: null,                      fallback: '{% trans "📸 رسید شارژ کاربر" %}' },
+  discount_type:          { label: '{% trans "نوع تخفیف" %}',             icon: 'ti-discount',      text_key: null,                      fallback: '{% trans "🎟 نوع تخفیف را انتخاب کنید:" %}' },
+  discount_expiry:        { label: '{% trans "تاریخ انقضا تخفیف" %}',    icon: 'ti-calendar',      text_key: null,                      fallback: '{% trans "📅 تاریخ انقضا را وارد کنید:" %}' },
+  confirm_delete_server:  { label: '{% trans "تأیید حذف سرور" %}',        icon: 'ti-trash',         text_key: null,                      fallback: '{% trans "🗑 آیا مطمئن هستید؟ (سرور)" %}' },
+  confirm_delete_plan:    { label: '{% trans "تأیید حذف پلن" %}',         icon: 'ti-trash',         text_key: null,                      fallback: '{% trans "🗑 آیا مطمئن هستید؟ (پلن)" %}' },
+  confirm_delete_service: { label: '{% trans "تأیید حذف سرویس" %}',       icon: 'ti-trash',         text_key: null,                      fallback: '{% trans "🗑 آیا مطمئن هستید؟ (سرویس)" %}' },
 };
 
 // ── گروه‌بندی کیبوردها در ستون چپ ──────────────────
 const KB_GROUPS = [
-  { label: 'کاربر',          keys: ['user_main','wallet','support','cancel','free_test_confirm','ticket','payment_info','subscription_approved'] },
-  { label: 'پروفایل',        keys: ['profile','referral','wallet_history','top_up'] },
-  { label: 'جریان خرید',     keys: ['buy_vpn','user_plans','user_proforma'] },
-  { label: 'سرویس‌ها',       keys: ['my_services','user_service_detail','confirm_delete_service'] },
-  { label: 'پشتیبانی',       keys: ['my_tickets'] },
-  { label: 'آموزش',          keys: ['user_tutorials','user_faqs','back_to_tutorials','back_to_faqs'] },
-  { label: 'ادمین',          keys: ['admin_panel','admin_general','admin_banner_and_text','admin_banner_settings','admin_text_settings','admin_servers','admin_plans','admin_free_test_global','admin_support_settings','admin_tutorials','admin_tutorial_list','admin_faqs','admin_stats','admin_broadcast','admin_users','admin_user_list','card_settings','admin_discount','admin_referral'] },
-  { label: 'زمینه‌ای',       keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan'] },
+  { label: '{% trans "کاربر" %}',          keys: ['user_main','wallet','support','cancel','free_test_confirm','ticket','payment_info','subscription_approved'] },
+  { label: '{% trans "پروفایل" %}',        keys: ['profile','referral','wallet_history','top_up'] },
+  { label: '{% trans "جریان خرید" %}',     keys: ['buy_vpn','user_plans','user_proforma'] },
+  { label: '{% trans "سرویس‌ها" %}',       keys: ['my_services','user_service_detail','confirm_delete_service'] },
+  { label: '{% trans "پشتیبانی" %}',       keys: ['my_tickets'] },
+  { label: '{% trans "آموزش" %}',          keys: ['user_tutorials','user_faqs','back_to_tutorials','back_to_faqs'] },
+  { label: '{% trans "ادمین" %}',          keys: ['admin_panel','admin_general','admin_banner_and_text','admin_banner_settings','admin_text_settings','admin_servers','admin_plans','admin_free_test_global','admin_support_settings','admin_tutorials','admin_tutorial_list','admin_faqs','admin_stats','admin_broadcast','admin_users','admin_user_list','card_settings','admin_discount','admin_referral'] },
+  { label: '{% trans "زمینه‌ای" %}',       keys: ['after_order','admin_order','admin_topup','discount_type','discount_expiry','confirm_delete_server','confirm_delete_plan'] },
 ];
 
 // کیبوردهایی که محتوای داینامیک از DB دارن
@@ -1501,12 +1408,12 @@ async function saveBubbleEdit() {
     if (data.ok) {
       BOT_TEXTS[key] = value;
       updateBubble();
-      notify('متن پیام ذخیره شد ✅');
+      notify('{% trans "متن پیام ذخیره شد ✅" %}');
     } else {
-      notify('خطا: ' + (data.error || '?'), 'error');
+      notify('{% trans "خطا: " %}' + (data.error || '?'), 'error');
     }
   } catch {
-    notify('خطا در ارتباط با سرور ❌', 'error');
+    notify('{% trans "خطا در ارتباط با سرور ❌" %}', 'error');
   }
   cancelBubbleEdit();
 }
@@ -1520,9 +1427,9 @@ function makeKbBtnEl(btn) {
     + (navKb ? ' ke-btn-nav' : '');
   el._d = { ...btn };
   el.title = navKb
-    ? `کلیک کن تا به "${KB_META[navKb]?.label || navKb}" بری`
+    ? `{% trans "کلیک کن تا بری به:" %} ${KB_META[navKb]?.label || navKb}`
     : (btn.callback_data && btn.callback_data !== '_')
-      ? 'این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند'
+      ? '{% trans "این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند" %}'
       : '';
 
   const lbl = document.createElement('span');
@@ -1539,7 +1446,7 @@ function makeKbBtnEl(btn) {
   if (btn.admin_only) {
     const badge = document.createElement('span');
     badge.className = 'ke-admin-badge';
-    badge.textContent = 'ادمین';
+    badge.textContent = '{% trans "ادمین" %}';
     el.appendChild(badge);
   }
 
@@ -1547,7 +1454,7 @@ function makeKbBtnEl(btn) {
     if (navKb && navKb !== currentKeyboard) {
       switchKeyboard(navKb);
     } else if (!navKb && btn.callback_data && btn.callback_data !== '_') {
-      notify('این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند', 'info', 2200);
+      notify('{% trans "این دکمه در ادیتور ناوبری ندارد — در بات یک عملیات اجرا می‌کند" %}', 'info', 2200);
     }
   });
   el.addEventListener('contextmenu', e => {
@@ -1566,7 +1473,7 @@ function refreshEmptyRows() {
     if (!hasBtns && !hasEmpty) {
       const ph = document.createElement('span');
       ph.className = 'ke-row-empty';
-      ph.textContent = 'خالی — از کاتالوگ اینجا رها کن';
+      ph.textContent = '{% trans "خالی — از کاتالوگ اینجا رها کن" %}';
       r.appendChild(ph);
     } else if (hasBtns && hasEmpty) {
       hasEmpty.remove();
@@ -1588,8 +1495,8 @@ function renderBoard() {
     const hdr = document.createElement('div');
     hdr.className = 'ke-row-hdr';
     hdr.innerHTML =
-      `<span class="ke-row-num">ردیف ${ri + 1}</span>` +
-      `<button class="ke-row-del" onclick="deleteRow(${ri})" title="حذف ردیف">` +
+      `<span class="ke-row-num">{% trans "ردیف" %} ${ri + 1}</span>` +
+      `<button class="ke-row-del" onclick="deleteRow(${ri})" title="{% trans "حذف ردیف" %}">` +
       `<i class="ti ti-trash"></i></button>`;
 
     const rowEl = document.createElement('div');
@@ -1599,7 +1506,7 @@ function renderBoard() {
     if (row.length === 0) {
       const ph = document.createElement('span');
       ph.className = 'ke-row-empty';
-      ph.textContent = 'خالی — از کاتالوگ اینجا رها کن';
+      ph.textContent = '{% trans "خالی — از کاتالوگ اینجا رها کن" %}';
       rowEl.appendChild(ph);
     } else {
       row.forEach(btn => rowEl.appendChild(makeKbBtnEl(btn)));
@@ -1734,7 +1641,7 @@ async function switchKeyboard(name) {
     const res = await fetch(`/diako/api/keyboard/${encodeURIComponent(name)}/?all=1`);
     const data = await res.json();
     if (!data.buttons || (data.buttons.length === 0 && !DYNAMIC_KEYBOARDS.has(name))) {
-      notify('این منو دکمه‌ای ندارد', 'error');
+      notify('{% trans "این منو دکمه‌ای ندارد" %}', 'error');
       document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.kb === prevKb);
       });
@@ -1745,7 +1652,7 @@ async function switchKeyboard(name) {
     boardRows = buildRows(data.buttons);
     renderBoard();
   } catch {
-    notify('خطا در بارگذاری منو ❌', 'error');
+    notify('{% trans "خطا در بارگذاری منو ❌" %}', 'error');
     document.querySelectorAll('.ke-menu-item, .ke-mobile-kb-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.kb === prevKb);
     });
@@ -1779,10 +1686,10 @@ async function saveLayout() {
       body:    JSON.stringify({ keyboard_name: currentKeyboard, buttons }),
     });
     const data = await res.json();
-    if (data.ok) notify(`${KB_META[currentKeyboard]?.label || currentKeyboard} ذخیره شد ✅`);
-    else         notify('خطا: ' + (data.error || '?'), 'error');
+    if (data.ok) notify(`${KB_META[currentKeyboard]?.label || currentKeyboard} {% trans "ذخیره شد" %} ✅`);
+    else         notify('{% trans "خطا: " %}' + (data.error || '?'), 'error');
   } catch {
-    notify('خطا در ارتباط با سرور ❌', 'error');
+    notify('{% trans "خطا در ارتباط با سرور ❌" %}', 'error');
   }
 }
 
@@ -1816,7 +1723,7 @@ function renderCatalog() {
     item.dataset.callback = action.callback_data;
     const isDynamic = action.is_dynamic || false;
     item.innerHTML = `<span>${esc(action.label)}</span>` +
-      (isDynamic ? '<span class="ke-cat-badge">داینامیک</span>' : '');
+      (isDynamic ? '<span class="ke-cat-badge">{% trans "داینامیک" %}</span>' : '');
     cat.appendChild(item);
   });
   Sortable.create(cat, {
@@ -1900,7 +1807,7 @@ async function fetchBotInfo() {
     const nameEl   = document.getElementById('sim-name');
     const avatarEl = document.getElementById('sim-avatar');
 
-    if (nameEl) nameEl.textContent = data.name || 'دیاکو';
+    if (nameEl) nameEl.textContent = data.name || '{% trans "دیاکو" %}';
 
     if (data.avatar_url && avatarEl) {
       const img = document.createElement('img');
@@ -1948,7 +1855,7 @@ function showCtx(e, btnEl) {
   const center = document.createElement('div');
   center.className = 'ke-radial-center';
   center.innerHTML = '<i class="ti ti-x"></i>';
-  center.title = 'بستن';
+  center.title = '{% trans "بستن" %}';
   center.addEventListener('click', e2 => { e2.stopPropagation(); closeCtx(); });
   menu.appendChild(center);
 
@@ -1956,9 +1863,9 @@ function showCtx(e, btnEl) {
   const isActive = !btnEl.classList.contains('inactive');
   const CX = 45, CY = -45, R = 52;
   const actions = [
-    { angle: -55, icon: 'ti-pencil',                           action: 'edit',   title: 'ویرایش متن' },
-    { angle:   0, icon: isActive ? 'ti-eye-off' : 'ti-eye',   action: 'toggle', title: isActive ? 'غیرفعال‌کردن' : 'فعال‌کردن' },
-    { angle:  55, icon: 'ti-trash',                            action: 'delete', title: 'حذف دکمه' },
+    { angle: -55, icon: 'ti-pencil',                           action: 'edit',   title: '{% trans "ویرایش متن" %}' },
+    { angle:   0, icon: isActive ? 'ti-eye-off' : 'ti-eye',   action: 'toggle', title: isActive ? '{% trans "غیرفعال‌کردن" %}' : '{% trans "فعال‌کردن" %}' },
+    { angle:  55, icon: 'ti-trash',                            action: 'delete', title: '{% trans "حذف دکمه" %}' },
   ];
 
   const actionEls = [];
@@ -1998,7 +1905,7 @@ function handleCtxAction(action, btnEl) {
   if (action === 'edit') {
     startInlineEdit(btnEl);
   } else if (action === 'delete') {
-    if (isDynamic) { notify('سرورها رو از پنل ادمین مدیریت کن', 'error'); return; }
+    if (isDynamic) { notify('{% trans "سرورها رو از پنل ادمین مدیریت کن" %}', 'error'); return; }
     btnEl.remove();
     refreshEmptyRows();
     syncState();
@@ -2064,7 +1971,7 @@ function closeBottomSheet() {
 function setBsTab(tab) {
   _bsTab = tab;
   document.querySelectorAll('.ke-bs-tab').forEach(t => {
-    t.classList.toggle('active', t.textContent.trim() === (tab === 'member' ? 'ممبر' : 'ادمین'));
+    t.classList.toggle('active', t.textContent.trim() === (tab === 'member' ? '{% trans "ممبر" %}' : '{% trans "ادمین" %}'));
   });
   renderBsItems();
 }
@@ -2076,7 +1983,7 @@ function renderBsItems() {
     _bsTab === 'admin' ? ADMIN_CBS.has(a.callback_data) : MEMBER_CBS.has(a.callback_data)
   );
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">دکمه‌ای در این دسته‌بندی وجود ندارد</div>';
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">{% trans "دکمه‌ای در این دسته‌بندی وجود ندارد" %}</div>';
     return;
   }
   filtered.forEach(action => {

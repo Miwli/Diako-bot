@@ -1,7 +1,7 @@
 {% extends 'diako/base.html' %}
-{% load static %}
+{% load static i18n diako_tags %}
 
-{% block title %}درخواست‌های افزودن — دیاکو{% endblock %}
+{% block title %}{% trans "درخواست‌های افزودن" %} — {% trans "دیاکو" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -9,9 +9,9 @@
 .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
 .section-title i { color: var(--accent); }
 .mgmt-table-wrap { overflow-x: auto; }
-.mgmt-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; direction: rtl; }
-.mgmt-table thead th { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 4px 14px 8px; text-align: right; white-space: nowrap; }
-.mgmt-table thead th.col-actions { text-align: left; }
+.mgmt-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
+.mgmt-table thead th { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; padding: 4px 14px 8px; text-align: start; white-space: nowrap; }
+.mgmt-table thead th.col-actions { text-align: end; }
 .mgmt-row td { padding: 12px 14px; vertical-align: middle; background: rgba(255,255,255,0.018); border-top: 1px solid rgba(255,255,255,0.038); border-bottom: 1px solid rgba(0,0,0,0.18); font-size: 12px; color: var(--text); white-space: nowrap; }
 .mgmt-row td:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid rgba(255,255,255,0.038); }
 .mgmt-row td:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid rgba(255,255,255,0.038); }
@@ -37,58 +37,14 @@
 </style>
 {% endblock %}
 
-{% block body %}
-<div class="dash-wrap">
-  <div class="sidebar-overlay"></div>
-  <aside class="sidebar">
-    <div class="sidebar-logo">د</div>
-    <div class="sidebar-divider"></div>
-    <nav class="sidebar-nav">
-      <a href="/diako/dashboard/" class="nav-item" data-tooltip="داشبورد"><i class="ti ti-layout-dashboard"></i></a>
-      <a href="/diako/orders/" class="nav-item" data-tooltip="سفارش‌ها"><i class="ti ti-package"></i></a>
-      <a href="/diako/users/" class="nav-item" data-tooltip="کاربران"><i class="ti ti-users"></i></a>
-      <a href="/diako/servers/" class="nav-item" data-tooltip="سرورها"><i class="ti ti-server"></i></a>
-      <a href="/diako/monitoring/" class="nav-item" data-tooltip="مانیتورینگ"><i class="ti ti-world"></i></a>
-      <a href="/diako/plans/" class="nav-item" data-tooltip="پلن‌ها"><i class="ti ti-list"></i></a>
-      <a href="/diako/finance/" class="nav-item" data-tooltip="مالی"><i class="ti ti-wallet"></i></a>
-      <a href="/diako/discounts/" class="nav-item" data-tooltip="تخفیف‌ها"><i class="ti ti-ticket"></i></a>
-      <a href="/diako/tutorials/" class="nav-item" data-tooltip="آموزش‌ها"><i class="ti ti-book"></i></a>
-      <a href="/diako/extra-requests/" class="nav-item active" data-tooltip="درخواست‌ها"><i class="ti ti-clock-plus"></i></a>
-      <a href="/diako/keyboard-editor/" class="nav-item" data-tooltip="کیبورد"><i class="ti ti-keyboard"></i></a>
-      <a href="/diako/texts-editor/" class="nav-item" data-tooltip="متن‌ها"><i class="ti ti-text-size"></i></a>
-      <a href="/diako/import-export/" class="nav-item" data-tooltip="ایمپورت/اکسپورت"><i class="ti ti-database-export"></i></a>
-      <a href="/diako/force-join/" class="nav-item" data-tooltip="جوین اجباری"><i class="ti ti-lock"></i></a>
-      <a href="/admin/" class="nav-item" data-tooltip="تنظیمات"><i class="ti ti-settings"></i></a>
-    </nav>
-  </aside>
-
-  <div class="dash-body">
-    <div class="dash-topbar">
-      <div class="topbar-left">
-        <button class="hamburger" onclick="openSidebar()"><i class="ti ti-menu-2"></i></button>
-        <h1 class="page-title">درخواست‌های افزودن حجم/زمان</h1>
-      </div>
-      <div class="topbar-right">
-        <button class="ctrl-btn" onclick="toggleTheme()"><i id="theme-icon" class="ti ti-sun"></i></button>
-        <button class="ctrl-btn lang-btn" id="lang-btn" onclick="toggleLang()">EN</button>
-        <div class="avatar-wrap">
-          <button class="ctrl-btn avatar-btn" onclick="toggleAvatarMenu(event)">{{ admin_username|slice:":1"|upper }}</button>
-          <div class="avatar-menu" id="avatar-menu">
-            <div class="avatar-menu-name">{{ admin_username }}</div>
-            <a href="/diako/logout/" class="avatar-menu-item"><i class="ti ti-logout"></i><span>خروج</span></a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="dash-container">
+{% block content %}
       <!-- Extra Volume Requests -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-plus"></i> درخواست‌های افزودن حجم</div></div>
+        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-plus"></i> {% trans "درخواست‌های افزودن حجم" %}</div></div>
         {% if ev_requests %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>#</th><th>کاربر</th><th>سرویس</th><th>پلن</th><th>وضعیت</th><th>تاریخ</th><th class="col-actions"></th></tr></thead>
+            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
             <tbody>
               {% for r in ev_requests %}
               <tr class="mgmt-row">
@@ -96,26 +52,26 @@
                 <td><span class="cell-name">{{ r.user_id }}</span></td>
                 <td><span class="cell-muted">{{ r.order_id }}</span></td>
                 <td><span class="cell-muted">{{ r.plan_id }}</span></td>
-                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">در انتظار</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">تایید</span>{% else %}<span class="st-badge st-rejected">رد</span>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
                 <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
-                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="تایید" onclick="approveEv({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="رد" onclick="rejectEv({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveEv({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="{% trans 'رد' %}" onclick="rejectEv({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="ord-empty"><i class="ti ti-plus"></i><p>درخواستی وجود ندارد</p></div>
+        <div class="ord-empty"><i class="ti ti-plus"></i><p>{% trans "درخواستی وجود ندارد" %}</p></div>
         {% endif %}
       </div>
 
       <!-- Extra Time Requests -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-clock"></i> درخواست‌های افزودن زمان</div></div>
+        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-clock"></i> {% trans "درخواست‌های افزودن زمان" %}</div></div>
         {% if et_requests %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>#</th><th>کاربر</th><th>سرویس</th><th>پلن</th><th>وضعیت</th><th>تاریخ</th><th class="col-actions"></th></tr></thead>
+            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
             <tbody>
               {% for r in et_requests %}
               <tr class="mgmt-row">
@@ -123,31 +79,31 @@
                 <td><span class="cell-name">{{ r.user_id }}</span></td>
                 <td><span class="cell-muted">{{ r.order_id }}</span></td>
                 <td><span class="cell-muted">{{ r.plan_id }}</span></td>
-                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">در انتظار</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">تایید</span>{% else %}<span class="st-badge st-rejected">رد</span>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
                 <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
-                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="تایید" onclick="approveEt({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="رد" onclick="rejectEt({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveEt({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="{% trans 'رد' %}" onclick="rejectEt({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="ord-empty"><i class="ti ti-clock"></i><p>درخواستی وجود ندارد</p></div>
+        <div class="ord-empty"><i class="ti ti-clock"></i><p>{% trans "درخواستی وجود ندارد" %}</p></div>
         {% endif %}
       </div>
 
       <!-- Location Change Requests -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
         <div style="padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between;">
-          <div class="section-title"><i class="ti ti-map-pin"></i> درخواست‌های تغییر لوکیشن</div>
+          <div class="section-title"><i class="ti ti-map-pin"></i> {% trans "درخواست‌های تغییر لوکیشن" %}</div>
           <button class="row-btn" style="width:auto;padding:4px 12px;font-size:11px;" onclick="toggleChangelocAdmin()">
-            {% if changeloc_need_admin %}🔒 نیاز به تایید ادمین: روشن{% else %}⚡ نیاز به تایید ادمین: خاموش{% endif %}
+            {% if changeloc_need_admin %}🔒 {% trans "نیاز به تایید ادمین: روشن" %}{% else %}⚡ {% trans "نیاز به تایید ادمین: خاموش" %}{% endif %}
           </button>
         </div>
         {% if lc_requests %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>#</th><th>کاربر</th><th>سرویس</th><th>از</th><th>به</th><th>وضعیت</th><th>تاریخ</th><th class="col-actions"></th></tr></thead>
+            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "از" %}</th><th>{% trans "به" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
             <tbody>
               {% for r in lc_requests %}
               <tr class="mgmt-row">
@@ -156,68 +112,65 @@
                 <td><span class="cell-muted">{{ r.order_id }}</span></td>
                 <td><span class="cell-muted">{{ r.from_server_name }}</span></td>
                 <td><span class="cell-muted">{{ r.to_server_name }}</span></td>
-                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">در انتظار</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">تایید</span>{% else %}<span class="st-badge st-rejected">رد</span>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
                 <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
-                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="تایید و انتقال" onclick="approveLc({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="رد" onclick="rejectLc({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
+                <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید و انتقال' %}" onclick="approveLc({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="{% trans 'رد' %}" onclick="rejectLc({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="ord-empty"><i class="ti ti-map-pin"></i><p>درخواستی وجود ندارد</p></div>
+        <div class="ord-empty"><i class="ti ti-map-pin"></i><p>{% trans "درخواستی وجود ندارد" %}</p></div>
         {% endif %}
       </div>
 
       <!-- Extra Volume Plans -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-package"></i> پکیج‌های افزودن حجم</div></div>
+        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-package"></i> {% trans "پکیج‌های افزودن حجم" %}</div></div>
         {% if ev_plans %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>نام</th><th>حجم</th><th>قیمت</th><th>وضعیت</th></tr></thead>
+            <thead><tr><th>{% trans "نام" %}</th><th>{% trans "حجم" %}</th><th>{% trans "قیمت" %}</th><th>{% trans "وضعیت" %}</th></tr></thead>
             <tbody>
               {% for p in ev_plans %}
               <tr class="mgmt-row">
                 <td><span class="cell-name">{{ p.name }}</span></td>
                 <td><span class="cell-muted">{{ p.traffic_gb }} GB</span></td>
-                <td><span class="cell-muted">{{ p.price }} تومان</span></td>
-                <td>{% if p.is_active %}<span class="st-badge st-active">فعال</span>{% else %}<span class="st-badge st-inactive">غیرفعال</span>{% endif %}</td>
+                <td><span class="cell-muted">{{ p.price }} {% trans "تومان" %}</span></td>
+                <td>{% if p.is_active %}<span class="st-badge st-active">{% trans "فعال" %}</span>{% else %}<span class="st-badge st-inactive">{% trans "غیرفعال" %}</span>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="ord-empty"><i class="ti ti-package"></i><p>پکیجی ثبت نشده</p></div>
+        <div class="ord-empty"><i class="ti ti-package"></i><p>{% trans "پکیجی ثبت نشده" %}</p></div>
         {% endif %}
       </div>
 
       <!-- Extra Time Plans -->
       <div class="inner-card anim-card card-section" style="padding:6px 0 8px;">
-        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-calendar"></i> پکیج‌های افزودن زمان</div></div>
+        <div style="padding:10px 16px 4px;"><div class="section-title"><i class="ti ti-calendar"></i> {% trans "پکیج‌های افزودن زمان" %}</div></div>
         {% if et_plans %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>نام</th><th>روز</th><th>قیمت</th><th>وضعیت</th></tr></thead>
+            <thead><tr><th>{% trans "نام" %}</th><th>{% trans "روز" %}</th><th>{% trans "قیمت" %}</th><th>{% trans "وضعیت" %}</th></tr></thead>
             <tbody>
               {% for p in et_plans %}
               <tr class="mgmt-row">
                 <td><span class="cell-name">{{ p.name }}</span></td>
-                <td><span class="cell-muted">{{ p.days }} روز</span></td>
-                <td><span class="cell-muted">{{ p.price }} تومان</span></td>
-                <td>{% if p.is_active %}<span class="st-badge st-active">فعال</span>{% else %}<span class="st-badge st-inactive">غیرفعال</span>{% endif %}</td>
+                <td><span class="cell-muted">{{ p.days }} {% trans "روز" %}</span></td>
+                <td><span class="cell-muted">{{ p.price }} {% trans "تومان" %}</span></td>
+                <td>{% if p.is_active %}<span class="st-badge st-active">{% trans "فعال" %}</span>{% else %}<span class="st-badge st-inactive">{% trans "غیرفعال" %}</span>{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% else %}
-        <div class="ord-empty"><i class="ti ti-calendar"></i><p>پکیجی ثبت نشده</p></div>
+        <div class="ord-empty"><i class="ti ti-calendar"></i><p>{% trans "پکیجی ثبت نشده" %}</p></div>
         {% endif %}
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -231,44 +184,44 @@ async function apiCall(body) {
 }
 
 async function approveEv(id) {
-  if (!confirm('تایید درخواست افزودن حجم؟ این عمل حجم را به سرویس کاربر اضافه می‌کند.')) return;
+  if (!confirm('{% trans "تایید درخواست افزودن حجم؟ این عمل حجم را به سرویس کاربر اضافه می‌کند." %}')) return;
   var d = await apiCall({ action: 'approve_ev', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function rejectEv(id) {
-  if (!confirm('رد درخواست افزودن حجم؟')) return;
+  if (!confirm('{% trans "رد درخواست افزودن حجم؟" %}')) return;
   var d = await apiCall({ action: 'reject_ev', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function approveEt(id) {
-  if (!confirm('تایید درخواست افزودن زمان؟ این عمل زمان را به سرویس کاربر اضافه می‌کند.')) return;
+  if (!confirm('{% trans "تایید درخواست افزودن زمان؟ این عمل زمان را به سرویس کاربر اضافه می‌کند." %}')) return;
   var d = await apiCall({ action: 'approve_et', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function rejectEt(id) {
-  if (!confirm('رد درخواست افزودن زمان؟')) return;
+  if (!confirm('{% trans "رد درخواست افزودن زمان؟" %}')) return;
   var d = await apiCall({ action: 'reject_et', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function approveLc(id) {
-  if (!confirm('تایید و انتقال سرویس؟ سرویس روی سرور جدید ساخته و از سرور قبلی حذف می‌شود.')) return;
+  if (!confirm('{% trans "تایید و انتقال سرویس؟ سرویس روی سرور جدید ساخته و از سرور قبلی حذف می‌شود." %}')) return;
   var d = await apiCall({ action: 'approve_lc', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function rejectLc(id) {
-  if (!confirm('رد درخواست تغییر لوکیشن؟')) return;
+  if (!confirm('{% trans "رد درخواست تغییر لوکیشن؟" %}')) return;
   var d = await apiCall({ action: 'reject_lc', req_id: id });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 async function toggleChangelocAdmin() {
   var d = await apiCall({ action: 'toggle_changeloc_admin' });
-  if (d.ok) { location.reload(); } else { showNotif('خطا', d.error, 'error'); }
+  if (d.ok) { location.reload(); } else { showNotif('{% trans "خطا" %}', d.error, 'error'); }
 }
 
 function showNotif(title, body, type) {
