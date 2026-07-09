@@ -315,11 +315,6 @@ def monitoring_view(request):
 
 @login_required
 def import_export_view(request):
-    all_texts_rows = async_to_sync(get_all_texts)()
-    bot_texts = {row['key']: row['value'] for row in all_texts_rows}
-    keyboards = async_to_sync(get_all_keyboard_buttons_grouped)()
-    actions = async_to_sync(get_keyboard_actions)()
-
     db_path = str(dj_settings.DATABASES['default']['NAME'])
     db_size = os.path.getsize(db_path) if os.path.exists(db_path) else 0
     db_stats = {
@@ -328,16 +323,8 @@ def import_export_view(request):
         'orders': Orders.objects.count(),
         'servers': Servers.objects.count(),
         'plans': Plans.objects.count(),
-        'texts': len(all_texts_rows),
-        'buttons': sum(len(v) for v in keyboards.values()),
     }
-
-    ctx = {
-        'bot_texts_json':        json.dumps(bot_texts, ensure_ascii=False),
-        'keyboards_json':        json.dumps(keyboards, ensure_ascii=False),
-        'keyboard_actions_json': json.dumps(actions, ensure_ascii=False),
-        'db_stats':              db_stats,
-    }
+    ctx = {'db_stats': db_stats}
     ctx.update(_page_ctx(request, 'settings', 'database'))
     return render(request, 'diako/import_export.html', ctx)
 

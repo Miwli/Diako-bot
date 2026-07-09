@@ -1691,3 +1691,274 @@ msgstr "🤝 Referral settings"
 
 msgid "🧾 پیش‌فاکتور پرداخت"
 msgstr "🧾 Payment invoice"
+
+msgid "بکاپ / خروجی"
+msgstr "Backup / Export"
+
+msgid "بازگردانی / ورودی"
+msgstr "Restore / Import"
+
+msgid "انتخاب برای بکاپ"
+msgstr "Select what to back up"
+
+msgid ""
+"دسته‌ای که می‌خوای بکاپ بگیری رو تیک بزن، یا با دکمه‌ی کناری واردش شو تا فقط"
+" بخش‌هایی ازش رو انتخاب کنی."
+msgstr ""
+"Tick a category to back it up, or use the side button to enter it and pick "
+"only some parts."
+
+msgid "بازگردانی از فایل"
+msgstr "Restore from file"
+
+msgid ""
+"فایل بکاپی که قبلاً گرفتی رو انتخاب کن (JSON برای بخش‌ها، یا فایل دیتابیس "
+"کامل). بعد می‌تونی ببینی داخلش چیه و انتخاب کنی چی اعمال بشه."
+msgstr ""
+"Choose a backup file you saved earlier (JSON for parts, or a full database "
+"file). Then you can see what’s inside and choose what to apply."
+
+msgid "فایل بکاپ را انتخاب کنید"
+msgstr "Choose a backup file"
+
+msgid ""
+"این‌ها بخش‌هایی هستند که داخل فایل پیدا شد. هرکدوم رو نمی‌خوای، تیکش رو "
+"بردار."
+msgstr ""
+"These are the parts found inside the file. Untick anything you don’t want."
+
+msgid "این داده روی دیتابیس فعلی چطور اعمال بشه؟"
+msgstr "How should this data be applied to the current database?"
+
+msgid "اعمال بازگردانی"
+msgstr "Apply restore"
+
+msgid ""
+"این یک فایل دیتابیس کامل است. با بازگردانی، کل دیتابیس فعلی پاک و با این "
+"فایل جایگزین می‌شود."
+msgstr ""
+"This is a full database file. Restoring it wipes the entire current database"
+" and replaces it with this file."
+
+msgid "قبل از جایگزینی، از نسخه‌ی فعلی خودکار بکاپ بگیر"
+msgstr "Back up the current version automatically before replacing"
+
+msgid "بازگردانی کامل"
+msgstr "Full restore"
+
+msgid "تیک همه"
+msgstr "Select all"
+
+msgid "برداشتن همه"
+msgstr "Clear all"
+
+msgid "اطلاعات حساس"
+msgstr "Sensitive data"
+
+msgid ""
+"انتخاب تو شامل توکن سرور / شماره کارت / رمز است. این فایل خروجی یک کپی "
+"متن‌باز از این‌هاست — اگه قراره برای کسی بفرستیش، بدون اطلاعات حساس بگیر. "
+"اگه برای بکاپ خودته، با اطلاعات حساس بگیر."
+msgstr ""
+"Your selection includes server tokens / card numbers / passwords. This "
+"export file is a plaintext copy of them — if you’re going to send it to "
+"someone, export without sensitive data. If it’s your own backup, include it."
+
+msgid "بدون اطلاعات حساس (امن)"
+msgstr "Without sensitive data (safe)"
+
+msgid "با اطلاعات حساس"
+msgstr "With sensitive data"
+
+msgid "تأیید بازگردانی کامل"
+msgstr "Confirm full restore"
+
+msgid "جایگزین کن"
+msgstr "Replace"
+
+msgid "متن‌ها، کیبوردها و اکشن‌ها"
+msgstr "Texts, keyboards and actions"
+
+msgid "داده‌ی بات"
+msgstr "Bot data"
+
+msgid "کاربران، سفارش‌ها، سرورها و بقیه‌ی داده‌ها"
+msgstr "Users, orders, servers and the rest of the data"
+
+msgid "حساب‌های پنل"
+msgstr "Panel accounts"
+
+msgid "ادمین‌ها و نشست‌های ورود به پنل"
+msgstr "Panel admins and login sessions"
+
+msgid "همه‌ی پیام‌هایی که کاربر در ربات می‌بیند"
+msgstr "All the messages the user sees in the bot"
+
+msgid "چینش کیبوردها"
+msgstr "Keyboard layout"
+
+msgid "دکمه‌ها و ترتیبشان در منوهای ربات"
+msgstr "Buttons and their order in the bot menus"
+
+msgid "کاتالوگ اکشن‌ها"
+msgstr "Actions catalog"
+
+msgid "فهرست اکشن‌های قابل‌استفاده در ادیتور کیبورد"
+msgstr "List of actions usable in the keyboard editor"
+
+msgid "حساب کاربرها و موجودی کیف‌پولشان"
+msgstr "User accounts and their wallet balances"
+
+msgid "همه‌ی سفارش‌ها و سرویس‌های ساخته‌شده"
+msgstr "All orders and created services"
+
+msgid "سرورهای پنل — شامل توکن اتصال"
+msgstr "Panel servers — includes the connection token"
+
+msgid "پلن‌های فروش هر سرور"
+msgstr "Sales plans for each server"
+
+msgid "کدهای تخفیف و سابقه‌ی استفاده"
+msgstr "Discount codes and their usage history"
+
+msgid "کیف‌پول و تراکنش‌ها"
+msgstr "Wallet and transactions"
+
+msgid "تراکنش‌ها و درخواست‌های شارژ حساب"
+msgstr "Transactions and top-up requests"
+
+msgid "کارت‌های پرداخت"
+msgstr "Payment cards"
+
+msgid "شماره‌کارت‌های کارت‌به‌کارت"
+msgstr "Card-to-card numbers"
+
+msgid "تیکت‌های پشتیبانی کاربران"
+msgstr "User support tickets"
+
+msgid "دعوت‌ها"
+msgstr "Referrals"
+
+msgid "زیرمجموعه‌گیری و پاداش‌ها"
+msgstr "Referrals and rewards"
+
+msgid "حجم و زمان اضافه"
+msgstr "Extra volume and time"
+
+msgid "پلن‌ها و درخواست‌های افزودن حجم/زمان"
+msgstr "Plans and requests for adding volume/time"
+
+msgid "تغییر لوکیشن"
+msgstr "Location change"
+
+msgid "درخواست‌های جابه‌جایی سرویس بین سرورها"
+msgstr "Requests to move services between servers"
+
+msgid "کانال‌های جوین اجباری"
+msgstr "Forced-join channels"
+
+msgid "کانال‌هایی که کاربر باید عضو شود"
+msgstr "Channels the user must join"
+
+msgid "آموزش‌ها و سوالات"
+msgstr "Tutorials and FAQs"
+
+msgid "آموزش‌ها و سوالات متداول"
+msgstr "Tutorials and frequently asked questions"
+
+msgid "تنظیمات بات"
+msgstr "Bot settings"
+
+msgid "تنظیمات عمومی ربات"
+msgstr "General bot settings"
+
+msgid "ادمین‌های پنل"
+msgstr "Panel admins"
+
+msgid "حساب‌های ورود به پنل — شامل رمز"
+msgstr "Panel login accounts — includes the password"
+
+msgid "نشست‌های فعال"
+msgstr "Active sessions"
+
+msgid "نشست‌های لاگین پنل"
+msgstr "Panel login sessions"
+
+msgid "تاریخچه‌ی فعالیت"
+msgstr "Activity history"
+
+msgid "لاگ تغییرات انجام‌شده در پنل"
+msgstr "Log of changes made in the panel"
+
+msgid "ادغام هوشمند (پیشنهادی)"
+msgstr "Smart merge (recommended)"
+
+msgid ""
+"رکوردهای موجود آپدیت و رکوردهای جدید اضافه می‌شوند. هیچ‌چیز پاک نمی‌شود."
+msgstr ""
+"Existing records are updated and new ones are added. Nothing is deleted."
+
+msgid "جایگزینی کامل جدول"
+msgstr "Full table replace"
+
+msgid ""
+"هرچه الان در این بخش‌ها هست پاک و کاملاً با محتوای فایل جایگزین می‌شود."
+msgstr ""
+"Whatever is currently in these sections is deleted and fully replaced with "
+"the file’s contents."
+
+msgid "فقط موارد جدید"
+msgstr "New items only"
+
+msgid ""
+"فقط رکوردهایی که الان وجود ندارند اضافه می‌شوند؛ موجودها دست‌نخورده "
+"می‌مانند."
+msgstr ""
+"Only records that don’t already exist are added; existing ones stay "
+"untouched."
+
+msgid "دیتابیس کامل"
+msgstr "Full database"
+
+msgid "کل فایل دیتابیس — همه‌چیز و همه‌ی اطلاعات حساس"
+msgstr "The entire database file — everything, including all sensitive data"
+
+msgid "دانلود فایل دیتابیس"
+msgstr "Download database file"
+
+msgid "بخش"
+msgstr "parts"
+
+msgid "رکورد"
+msgstr "records"
+
+msgid "چیزی انتخاب نشده"
+msgstr "Nothing selected"
+
+msgid "حداقل یک مورد را انتخاب کنید"
+msgstr "Select at least one item"
+
+msgid "خروجی آماده شد"
+msgstr "Backup ready"
+
+msgid "بازگردانی با موفقیت اعمال شد"
+msgstr "Restore applied successfully"
+
+msgid "دیتابیس با موفقیت جایگزین شد"
+msgstr "Database replaced successfully"
+
+msgid "بکاپ نسخه‌ی قبلی ذخیره شد"
+msgstr "Previous version backed up"
+
+msgid "این فایل یک بکاپ معتبر دیاکو نیست"
+msgstr "This file is not a valid Diako backup"
+
+msgid "حساس"
+msgstr "Sensitive"
+
+msgid ""
+"کل دیتابیس فعلی پاک و با فایل جایگزین می‌شود. برای تأیید، کلمه‌ی "
+"<b>REPLACE</b> را تایپ کنید."
+msgstr ""
+"The entire current database is wiped and replaced with the file. To confirm,"
+" type the word <b>REPLACE</b>."

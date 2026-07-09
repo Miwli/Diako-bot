@@ -5,17 +5,122 @@
 
 {% block extra_head %}
 <style>
-.ie-group { margin-bottom: 14px; }
-.ie-group-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 8px; }
-.ie-group-title { font-size: 12px; font-weight: 700; }
-.ie-select-all { font-size: 10px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: inherit; }
-.ie-empty { font-size: 11px; color: var(--text-muted); padding: 10px; text-align: center; }
-.ie-hint { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.7; }
-.ie-file-drop { border: 1.5px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; transition: all 150ms; margin-bottom: 14px; }
+.db-modebar { margin-bottom: 14px; display: flex; justify-content: center; }
+
+.db-panel .widget-body { display: flex; flex-direction: column; gap: 14px; }
+.db-hint { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
+
+/* لیست دسته‌ها */
+.cat-list { display: flex; flex-direction: column; gap: 9px; }
+.cat-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: var(--edge-soft), 0 2px 8px rgba(0,0,0,0.2);
+  transition: all 180ms cubic-bezier(0.34,1.4,0.64,1);
+}
+.cat-row:hover { border-color: rgba(var(--accent-rgb),0.28); box-shadow: var(--edge-soft), 0 6px 18px rgba(0,0,0,0.3); }
+.cat-row.dimmed { opacity: 0.4; filter: grayscale(0.5); pointer-events: none; }
+.cat-row.cat-full { border-color: rgba(255,193,120,0.28); background: linear-gradient(180deg, rgba(255,193,120,0.06), transparent); }
+
+/* چک‌باکس سه‌حالته */
+.cat-check {
+  width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.22);
+  background: rgba(0,0,0,0.3); box-shadow: inset 0 2px 5px rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: transparent; font-size: 14px;
+  transition: all 180ms ease;
+}
+.cat-check i { display: none; }
+.cat-check.tri-full, .cat-check.tri-part {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent; color: #000;
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb),0.45), inset 0 1px 0 rgba(255,255,255,0.4);
+  animation: pickPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.cat-check.tri-full .ti-check { display: block; }
+.cat-check.tri-part .ti-minus { display: block; }
+
+.cat-main { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; cursor: pointer; }
+.cat-ico {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: rgba(var(--accent-rgb),0.12); color: var(--accent);
+  box-shadow: var(--edge-soft), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.cat-ico.warn { background: rgba(255,193,120,0.14); color: #FCC479; }
+.cat-info { min-width: 0; flex: 1; }
+.cat-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.cat-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-enter {
+  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.08); background: var(--surface);
+  color: var(--text-muted); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--edge-soft); transition: all 150ms ease;
+}
+.cat-enter:hover { background: var(--surface-raised); color: var(--accent); }
+[dir="ltr"] .cat-enter i { transform: scaleX(-1); }
+
+.cat-count { font-size: 10px; font-weight: 700; color: var(--accent);
+  background: rgba(var(--accent-rgb),0.1); padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+
+.db-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 2px 0; }
+
+/* دکمه‌ی اصلی اکشن */
+.db-action { width: 100%; justify-content: center; }
+.db-action.btn-danger-solid {
+  background: linear-gradient(135deg, #F87171, #FB923C); color: #000; border: none;
+  box-shadow: 0 4px 18px rgba(248,113,113,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* هشدار و ردیف سوییچ */
+.db-warn {
+  font-size: 11px; line-height: 1.8; color: #FCC479;
+  background: rgba(255,193,120,0.08); border: 1px solid rgba(255,193,120,0.2);
+  border-radius: 12px; padding: 11px 13px; display: flex; gap: 9px; align-items: flex-start;
+}
+.db-warn i { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.db-warn b { color: #fff; }
+.db-switchrow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 12px; color: var(--text); padding: 4px 2px; }
+
+/* فایل درگ */
+.ie-file-drop { border: 1.5px dashed rgba(255,255,255,0.15); border-radius: 14px; padding: 24px;
+  text-align: center; cursor: pointer; transition: all 150ms; font-size: 12px; color: var(--text-muted); }
 .ie-file-drop:hover { border-color: rgba(var(--accent-rgb),0.4); background: rgba(var(--accent-rgb),0.03); }
-.ie-file-drop i { font-size: 26px; color: var(--text-muted); display: block; margin-bottom: 6px; }
-.ie-file-name { font-size: 11px; color: var(--accent); margin-top: 6px; }
-.ie-btn { width: 100%; justify-content: center; }
+.ie-file-drop i { font-size: 28px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+.ie-file-name { font-size: 11px; color: var(--accent); margin-top: 6px; font-weight: 600; }
+
+/* حالت‌های اعمال (رادیویی با توضیح) */
+.db-modes { display: flex; flex-direction: column; gap: 8px; }
+.mode-opt {
+  display: flex; gap: 11px; padding: 11px 13px; border-radius: 12px; cursor: pointer;
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: var(--edge-soft); transition: all 150ms ease; align-items: flex-start;
+}
+.mode-opt:hover { border-color: rgba(var(--accent-rgb),0.3); }
+.mode-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+  border: 2px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.3); transition: all 150ms ease; }
+.mode-opt.sel { border-color: rgba(var(--accent-rgb),0.5);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),0.14), rgba(var(--accent-rgb),0.05)); }
+.mode-opt.sel .mode-dot { border-color: var(--accent);
+  box-shadow: inset 0 0 0 4px var(--accent), 0 0 8px rgba(var(--accent-rgb),0.5); }
+.mode-body { min-width: 0; }
+.mode-title { font-size: 12px; font-weight: 700; color: var(--text); }
+.mode-opt.sel .mode-title { color: var(--accent); }
+.mode-desc { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.6; }
+
+/* ابزار modal */
+.cat-modal-tools { display: flex; gap: 8px; margin-bottom: 12px; }
+.pick-row .pick-sub { display: block; margin-top: 3px; white-space: normal; }
+.pick-row .pick-label-wrap { flex: 1; min-width: 0; }
+.pick-row .pick-label-wrap .pick-label { white-space: normal; }
+.sens-tag { font-size: 9px; font-weight: 700; color: #FCC479; background: rgba(255,193,120,0.12);
+  padding: 1px 6px; border-radius: 20px; margin-inline-start: 6px; }
 </style>
 {% endblock %}
 
@@ -49,43 +154,101 @@
       <div class="kpi-label">{% trans "سرور / پلن" %}</div>
     </div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-ico warn"><i class="ti ti-text-size"></i></div>
-    <div class="kpi-info">
-      <div class="kpi-value">{{ db_stats.texts }} / {{ db_stats.buttons }}</div>
-      <div class="kpi-label">{% trans "متن / دکمه" %}</div>
+</div>
+
+<div class="db-modebar anim-card">
+  <div class="seg">
+    <button class="seg-btn active" id="segExport" onclick="setMode('export')"><i class="ti ti-download"></i> {% trans "بکاپ / خروجی" %}</button>
+    <button class="seg-btn" id="segImport" onclick="setMode('import')"><i class="ti ti-upload"></i> {% trans "بازگردانی / ورودی" %}</button>
+  </div>
+</div>
+
+<!-- ═══ خروجی ═══ -->
+<div id="exportPanel" class="widget-card anim-card db-panel">
+  <div class="widget-head"><div class="widget-title"><i class="ti ti-download"></i>{% trans "انتخاب برای بکاپ" %}</div></div>
+  <div class="widget-body">
+    <div class="db-hint">{% trans "دسته‌ای که می‌خوای بکاپ بگیری رو تیک بزن، یا با دکمه‌ی کناری واردش شو تا فقط بخش‌هایی ازش رو انتخاب کنی." %}</div>
+    <div id="exportCats" class="cat-list"></div>
+    <div class="db-divider"></div>
+    <div id="fullDbRow" class="cat-list"></div>
+    <button class="btn-primary db-action" id="exportBtn" onclick="startExport()"><i class="ti ti-download"></i> {% trans "دانلود خروجی" %}</button>
+  </div>
+</div>
+
+<!-- ═══ بازگردانی ═══ -->
+<div id="importPanel" class="widget-card anim-card db-panel" style="display:none">
+  <div class="widget-head"><div class="widget-title"><i class="ti ti-upload"></i>{% trans "بازگردانی از فایل" %}</div></div>
+  <div class="widget-body">
+    <div class="db-hint">{% trans "فایل بکاپی که قبلاً گرفتی رو انتخاب کن (JSON برای بخش‌ها، یا فایل دیتابیس کامل). بعد می‌تونی ببینی داخلش چیه و انتخاب کنی چی اعمال بشه." %}</div>
+    <div class="ie-file-drop" onclick="document.getElementById('impFile').click()">
+      <i class="ti ti-file-upload"></i>
+      <span>{% trans "فایل بکاپ را انتخاب کنید" %}</span>
+      <div class="ie-file-name" id="impFileName"></div>
+    </div>
+    <input type="file" id="impFile" accept=".json,application/json,.db,application/octet-stream" style="display:none" onchange="onImpFile(event)">
+
+    <!-- بازگردانی JSON -->
+    <div id="jsonRestore" style="display:none">
+      <div class="db-hint">{% trans "این‌ها بخش‌هایی هستند که داخل فایل پیدا شد. هرکدوم رو نمی‌خوای، تیکش رو بردار." %}</div>
+      <div id="importCats" class="cat-list"></div>
+      <div class="modal-label" style="margin-top:6px">{% trans "این داده روی دیتابیس فعلی چطور اعمال بشه؟" %}</div>
+      <div id="modeList" class="db-modes"></div>
+      <button class="btn-primary db-action" onclick="startImportJson()"><i class="ti ti-upload"></i> {% trans "اعمال بازگردانی" %}</button>
+    </div>
+
+    <!-- بازگردانی دیتابیس کامل -->
+    <div id="dbRestore" style="display:none">
+      <div class="db-warn"><i class="ti ti-alert-triangle"></i>
+        <span>{% trans "این یک فایل دیتابیس کامل است. با بازگردانی، کل دیتابیس فعلی پاک و با این فایل جایگزین می‌شود." %}</span></div>
+      <label class="db-switchrow">
+        <span>{% trans "قبل از جایگزینی، از نسخه‌ی فعلی خودکار بکاپ بگیر" %}</span>
+        <span class="switch"><input type="checkbox" id="backupFirst" checked><span class="track"></span></span>
+      </label>
+      <button class="btn-primary db-action btn-danger-solid" onclick="openRestoreConfirm()"><i class="ti ti-refresh"></i> {% trans "بازگردانی کامل" %}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- انتخاب زیرشاخه‌ها -->
+<div class="modal-bg" id="catModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-list-check"></i> <span id="catModalTitle"></span></div>
+    <div class="cat-modal-tools">
+      <button class="modal-btn" onclick="modalSelectAll(true)"><i class="ti ti-checks"></i> {% trans "تیک همه" %}</button>
+      <button class="modal-btn" onclick="modalSelectAll(false)"><i class="ti ti-square"></i> {% trans "برداشتن همه" %}</button>
+    </div>
+    <div class="pick-list" id="catModalList"></div>
+    <div class="modal-acts">
+      <button class="modal-btn btn-confirm" onclick="closeCatModal()"><i class="ti ti-check"></i> {% trans "تأیید" %}</button>
     </div>
   </div>
 </div>
 
-<div class="widget-grid anim-card">
-  <!-- Export -->
-  <div class="widget-card">
-    <div class="widget-head">
-      <div class="widget-title"><i class="ti ti-download"></i>{% trans "خروجی گرفتن (بکاپ)" %}</div>
-    </div>
-    <div class="widget-body">
-      <div class="ie-hint">{% trans "قسمت‌هایی که می‌خوای خروجی بگیری رو انتخاب کن، بعد دانلود کن. فایل خروجی شامل هیچ اطلاعات حساسی (توکن/شماره کارت) نیست." %}</div>
-      <div id="exportGroups"></div>
-      <button class="btn-primary ie-btn" onclick="doExport()"><i class="ti ti-download"></i> {% trans "دانلود خروجی" %}</button>
+<!-- تأیید اطلاعات حساس (خروجی) -->
+<div class="modal-bg" id="sensModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-shield-lock"></i> {% trans "اطلاعات حساس" %}</div>
+    <div class="db-warn"><i class="ti ti-alert-triangle"></i>
+      <span>{% trans "انتخاب تو شامل توکن سرور / شماره کارت / رمز است. این فایل خروجی یک کپی متن‌باز از این‌هاست — اگه قراره برای کسی بفرستیش، بدون اطلاعات حساس بگیر. اگه برای بکاپ خودته، با اطلاعات حساس بگیر." %}</span></div>
+    <div class="modal-acts" style="flex-direction:column;gap:8px">
+      <button class="modal-btn btn-confirm" style="width:100%;justify-content:center" onclick="doExport(false)"><i class="ti ti-shield-check"></i> {% trans "بدون اطلاعات حساس (امن)" %}</button>
+      <button class="modal-btn btn-danger" style="width:100%;justify-content:center" onclick="doExport(true)"><i class="ti ti-lock-open"></i> {% trans "با اطلاعات حساس" %}</button>
     </div>
   </div>
+</div>
 
-  <!-- Import -->
-  <div class="widget-card">
-    <div class="widget-head">
-      <div class="widget-title"><i class="ti ti-upload"></i>{% trans "بازگردانی (Import)" %}</div>
-    </div>
-    <div class="widget-body">
-      <div class="ie-hint">{% trans "یه فایل JSON که قبلاً از همین صفحه خروجی گرفتی رو انتخاب کن. بعد از خوندن فایل، می‌تونی مشخص کنی کدوم قسمت‌ها اعمال بشن." %}</div>
-      <div class="ie-file-drop" onclick="document.getElementById('importFile').click()">
-        <i class="ti ti-file-upload"></i>
-        <span>{% trans "فایل JSON را انتخاب کنید" %}</span>
-        <div class="ie-file-name" id="fileName"></div>
-      </div>
-      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="onFileSelected(event)">
-      <div id="importGroups"></div>
-      <button class="btn-primary ie-btn" id="importBtn" style="display:none" onclick="doImport()"><i class="ti ti-upload"></i> {% trans "اعمال ایمپورت" %}</button>
+<!-- تأیید بازگردانی کامل -->
+<div class="modal-bg" id="restoreModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-alert-triangle"></i> {% trans "تأیید بازگردانی کامل" %}</div>
+    <div class="db-warn"><i class="ti ti-alert-triangle"></i>
+      <span>{% blocktrans %}کل دیتابیس فعلی پاک و با فایل جایگزین می‌شود. برای تأیید، کلمه‌ی <b>REPLACE</b> را تایپ کنید.{% endblocktrans %}</span></div>
+    <input class="modal-input" id="restoreWord" placeholder="REPLACE" autocomplete="off" oninput="checkRestoreWord()">
+    <div class="modal-acts">
+      <button class="modal-btn" onclick="closeM('restoreModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-danger" id="restoreGoBtn" disabled onclick="doFullRestore()"><i class="ti ti-refresh"></i> {% trans "جایگزین کن" %}</button>
     </div>
   </div>
 </div>
@@ -93,158 +256,333 @@
 
 {% block extra_scripts %}
 <script>
-const BOT_TEXTS       = {{ bot_texts_json|safe }};
-const KEYBOARDS       = {{ keyboards_json|safe }};
-const KEYBOARD_ACTIONS = {{ keyboard_actions_json|safe }};
+/* ── برچسب‌ها و توضیح‌ها (قابل ترجمه) ── */
+const CAT_LABELS = {
+  config:  { label: '{% trans "شخصی‌سازی" %}',   icon: 'ti-palette',  sub: '{% trans "متن‌ها، کیبوردها و اکشن‌ها" %}' },
+  botdata: { label: '{% trans "داده‌ی بات" %}',   icon: 'ti-database', sub: '{% trans "کاربران، سفارش‌ها، سرورها و بقیه‌ی داده‌ها" %}' },
+  panel:   { label: '{% trans "حساب‌های پنل" %}', icon: 'ti-shield',   sub: '{% trans "ادمین‌ها و نشست‌های ورود به پنل" %}' },
+};
+const SUB_LABELS = {
+  texts:     { label: '{% trans "متن‌های بات" %}',        icon: 'ti-text-size', desc: '{% trans "همه‌ی پیام‌هایی که کاربر در ربات می‌بیند" %}' },
+  keyboards: { label: '{% trans "چینش کیبوردها" %}',      icon: 'ti-keyboard',  desc: '{% trans "دکمه‌ها و ترتیبشان در منوهای ربات" %}' },
+  actions:   { label: '{% trans "کاتالوگ اکشن‌ها" %}',    icon: 'ti-category',  desc: '{% trans "فهرست اکشن‌های قابل‌استفاده در ادیتور کیبورد" %}' },
+  users:     { label: '{% trans "کاربران" %}',            icon: 'ti-user',      desc: '{% trans "حساب کاربرها و موجودی کیف‌پولشان" %}' },
+  orders:    { label: '{% trans "سفارش‌ها" %}',           icon: 'ti-package',   desc: '{% trans "همه‌ی سفارش‌ها و سرویس‌های ساخته‌شده" %}' },
+  servers:   { label: '{% trans "سرورها" %}',             icon: 'ti-server',    desc: '{% trans "سرورهای پنل — شامل توکن اتصال" %}', sens: true },
+  plans:     { label: '{% trans "پلن‌ها" %}',             icon: 'ti-tag',       desc: '{% trans "پلن‌های فروش هر سرور" %}' },
+  discounts: { label: '{% trans "کدهای تخفیف" %}',        icon: 'ti-discount',  desc: '{% trans "کدهای تخفیف و سابقه‌ی استفاده" %}' },
+  wallet:    { label: '{% trans "کیف‌پول و تراکنش‌ها" %}', icon: 'ti-wallet',    desc: '{% trans "تراکنش‌ها و درخواست‌های شارژ حساب" %}' },
+  cards:     { label: '{% trans "کارت‌های پرداخت" %}',    icon: 'ti-credit-card', desc: '{% trans "شماره‌کارت‌های کارت‌به‌کارت" %}', sens: true },
+  support:   { label: '{% trans "پشتیبانی" %}',           icon: 'ti-headset',   desc: '{% trans "تیکت‌های پشتیبانی کاربران" %}' },
+  referrals: { label: '{% trans "دعوت‌ها" %}',            icon: 'ti-users-group', desc: '{% trans "زیرمجموعه‌گیری و پاداش‌ها" %}' },
+  extras:    { label: '{% trans "حجم و زمان اضافه" %}',   icon: 'ti-plus',      desc: '{% trans "پلن‌ها و درخواست‌های افزودن حجم/زمان" %}' },
+  locchange: { label: '{% trans "تغییر لوکیشن" %}',       icon: 'ti-map-pin',   desc: '{% trans "درخواست‌های جابه‌جایی سرویس بین سرورها" %}' },
+  channels:  { label: '{% trans "کانال‌های جوین اجباری" %}', icon: 'ti-brand-telegram', desc: '{% trans "کانال‌هایی که کاربر باید عضو شود" %}' },
+  content:   { label: '{% trans "آموزش‌ها و سوالات" %}',  icon: 'ti-book',      desc: '{% trans "آموزش‌ها و سوالات متداول" %}' },
+  settings:  { label: '{% trans "تنظیمات بات" %}',        icon: 'ti-settings',  desc: '{% trans "تنظیمات عمومی ربات" %}' },
+  admins:    { label: '{% trans "ادمین‌های پنل" %}',      icon: 'ti-shield-lock', desc: '{% trans "حساب‌های ورود به پنل — شامل رمز" %}', sens: true },
+  sessions:  { label: '{% trans "نشست‌های فعال" %}',      icon: 'ti-plug',      desc: '{% trans "نشست‌های لاگین پنل" %}', sens: true },
+  adminlog:  { label: '{% trans "تاریخچه‌ی فعالیت" %}',   icon: 'ti-history',   desc: '{% trans "لاگ تغییرات انجام‌شده در پنل" %}' },
+};
+const MODES = [
+  { id: 'upsert',  title: '{% trans "ادغام هوشمند (پیشنهادی)" %}', desc: '{% trans "رکوردهای موجود آپدیت و رکوردهای جدید اضافه می‌شوند. هیچ‌چیز پاک نمی‌شود." %}' },
+  { id: 'replace', title: '{% trans "جایگزینی کامل جدول" %}',      desc: '{% trans "هرچه الان در این بخش‌ها هست پاک و کاملاً با محتوای فایل جایگزین می‌شود." %}' },
+  { id: 'addnew',  title: '{% trans "فقط موارد جدید" %}',          desc: '{% trans "فقط رکوردهایی که الان وجود ندارند اضافه می‌شوند؛ موجودها دست‌نخورده می‌مانند." %}' },
+];
+const T = {
+  full_label: '{% trans "دیتابیس کامل" %}',
+  full_sub: '{% trans "کل فایل دیتابیس — همه‌چیز و همه‌ی اطلاعات حساس" %}',
+  full_download: '{% trans "دانلود فایل دیتابیس" %}',
+  normal_download: '{% trans "دانلود خروجی" %}',
+  parts: '{% trans "بخش" %}',
+  all: '{% trans "همه" %}',
+  none: '{% trans "چیزی انتخاب نشده" %}',
+  records: '{% trans "رکورد" %}',
+  err: '{% trans "خطا" %}',
+  pick_one: '{% trans "حداقل یک مورد را انتخاب کنید" %}',
+  done: '{% trans "انجام شد" %}',
+  exported: '{% trans "خروجی آماده شد" %}',
+  imported: '{% trans "بازگردانی با موفقیت اعمال شد" %}',
+  restored: '{% trans "دیتابیس با موفقیت جایگزین شد" %}',
+  backup_saved: '{% trans "بکاپ نسخه‌ی قبلی ذخیره شد" %}',
+  bad_file: '{% trans "این فایل یک بکاپ معتبر دیاکو نیست" %}',
+  no_conn: '{% trans "ارتباط با سرور برقرار نشد" %}',
+};
 
-/* ── ساخت چک‌لیست عمومی (هم برای Export هم Import) ── */
-function pickRow(cls, val, label, icon, checked) {
-  return `<div class="pick-row${checked ? ' sel' : ''} ${cls}" data-val="${val}" onclick="this.classList.toggle('sel')">
-    <span class="pick-check"><i class="ti ti-check"></i></span>
-    <span class="pick-label"><i class="ti ${icon}" style="margin-inline-end:6px;color:var(--accent)"></i>${label}</span>
+let MANIFEST = {}, COUNTS = {}, SENSITIVE = [];
+let selExport = new Set(), fullDbSel = false;
+let importData = null, importCounts = {}, importPresent = [], selImport = new Set(), importMode = 'upsert';
+let uploadedDbFile = null;
+let modalCat = null, modalCtx = 'export';
+
+/* ── راه‌اندازی ── */
+(async function init() {
+  try {
+    const res = await fetch('/diako/api/backup-manifest/');
+    const d = await res.json();
+    MANIFEST = d.manifest; COUNTS = d.counts; SENSITIVE = d.sensitive || [];
+    // پیش‌فرض: خروجی همه‌چیز انتخاب باشه (opt-out راحت‌تر برای بکاپ)
+    Object.values(MANIFEST).forEach(ids => ids.forEach(id => selExport.add(id)));
+    renderExportCats();
+    renderFullDbRow();
+    renderModes();
+  } catch (e) { showToast(T.err, T.no_conn, 'error'); }
+})();
+
+/* ── سوییچ حالت بکاپ/بازگردانی ── */
+function setMode(m) {
+  const exp = m === 'export';
+  document.getElementById('exportPanel').style.display = exp ? '' : 'none';
+  document.getElementById('importPanel').style.display = exp ? 'none' : '';
+  document.getElementById('segExport').classList.toggle('active', exp);
+  document.getElementById('segImport').classList.toggle('active', !exp);
+}
+
+/* ── وضعیت یک دسته: none/part/full ── */
+function catState(ids, set) {
+  const on = ids.filter(id => set.has(id)).length;
+  if (on === 0) return 'none';
+  if (on === ids.length) return 'full';
+  return 'part';
+}
+
+function catRowHtml(cat, ids, set, counts, ctx) {
+  const meta = CAT_LABELS[cat];
+  const st = catState(ids, set);
+  const on = ids.filter(id => set.has(id)).length;
+  const total = ids.reduce((s, id) => s + (counts[id] || 0), 0);
+  let sub;
+  if (st === 'full') sub = `${T.all} · ${total} ${T.records}`;
+  else if (st === 'none') sub = T.none;
+  else sub = `${on}/${ids.length} ${T.parts} · ${total} ${T.records}`;
+  return `<div class="cat-row" data-cat="${cat}">
+    <div class="cat-check tri-${st}" onclick="toggleCat('${cat}','${ctx}',event)"><i class="ti ti-check"></i><i class="ti ti-minus"></i></div>
+    <div class="cat-main" onclick="openCatModal('${cat}','${ctx}')">
+      <div class="cat-ico"><i class="ti ${meta.icon}"></i></div>
+      <div class="cat-info">
+        <div class="cat-label">${meta.label}</div>
+        <div class="cat-sub" data-sub="${cat}">${sub}</div>
+      </div>
+    </div>
+    <button class="cat-enter" onclick="openCatModal('${cat}','${ctx}')"><i class="ti ti-chevron-left"></i></button>
   </div>`;
 }
 
-function pickedVals(cls) {
-  return Array.from(document.querySelectorAll('.pick-row.sel.' + cls)).map(r => r.dataset.val);
+function renderExportCats() {
+  const el = document.getElementById('exportCats');
+  el.innerHTML = Object.keys(MANIFEST).map(cat => catRowHtml(cat, MANIFEST[cat], selExport, COUNTS, 'export')).join('');
 }
 
-function buildGroupsHtml(idPrefix, hasTexts, keyboardNames, hasActions) {
-  let html = '';
-  let singles = '';
-  if (hasTexts) {
-    singles += pickRow(idPrefix + '_texts', 'texts', '{% trans "متن‌های بات" %} (bot_texts)', 'ti-text-size', true);
-  }
-  if (hasActions) {
-    singles += pickRow(idPrefix + '_actions', 'actions', '{% trans "کاتالوگ اکشن‌های کیبورد" %}', 'ti-category', true);
-  }
-  if (singles) {
-    html += `<div class="ie-group"><div class="pick-list">${singles}</div></div>`;
-  }
-  if (keyboardNames && keyboardNames.length) {
-    const items = keyboardNames.sort().map(name =>
-      pickRow(idPrefix + '_kb', name, name, 'ti-keyboard', true)
-    ).join('');
-    html += `
-    <div class="ie-group">
-      <div class="ie-group-head">
-        <span class="ie-group-title">{% trans "کیبوردها" %} (${keyboardNames.length})</span>
-        <button class="ie-select-all" onclick="toggleAll('${idPrefix}_kb', this)">{% trans "لغو انتخاب همه" %}</button>
+function renderFullDbRow() {
+  document.getElementById('fullDbRow').innerHTML = `
+    <div class="cat-row cat-full" data-cat="__full">
+      <div class="cat-check tri-${fullDbSel ? 'full' : 'none'}" onclick="toggleFullDb(event)"><i class="ti ti-check"></i><i class="ti ti-minus"></i></div>
+      <div class="cat-main" onclick="toggleFullDb(event)">
+        <div class="cat-ico warn"><i class="ti ti-database"></i></div>
+        <div class="cat-info">
+          <div class="cat-label">${T.full_label}</div>
+          <div class="cat-sub">${T.full_sub}</div>
+        </div>
       </div>
-      <div class="pick-list">${items}</div>
     </div>`;
-  }
-  if (!html) html = '<div class="ie-empty">{% trans "چیزی برای نمایش نیست" %}</div>';
-  return html;
 }
 
-function toggleAll(cls, btn) {
-  const rows = document.querySelectorAll('.pick-row.' + cls);
-  const allSel = Array.from(rows).every(r => r.classList.contains('sel'));
-  rows.forEach(r => r.classList.toggle('sel', !allSel));
-  btn.textContent = allSel ? '{% trans "انتخاب همه" %}' : '{% trans "لغو انتخاب همه" %}';
+/* ── تیک/برداشتن کل یک دسته ── */
+function toggleCat(cat, ctx, ev) {
+  if (ev) ev.stopPropagation();
+  const set = ctx === 'export' ? selExport : selImport;
+  const ids = (ctx === 'export' ? MANIFEST[cat] : MANIFEST[cat].filter(id => importPresent.includes(id)));
+  const st = catState(ids, set);
+  if (st === 'full') ids.forEach(id => set.delete(id));
+  else ids.forEach(id => set.add(id));
+  ctx === 'export' ? renderExportCats() : renderImportCats();
 }
 
-/* ── Export ── */
-document.getElementById('exportGroups').innerHTML = buildGroupsHtml(
-  'exp',
-  Object.keys(BOT_TEXTS).length > 0,
-  Object.keys(KEYBOARDS),
-  KEYBOARD_ACTIONS.length > 0
-);
+function toggleFullDb(ev) {
+  if (ev) ev.stopPropagation();
+  fullDbSel = !fullDbSel;
+  renderFullDbRow();
+  // وقتی دیتابیس کامل انتخابه، بقیه بی‌اثرن
+  document.querySelectorAll('#exportCats .cat-row').forEach(r => r.classList.toggle('dimmed', fullDbSel));
+  document.getElementById('exportBtn').innerHTML = fullDbSel
+    ? `<i class="ti ti-database-export"></i> ${T.full_download}`
+    : `<i class="ti ti-download"></i> ${T.normal_download}`;
+}
 
-function doExport() {
-  const payload = {};
-  if (pickedVals('exp_texts').length) {
-    payload.bot_texts = BOT_TEXTS;
-  }
-  const checkedKb = pickedVals('exp_kb');
-  if (checkedKb.length) {
-    payload.keyboards = {};
-    checkedKb.forEach(name => { payload.keyboards[name] = KEYBOARDS[name]; });
-  }
-  if (pickedVals('exp_actions').length) {
-    payload.keyboard_actions = KEYBOARD_ACTIONS;
-  }
-  if (!Object.keys(payload).length) {
-    showToast('{% trans "خطا" %}', '{% trans "حداقل یک قسمت را انتخاب کنید" %}', 'error');
+/* ── modal زیرشاخه‌ها ── */
+function openCatModal(cat, ctx) {
+  if (ctx === 'export' && fullDbSel) return;
+  modalCat = cat; modalCtx = ctx;
+  const set = ctx === 'export' ? selExport : selImport;
+  const counts = ctx === 'export' ? COUNTS : importCounts;
+  let ids = MANIFEST[cat];
+  if (ctx === 'import') ids = ids.filter(id => importPresent.includes(id));
+  document.getElementById('catModalTitle').textContent = CAT_LABELS[cat].label;
+  document.getElementById('catModalList').innerHTML = ids.map(id => {
+    const m = SUB_LABELS[id];
+    const sens = m.sens ? `<span class="sens-tag">{% trans "حساس" %}</span>` : '';
+    return `<div class="pick-row ${set.has(id) ? 'sel' : ''}" data-id="${id}" onclick="toggleSub('${id}')">
+      <span class="pick-check"><i class="ti ti-check"></i></span>
+      <span class="pick-label-wrap">
+        <span class="pick-label"><i class="ti ${m.icon}" style="margin-inline-end:6px;color:var(--accent)"></i>${m.label}${sens} <b style="color:var(--text-muted);font-weight:600">· ${counts[id]||0}</b></span>
+        <span class="pick-sub">${m.desc}</span>
+      </span>
+    </div>`;
+  }).join('');
+  document.getElementById('catModal').classList.add('open');
+}
+
+function toggleSub(id) {
+  const set = modalCtx === 'export' ? selExport : selImport;
+  const row = document.querySelector(`#catModalList .pick-row[data-id="${id}"]`);
+  if (set.has(id)) { set.delete(id); row.classList.remove('sel'); }
+  else { set.add(id); row.classList.add('sel'); }
+}
+
+function modalSelectAll(v) {
+  const set = modalCtx === 'export' ? selExport : selImport;
+  let ids = MANIFEST[modalCat];
+  if (modalCtx === 'import') ids = ids.filter(id => importPresent.includes(id));
+  ids.forEach(id => {
+    const row = document.querySelector(`#catModalList .pick-row[data-id="${id}"]`);
+    if (v) { set.add(id); row && row.classList.add('sel'); }
+    else { set.delete(id); row && row.classList.remove('sel'); }
+  });
+}
+
+function closeCatModal() {
+  document.getElementById('catModal').classList.remove('open');
+  modalCtx === 'export' ? renderExportCats() : renderImportCats();
+}
+
+/* ── خروجی ── */
+function startExport() {
+  if (fullDbSel) {
+    window.location = '/diako/api/export-full-db/';
     return;
   }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `diako-config-${stamp}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  if (selExport.size === 0) { showToast(T.err, T.pick_one, 'error'); return; }
+  const hasSens = [...selExport].some(id => SENSITIVE.includes(id));
+  if (hasSens) { document.getElementById('sensModal').classList.add('open'); return; }
+  doExport(false);
 }
 
-/* ── Import ── */
-let parsedImportData = null;
+async function doExport(includeSensitive) {
+  closeM('sensModal');
+  try {
+    const d = await apiPost('/diako/api/export-data/', {
+      subitems: [...selExport], include_sensitive: includeSensitive,
+    });
+    if (!d.ok) { showToast(T.err, d.error || '?', 'error'); return; }
+    const blob = new Blob([JSON.stringify(d.data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `diako-backup-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast(T.done, T.exported + ' ✅', 'success');
+  } catch { showToast(T.err, T.no_conn, 'error'); }
+}
 
-function onFileSelected(event) {
-  const file = event.target.files[0];
+/* ── انتخاب فایل بازگردانی ── */
+function onImpFile(ev) {
+  const file = ev.target.files[0];
   if (!file) return;
-  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('impFileName').textContent = file.name;
+  const isDb = /\.db$/i.test(file.name) || file.type === 'application/octet-stream';
+  document.getElementById('jsonRestore').style.display = 'none';
+  document.getElementById('dbRestore').style.display = 'none';
+  if (isDb) {
+    uploadedDbFile = file;
+    document.getElementById('dbRestore').style.display = '';
+    return;
+  }
   const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      parsedImportData = JSON.parse(e.target.result);
-    } catch (err) {
-      showToast('{% trans "خطا" %}', '{% trans "فایل JSON معتبر نیست" %}', 'error');
-      parsedImportData = null;
-      document.getElementById('importGroups').innerHTML = '';
-      document.getElementById('importBtn').style.display = 'none';
-      return;
-    }
-    const hasTexts = parsedImportData.bot_texts && typeof parsedImportData.bot_texts === 'object';
-    const kbNames = (parsedImportData.keyboards && typeof parsedImportData.keyboards === 'object')
-      ? Object.keys(parsedImportData.keyboards) : [];
-    const hasActions = Array.isArray(parsedImportData.keyboard_actions);
-    document.getElementById('importGroups').innerHTML = buildGroupsHtml('imp', hasTexts, kbNames, hasActions);
-    document.getElementById('importBtn').style.display = (hasTexts || kbNames.length || hasActions) ? 'flex' : 'none';
+  reader.onload = e => {
+    try { importData = JSON.parse(e.target.result); }
+    catch { showToast(T.err, T.bad_file, 'error'); return; }
+    const meta = importData._meta;
+    if (!meta || !Array.isArray(meta.subitems)) { showToast(T.err, T.bad_file, 'error'); return; }
+    importPresent = meta.subitems;
+    importCounts = meta.counts || {};
+    selImport = new Set(importPresent);   // پیش‌فرض همه‌ی موجودها تیک
+    renderImportCats();
+    document.getElementById('jsonRestore').style.display = '';
   };
   reader.readAsText(file);
 }
 
-async function doImport() {
-  if (!parsedImportData) return;
-  const payload = {};
-  if (pickedVals('imp_texts').length) {
-    payload.bot_texts = parsedImportData.bot_texts;
-  }
-  const checkedKb = pickedVals('imp_kb');
-  if (checkedKb.length) {
-    payload.keyboards = {};
-    checkedKb.forEach(name => { payload.keyboards[name] = parsedImportData.keyboards[name]; });
-  }
-  if (pickedVals('imp_actions').length) {
-    payload.keyboard_actions = parsedImportData.keyboard_actions;
-  }
-  if (!Object.keys(payload).length) {
-    showToast('{% trans "خطا" %}', '{% trans "حداقل یک قسمت را انتخاب کنید" %}', 'error');
-    return;
-  }
-  if (checkedKb.length && !confirm('{% trans "چینش کیبوردهای انتخاب‌شده با فایل جایگزین می‌شود. ادامه می‌دهید؟" %}')) return;
-
-  const btn = document.getElementById('importBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>';
-  try {
-    const data = await apiPost('/diako/api/import-config/', payload);
-    if (data.ok) {
-      showToast('{% trans "انجام شد" %}', '{% trans "ایمپورت با موفقیت اعمال شد" %} ✅', 'success');
-    } else {
-      showToast('{% trans "خطا" %}', data.error || '?', 'error');
-    }
-  } catch {
-    showToast('{% trans "خطا" %}', '{% trans "ارتباط با سرور برقرار نشد" %}', 'error');
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<i class="ti ti-upload"></i> {% trans "اعمال ایمپورت" %}';
+function renderImportCats() {
+  const el = document.getElementById('importCats');
+  const cats = Object.keys(MANIFEST).filter(cat => MANIFEST[cat].some(id => importPresent.includes(id)));
+  el.innerHTML = cats.map(cat => {
+    const ids = MANIFEST[cat].filter(id => importPresent.includes(id));
+    return catRowHtml(cat, ids, selImport, importCounts, 'import');
+  }).join('');
 }
+
+function renderModes() {
+  document.getElementById('modeList').innerHTML = MODES.map(m => `
+    <div class="mode-opt ${m.id === importMode ? 'sel' : ''}" data-mode="${m.id}" onclick="pickMode('${m.id}')">
+      <span class="mode-dot"></span>
+      <span class="mode-body">
+        <span class="mode-title">${m.title}</span>
+        <span class="mode-desc">${m.desc}</span>
+      </span>
+    </div>`).join('');
+}
+function pickMode(m) {
+  importMode = m;
+  document.querySelectorAll('.mode-opt').forEach(o => o.classList.toggle('sel', o.dataset.mode === m));
+}
+
+async function startImportJson() {
+  if (selImport.size === 0) { showToast(T.err, T.pick_one, 'error'); return; }
+  try {
+    const d = await apiPost('/diako/api/import-data/', {
+      file_data: importData, subitems: [...selImport], mode: importMode,
+    });
+    if (!d.ok) { showToast(T.err, d.error || '?', 'error'); return; }
+    showToast(T.done, T.imported + ' ✅', 'success');
+  } catch { showToast(T.err, T.no_conn, 'error'); }
+}
+
+/* ── بازگردانی کامل ── */
+function openRestoreConfirm() {
+  document.getElementById('restoreWord').value = '';
+  document.getElementById('restoreGoBtn').disabled = true;
+  document.getElementById('restoreModal').classList.add('open');
+}
+function checkRestoreWord() {
+  document.getElementById('restoreGoBtn').disabled =
+    document.getElementById('restoreWord').value.trim().toUpperCase() !== 'REPLACE';
+}
+async function doFullRestore() {
+  if (!uploadedDbFile) return;
+  const btn = document.getElementById('restoreGoBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const fd = new FormData();
+  fd.append('file', uploadedDbFile);
+  fd.append('backup_first', document.getElementById('backupFirst').checked ? '1' : '0');
+  try {
+    const res = await fetch('/diako/api/import-full-db/', {
+      method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    });
+    const d = await res.json();
+    closeM('restoreModal');
+    if (d.ok) {
+      const extra = d.backup ? ` · ${T.backup_saved}` : '';
+      showToast(T.done, T.restored + ' ✅' + extra, 'success');
+    } else { showToast(T.err, d.error || '?', 'error'); }
+  } catch { closeM('restoreModal'); showToast(T.err, T.no_conn, 'error'); }
+  btn.innerHTML = `<i class="ti ti-refresh"></i> {% trans "جایگزین کن" %}`;
+}
+
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+/* بستن مودال با کلیک روی پس‌زمینه */
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
 </script>
 {% endblock %}

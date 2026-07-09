@@ -34,6 +34,10 @@ from shared_lib.db import (
     get_extra_volume_request, update_extra_volume_request,
     approve_top_up_atomic, update_top_up_status,
 )
+from shared_lib.db import (
+    BACKUP_MANIFEST, SENSITIVE_SUBITEMS, backup_manifest_counts,
+    export_backup, import_backup, create_db_snapshot, replace_database, DB_PATH,
+)
 from .models import Orders, Servers, Plans, DiscountCodes, TopUpRequests, Users
 
 
@@ -445,6 +449,120 @@ def import_config(request):
         return JsonResponse({'ok': False, 'error': f'خطا در اعمال: {e}'}, status=400)
 
     return JsonResponse({'ok': True, 'result': result})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  API — بکاپ و بازگردانی (دیتابیس)
+# ═══════════════════════════════════════════════════════════════════════════
+
+@login_required
+@require_http_methods(["GET"])
+def backup_manifest(request):
+    """ساختار دسته‌ها + تعداد رکورد هر زیرشاخه — برای ساخت لیست انتخاب"""
+    structure = {cat: [sid for sid, _, _ in items] for cat, items in BACKUP_MANIFEST.items()}
+    counts = async_to_sync(backup_manifest_counts)()
+    return JsonResponse({
+        'ok': True,
+        'manifest': structure,
+        'counts': counts,
+        'sensitive': sorted(SENSITIVE_SUBITEMS),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def export_data(request):
+    """خروجی JSON از زیرشاخه‌های انتخاب‌شده"""
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+    subitems = body.get('subitems') or []
+    include_sensitive = bool(body.get('include_sensitive'))
+    if not isinstance(subitems, list) or not subitems:
+        return JsonResponse({'ok': False, 'error': 'هیچ موردی انتخاب نشده'}, status=400)
+    data = async_to_sync(export_backup)(subitems, include_sensitive)
+    return JsonResponse({'ok': True, 'data': data})
+
+
+@login_required
+@require_http_methods(["GET"])
+def export_full_db(request):
+    """دانلود کل دیتابیس به‌صورت فایل خام (اسنپ‌شات سازگار)"""
+    import tempfile
+    from django.http import HttpResponse
+    stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    fd, tmp = tempfile.mkstemp(suffix='.db')
+    os.close(fd)
+    try:
+        create_db_snapshot(tmp)
+        with open(tmp, 'rb') as f:
+            blob = f.read()
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    resp = HttpResponse(blob, content_type='application/octet-stream')
+    resp['Content-Disposition'] = f'attachment; filename="diako-full-{stamp}.db"'
+    return resp
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_data(request):
+    """اعمال یک فایل JSON روی زیرشاخه‌های انتخاب‌شده با حالت مشخص"""
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+    file_data = body.get('file_data')
+    subitems = body.get('subitems') or []
+    mode = body.get('mode') or 'upsert'
+    if not isinstance(file_data, dict):
+        return JsonResponse({'ok': False, 'error': 'محتوای فایل نامعتبر است'}, status=400)
+    if mode not in ('upsert', 'replace', 'addnew'):
+        return JsonResponse({'ok': False, 'error': 'حالت اعمال نامعتبر'}, status=400)
+    if not isinstance(subitems, list) or not subitems:
+        return JsonResponse({'ok': False, 'error': 'هیچ موردی انتخاب نشده'}, status=400)
+    try:
+        result = async_to_sync(import_backup)(file_data, subitems, mode)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'خطا در اعمال: {e}'}, status=400)
+    return JsonResponse({'ok': True, 'result': result})
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_full_db(request):
+    """جایگزینی کل دیتابیس با فایل .db آپلودشده (با بکاپ خودکار اختیاری قبلش)"""
+    up = request.FILES.get('file')
+    if not up:
+        return JsonResponse({'ok': False, 'error': 'فایلی آپلود نشده'}, status=400)
+    backup_first = request.POST.get('backup_first') == '1'
+    dbdir = os.path.dirname(DB_PATH)
+    tmp = os.path.join(dbdir, '.restore-upload.db')
+    with open(tmp, 'wb') as out:
+        for chunk in up.chunks():
+            out.write(chunk)
+    try:
+        backup_path = replace_database(tmp, backup_first=backup_first)
+    except ValueError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+    except Exception as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return JsonResponse({'ok': False, 'error': f'خطا در بازگردانی: {e}'}, status=400)
+    return JsonResponse({
+        'ok': True,
+        'backup': os.path.basename(backup_path) if backup_path else None,
+    })
 
 
 @login_required

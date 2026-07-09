@@ -1,4 +1,5 @@
 shared-data/*.db
+shared-data/backups/
 shared-data/.django_secret_key
 instances/
 shared_lib/__pycache__/

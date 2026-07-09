@@ -3013,3 +3013,217 @@ async def get_admin_users_as_buttons() -> list[dict]:
         result = [_dyn("admin_user_list", "👤 کاربر نمونه", "admin_user_1", 0)]
     result += await get_all_keyboard_buttons("admin_user_list")
     return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  بکاپ و بازگردانی — دسته‌بندی جدول‌ها، خروجی/ورودی جزئی، بکاپ کامل فایل
+# ═══════════════════════════════════════════════════════════════════════════
+
+# هر زیرشاخه: (شناسه، جدول‌های مربوط، ستون‌های حساس هر جدول)
+# ستون حساس در خروجیِ بدون‌راز null می‌شود.
+BACKUP_MANIFEST = {
+    "config": [
+        ("texts",     ["bot_texts"],        {}),
+        ("keyboards", ["keyboard_buttons"], {}),
+        ("actions",   ["keyboard_actions"], {}),
+    ],
+    "botdata": [
+        ("users",     ["users"],   {}),
+        ("orders",    ["orders"],  {}),
+        ("servers",   ["servers"], {"servers": ["panel_token"]}),
+        ("plans",     ["plans"],   {}),
+        ("discounts", ["discount_codes", "discount_code_uses"], {}),
+        ("wallet",    ["transactions", "top_up_requests"], {}),
+        ("cards",     ["payment_cards"], {"payment_cards": ["number"]}),
+        ("support",   ["tickets"], {}),
+        ("referrals", ["referrals"], {}),
+        ("extras",    ["extra_volume_plans", "extra_volume_requests",
+                       "extra_time_plans", "extra_time_requests"], {}),
+        ("locchange", ["location_change_requests"], {}),
+        ("channels",  ["required_channels"], {}),
+        ("content",   ["tutorials", "faqs"], {}),
+        ("settings",  ["settings"], {}),
+    ],
+    "panel": [
+        ("admins",   ["auth_user", "auth_user_groups", "auth_user_user_permissions"],
+                     {"auth_user": ["password"]}),
+        ("sessions", ["django_session"], {"django_session": ["session_data"]}),
+        ("adminlog", ["django_admin_log"], {}),
+    ],
+}
+
+
+def _backup_subitem_map() -> dict:
+    """شناسه‌ی زیرشاخه → (جدول‌ها، ستون‌های حساس)"""
+    m = {}
+    for items in BACKUP_MANIFEST.values():
+        for sid, tables, sens in items:
+            m[sid] = (tables, sens)
+    return m
+
+
+# زیرشاخه‌هایی که داده‌ی حساس دارند — پنل با این‌ها تصمیم می‌گیره که prompt رو نشون بده
+SENSITIVE_SUBITEMS = {
+    sid for items in BACKUP_MANIFEST.values() for sid, _, sens in items if sens
+}
+
+
+async def backup_manifest_counts() -> dict:
+    """تعداد رکورد هر زیرشاخه — برای نمایش کنار هر گزینه در لیست"""
+    smap = _backup_subitem_map()
+    out = {}
+    async with aiosqlite.connect(DB_PATH) as db:
+        for sid, (tables, _) in smap.items():
+            total = 0
+            for t in tables:
+                try:
+                    cur = await db.execute(f'SELECT COUNT(*) FROM "{t}"')
+                    total += (await cur.fetchone())[0]
+                except Exception:
+                    pass
+            out[sid] = total
+    return out
+
+
+async def export_backup(subitem_ids: list, include_sensitive: bool = False) -> dict:
+    """داده‌ی زیرشاخه‌های انتخاب‌شده را به یک dict قابل‌سریال (JSON) برمی‌گرداند"""
+    from datetime import datetime, timezone
+    smap = _backup_subitem_map()
+    data = {"_meta": {
+        "version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "subitems": [],
+        "counts": {},
+        "include_sensitive": bool(include_sensitive),
+    }}
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        for sid in subitem_ids:
+            if sid not in smap:
+                continue
+            tables, sens = smap[sid]
+            data["_meta"]["subitems"].append(sid)
+            sub_total = 0
+            for t in tables:
+                try:
+                    cur = await db.execute(f'SELECT * FROM "{t}"')
+                    rows = await cur.fetchall()
+                except Exception:
+                    continue
+                strip = [] if include_sensitive else sens.get(t, [])
+                bucket = []
+                for r in rows:
+                    d = dict(r)
+                    for col in strip:
+                        if col in d:
+                            d[col] = None
+                    bucket.append(d)
+                data[t] = bucket
+                sub_total += len(bucket)
+            data["_meta"]["counts"][sid] = sub_total
+    return data
+
+
+async def import_backup(file_data: dict, subitem_ids: list, mode: str = "upsert") -> dict:
+    """داده‌ی فایل را روی زیرشاخه‌های انتخاب‌شده اعمال می‌کند.
+    mode: upsert (آپدیت+افزودن) | replace (پاک‌کردن جدول و جایگزینی) | addnew (فقط جدیدها)"""
+    smap = _backup_subitem_map()
+    verb = "INSERT OR IGNORE" if mode == "addnew" else "INSERT OR REPLACE"
+    result = {}
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("PRAGMA foreign_keys=OFF")
+        for sid in subitem_ids:
+            if sid not in smap:
+                continue
+            tables, _ = smap[sid]
+            for t in tables:
+                if t not in file_data:
+                    continue
+                rows = file_data[t] or []
+                cur = await db.execute(f'PRAGMA table_info("{t}")')
+                live_cols = {c[1] for c in await cur.fetchall()}
+                if not live_cols:
+                    continue
+                if mode == "replace":
+                    await db.execute(f'DELETE FROM "{t}"')
+                n = 0
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    cols = [c for c in row.keys() if c in live_cols]
+                    if not cols:
+                        continue
+                    collist = ",".join(f'"{c}"' for c in cols)
+                    ph = ",".join("?" for _ in cols)
+                    await db.execute(
+                        f'{verb} INTO "{t}" ({collist}) VALUES ({ph})',
+                        [row[c] for c in cols],
+                    )
+                    n += 1
+                result[t] = n
+        await db.commit()
+    # کش‌ها را تازه کن تا متن/کیبورد وارد‌شده بلافاصله در پنل دیده شود
+    try:
+        await reload_texts_cache()
+        await reload_keyboards_cache()
+    except Exception:
+        pass
+    return result
+
+
+def create_db_snapshot(dest_path: str) -> str:
+    """یک کپی سازگارِ کل دیتابیس می‌گیرد (backup API — حتی حین نوشتن امن است)"""
+    import sqlite3
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    src = sqlite3.connect(DB_PATH)
+    try:
+        dst = sqlite3.connect(dest_path)
+        try:
+            with dst:
+                src.backup(dst)
+        finally:
+            dst.close()
+    finally:
+        src.close()
+    return dest_path
+
+
+def _looks_like_sqlite(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(16) == b"SQLite format 3\x00"
+    except Exception:
+        return False
+
+
+def replace_database(src_path: str, backup_first: bool = True) -> str | None:
+    """کل دیتابیس را با فایل داده‌شده جایگزین می‌کند. اگر backup_first، اول از
+    نسخه‌ی فعلی یک اسنپ‌شات می‌گیرد و مسیرش را برمی‌گرداند."""
+    import sqlite3
+    import shutil
+    from datetime import datetime
+    if not _looks_like_sqlite(src_path):
+        raise ValueError("فایل یک دیتابیس SQLite معتبر نیست")
+    conn = sqlite3.connect(src_path)
+    try:
+        tabs = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+    finally:
+        conn.close()
+    if not ({"bot_texts", "users"} & tabs):
+        raise ValueError("ساختار این دیتابیس با ربات هم‌خوان نیست")
+    backup_path = None
+    if backup_first:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_path = os.path.join(os.path.dirname(DB_PATH), "backups",
+                                   f"pre-restore-{stamp}.db")
+        create_db_snapshot(backup_path)
+    try:
+        os.replace(src_path, DB_PATH)
+    except OSError:
+        shutil.copyfile(src_path, DB_PATH)
+        try:
+            os.remove(src_path)
+        except OSError:
+            pass
+    return backup_path
