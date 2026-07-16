@@ -170,6 +170,22 @@
 }
 .ke-save-btn:hover { opacity: .85; }
 
+/* ── Sticky save bar (always accessible) ─────────── */
+.ke-save-bar {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+}
+.ke-save-bar .ke-save-btn {
+  height: 46px;
+  padding: 0 30px;
+  font-size: 15px;
+  border-radius: 14px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.45);
+}
+
 /* ── Left column: Menu items ─────────────────────── */
 .ke-menu-item {
   display: flex;
@@ -1088,6 +1104,13 @@
       <div class="ke-staging" id="staging" style="display:none">
         <div class="ke-staging-title">{% trans "دکمه‌های انتخاب‌شده" %}</div>
         <div class="ke-staging-items" id="staging-items"></div>
+      </div>
+
+      <!-- دکمه‌ی ذخیره‌ی همیشه‌دردسترس -->
+      <div class="ke-save-bar">
+        <button class="ke-save-btn" onclick="saveLayout()">
+          <i class="ti ti-device-floppy"></i> {% trans "ذخیره‌ی چیدمان" %}
+        </button>
       </div>
 
 
