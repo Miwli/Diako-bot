@@ -1001,6 +1001,12 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "referral_error":             "خطا در دریافت اطلاعات.",
     "referral_disabled":          "سیستم دعوت دوستان در حال حاضر غیرفعال است.",
     "referral_commission_notify": "💰 <b>پورسانت دریافت کردی!</b>\nدوستت خرید کرد و <b>{amount}</b> تومان به کیف پولت اضافه شد.",
+    "referral_page":              "🤝 <b>دعوت دوستان</b>\n\n👥 دعوت‌شدگان: <b>{count} نفر</b>\n💰 جوایز دریافتی: <b>{total} تومان</b>\n\n🔗 لینک اختصاصی:\n<code>{ref_link}</code>",
+    "referral_rewards_header":    "<b>جوایز شما:</b>",
+    "referral_reward_flat":       "💵 جایزه ثابت: <b>{amount} تومان</b> به ازای هر دعوت",
+    "referral_reward_percent":    "📊 پورسانت: <b>{value}٪</b> از هر خرید دوستت",
+    "referral_reward_free_test":  "🎁 <b>یک تست رایگان اضافه</b> برای هر دعوت موفق",
+    "referral_reward_discount":   "🎫 دوستت <b>{value}٪ اعتبار</b> برای اولین خریدش می‌گیره",
     # ─── متن‌های عمومی کاربر (قبلاً hardcode بودند) ──────────────────────
     "coming_soon":             "🔜 به زودی...",
     "free_test_select_server": "🎁 <b>تست رایگان</b>\n\nسرور مورد نظر را انتخاب کنید:",

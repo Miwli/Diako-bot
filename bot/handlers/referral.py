@@ -247,24 +247,24 @@ def register_referral_handlers(dp):
         ref_link = f"https://t.me/{bot_info.username}?start=ref_{user['referral_code']}"
         stats = await get_referral_stats(u.id)
 
-        rewards_text = ""
+        rewards_lines = []
         if _bool(cfg, "referral_flat_enabled"):
-            rewards_text += f"\n💵 جایزه ثابت: <b>{_int(cfg, 'referral_flat_amount'):,} تومان</b> به ازای هر دعوت"
+            rewards_lines.append(get_text("referral_reward_flat", amount=f"{_int(cfg, 'referral_flat_amount'):,}"))
         if _bool(cfg, "referral_percent_enabled"):
-            rewards_text += f"\n📊 پورسانت: <b>{_int(cfg, 'referral_percent_value')}٪</b> از هر خرید دوستت"
+            rewards_lines.append(get_text("referral_reward_percent", value=_int(cfg, "referral_percent_value")))
         if _bool(cfg, "referral_free_test_enabled"):
-            rewards_text += f"\n🎁 <b>یک تست رایگان اضافه</b> برای هر دعوت موفق"
+            rewards_lines.append(get_text("referral_reward_free_test"))
         if _bool(cfg, "referral_discount_enabled"):
-            rewards_text += f"\n🎫 دوستت <b>{_int(cfg, 'referral_discount_value')}٪ اعتبار</b> برای اولین خریدش می‌گیره"
+            rewards_lines.append(get_text("referral_reward_discount", value=_int(cfg, "referral_discount_value")))
 
-        text = (
-            f"🤝 <b>دعوت دوستان</b>\n\n"
-            f"👥 دعوت‌شدگان: <b>{stats['count']} نفر</b>\n"
-            f"💰 جوایز دریافتی: <b>{stats['total']:,} تومان</b>\n\n"
-            f"🔗 لینک اختصاصی:\n<code>{ref_link}</code>"
+        text = get_text(
+            "referral_page",
+            count=stats["count"],
+            total=f"{stats['total']:,}",
+            ref_link=ref_link,
         )
-        if rewards_text:
-            text += f"\n\n<b>جوایز شما:</b>{rewards_text}"
+        if rewards_lines:
+            text += "\n\n" + get_text("referral_rewards_header") + "\n" + "\n".join(rewards_lines)
 
         await _edit_or_replace(callback, text, user_referral_keyboard(ref_link))
         await callback.answer()
