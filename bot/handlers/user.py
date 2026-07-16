@@ -100,19 +100,41 @@ def _service_text(order, live=None) -> str:
     parts.append(f"🗓 خرید : {_to_jalali(order['created_at'])}")
     return "\n".join(parts)
 
+async def _banner_caption_entities():
+    """entities ذخیره‌شده‌ی کپشن بنر رو به آبجکت MessageEntity برمی‌گردونه"""
+    import json as _json
+    raw = await get_setting("banner_caption_entities")
+    if not raw:
+        return None
+    try:
+        from aiogram.types import MessageEntity
+        return [MessageEntity.model_validate(d) for d in _json.loads(raw)]
+    except Exception:
+        return None
+
 async def _send_main_menu(target, user: types.User):
     from bot import logger
     menu = await _get_main_menu(user.id)
     name = user.first_name or "کاربر"
-    caption = get_text("start_welcome_default", name=name)
+
+    # کپشن دلخواه ادمین اولویت داره؛ وگرنه متن پیش‌فرض خوش‌آمد
+    custom_caption = await get_setting("banner_caption")
+    if custom_caption:
+        caption = custom_caption
+        entities = await _banner_caption_entities()
+        parse_mode = None  # entities با parse_mode ترکیب نمی‌شه؛ متن ادمین literal است
+    else:
+        caption = get_text("start_welcome_default", name=name)
+        entities = None
+        parse_mode = "HTML"
     banner = await get_setting("banner_file_id")
 
     async def _send(msg, is_cb=False):
         try:
             if banner:
-                await msg.answer_photo(photo=banner, caption=caption, reply_markup=menu, parse_mode="HTML", protect_content=True)
+                await msg.answer_photo(photo=banner, caption=caption, caption_entities=entities, reply_markup=menu, parse_mode=parse_mode, protect_content=True)
             else:
-                await msg.answer(caption, reply_markup=menu, parse_mode="HTML")
+                await msg.answer(caption, entities=entities, reply_markup=menu, parse_mode=parse_mode)
         except TelegramBadRequest as e:
             logger.error(f"خطا در ارسال منوی اصلی (HTML): {e} — متن: {caption[:80]!r}")
             import re as _re
