@@ -249,19 +249,18 @@ def register_discount_handlers(dp):
         stats       = await get_user_wallet_stats(message.from_user.id)
         has_balance = stats["balance"] >= final
 
-        text = (
-            f"🧾 <b>پیش‌فاکتور</b>\n"
-            f"{'─' * 24}\n"
-            f"📦 <b>پلن:</b> {plan['name']}\n"
-            f"📊 <b>حجم:</b> {plan['traffic']} گیگابایت\n"
-            f"📅 <b>مدت:</b> {plan['duration']} روز\n"
-            f"{'─' * 24}\n"
-            f"💰 قیمت اصلی: <s>{original:,}</s> تومان\n"
-            f"🎟 تخفیف کد <code>{code['code']}</code>: {discount:,} تومان\n"
-            f"✅ <b>مبلغ نهایی: {final:,} تومان</b>"
+        balance_line = f"\n💎 موجودی کیف پول: {stats['balance']:,} تومان" if has_balance else ""
+        text = get_text(
+            "proforma_discount_text",
+            plan_name=plan["name"],
+            traffic=plan["traffic"],
+            duration=plan["duration"],
+            original=f"{original:,}",
+            code=code["code"],
+            discount=f"{discount:,}",
+            final=f"{final:,}",
+            balance_line=balance_line,
         )
-        if has_balance:
-            text += f"\n💎 موجودی کیف پول: {stats['balance']:,} تومان"
 
         await message.answer(
             text,
