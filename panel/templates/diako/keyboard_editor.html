@@ -128,6 +128,16 @@
   border-radius: 16px;
   padding: 14px 24px;
   flex-shrink: 0;
+  position: sticky;
+  top: 8px;
+  z-index: 40;
+}
+.ke-save-btn-main {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  box-shadow: 0 4px 14px var(--accent-dim);
 }
 .ke-stat {
   display: flex;
@@ -169,22 +179,6 @@
   transition: opacity .15s;
 }
 .ke-save-btn:hover { opacity: .85; }
-
-/* ── Sticky save bar (always accessible) ─────────── */
-.ke-save-bar {
-  position: fixed;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 60;
-}
-.ke-save-bar .ke-save-btn {
-  height: 46px;
-  padding: 0 30px;
-  font-size: 15px;
-  border-radius: 14px;
-  box-shadow: 0 8px 26px rgba(0,0,0,.45);
-}
 
 /* ── Left column: Menu items ─────────────────────── */
 .ke-menu-item {
@@ -515,6 +509,21 @@
   opacity: .85;
   margin-top: 4px;
 }
+.ke-dyn-banner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 1;
+}
+.ke-dyn-banner-link:hover { opacity: .85; }
 
 /* ── Right column: Catalog ───────────────────────── */
 .ke-cat-tabs {
@@ -946,6 +955,12 @@
   .ke-sim-body { flex: none; overflow: visible; min-height: 60px; }
   .ke-sim-kb-wrap { height: auto !important; overflow: visible !important; }
 
+  /* نوار آمار: دکمه‌ی ذخیره تمام‌عرض زیر آمار */
+  .ke-stats-bar { flex-wrap: wrap; gap: 8px 0; padding: 12px 14px; }
+  .ke-save-btn-main { flex: 1 0 100%; justify-content: center; height: 44px; margin-top: 4px; }
+  .ke-save-btn-main + .ke-stat-sep,
+  .ke-stat-sep:has(+ .ke-save-btn-main) { display: none; }
+
   /* touch target بزرگ‌تر */
   .ke-kb-btn     { min-height: 48px; font-size: 14px; }
   .ke-row        { min-height: 56px; padding: 4px; gap: 6px; }
@@ -1020,6 +1035,10 @@
           <span class="ke-stat-val clr-muted" id="s-inactive">0</span>
           <span class="ke-stat-lbl">{% trans "غیرفعال" %}</span>
         </div>
+        <div class="ke-stat-sep"></div>
+        <button class="ke-save-btn ke-save-btn-main" onclick="saveLayout()">
+          <i class="ti ti-device-floppy"></i> {% trans "ذخیره تغییرات" %}
+        </button>
       </div>
 
       <!-- سه‌ستون -->
@@ -1074,7 +1093,8 @@
                 <i class="ti ti-plus"></i> {% trans "ردیف جدید" %}
               </button>
               <div class="ke-dyn-banner" id="ke-dyn-banner" style="display:none">
-                {% trans "⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده." %}
+                <div id="ke-dyn-banner-text">{% trans "⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده." %}</div>
+                <a id="ke-dyn-banner-link" class="ke-dyn-banner-link" href="#" style="display:none"></a>
               </div>
             </div>
           </div><!-- /ke-sim -->
@@ -1105,14 +1125,6 @@
         <div class="ke-staging-title">{% trans "دکمه‌های انتخاب‌شده" %}</div>
         <div class="ke-staging-items" id="staging-items"></div>
       </div>
-
-      <!-- دکمه‌ی ذخیره‌ی همیشه‌دردسترس -->
-      <div class="ke-save-bar">
-        <button class="ke-save-btn" onclick="saveLayout()">
-          <i class="ti ti-device-floppy"></i> {% trans "ذخیره‌ی چیدمان" %}
-        </button>
-      </div>
-
 
 <!-- مودال راهنما -->
 {% endblock %}
@@ -1269,6 +1281,18 @@ const DYNAMIC_KEYBOARDS = new Set([
   'user_tutorials','user_faqs','admin_plans','admin_discount',
   'admin_tutorial_list','admin_faqs','admin_user_list',
 ]);
+
+// کیبوردهای داینامیکی که محتواشون از یه صفحه‌ی دیگه مدیریت می‌شه —
+// اینجا فقط ترتیب عوض می‌شه، افزودن/ویرایش آیتم اونجاست
+const CONTENT_MANAGE_LINKS = {
+  'user_faqs':           { url: '{% url "diako_settings_bot" %}', label: '{% trans "افزودن/ویرایش سوالات متداول" %}' },
+  'admin_faqs':          { url: '{% url "diako_settings_bot" %}', label: '{% trans "افزودن/ویرایش سوالات متداول" %}' },
+  'user_tutorials':      { url: '{% url "diako_settings_bot" %}', label: '{% trans "افزودن/ویرایش آموزش‌ها" %}' },
+  'admin_tutorial_list': { url: '{% url "diako_settings_bot" %}', label: '{% trans "افزودن/ویرایش آموزش‌ها" %}' },
+  'admin_plans':         { url: '{% url "diako_plans" %}',        label: '{% trans "افزودن/ویرایش پلن‌ها" %}' },
+  'buy_vpn':             { url: '{% url "diako_servers" %}',      label: '{% trans "افزودن/ویرایش سرورها" %}' },
+  'admin_discount':      { url: '{% url "diako_finance" %}',       label: '{% trans "افزودن/ویرایش کدهای تخفیف" %}' },
+};
 // همه کلیدهای موجود (برای تشخیص کلیک‌های ناوبری داخل شبیه‌ساز)
 const AVAILABLE_KEYBOARDS = Object.keys(KB_META);
 
@@ -1547,18 +1571,37 @@ function renderBoard() {
   // کیبورد داینامیک
   const addRowBtn = document.getElementById('add-row-btn');
   const dynBanner = document.getElementById('ke-dyn-banner');
+  const dynLink   = document.getElementById('ke-dyn-banner-link');
   if (DYNAMIC_KEYBOARDS.has(currentKeyboard)) {
     if (addRowBtn) addRowBtn.style.display = 'none';
     if (dynBanner) dynBanner.style.display = 'block';
+    const link = CONTENT_MANAGE_LINKS[currentKeyboard];
+    if (dynLink && link) {
+      dynLink.href = link.url;
+      dynLink.innerHTML = '<i class="ti ti-external-link"></i> ' + link.label;
+      dynLink.style.display = 'inline-flex';
+    } else if (dynLink) {
+      dynLink.style.display = 'none';
+    }
   } else {
     if (addRowBtn) addRowBtn.style.display = '';
     if (dynBanner) dynBanner.style.display = 'none';
+    if (dynLink)   dynLink.style.display = 'none';
   }
 }
 
 function initRowSortable(rowEl) {
+  const isDyn = DYNAMIC_KEYBOARDS.has(currentKeyboard);
   return Sortable.create(rowEl, {
-    group:               'keyboard',
+    // روی کیبورد داینامیک جابجایی آیتم‌های موجود مجازه، ولی افزودن دکمه‌ی جدید از کاتالوگ نه
+    group: {
+      name: 'keyboard',
+      pull: true,
+      put: (to, from, dragEl) => {
+        if (!isDyn) return true;
+        return !(dragEl.classList.contains('ke-cat-item') || dragEl.classList.contains('ke-staging-chip'));
+      },
+    },
     animation:           150,
     draggable:           '.ke-kb-btn',
     ghostClass:          'sortable-ghost',
@@ -1922,13 +1965,23 @@ function showCtx(e, btnEl) {
   });
 }
 
+function dynManageHint() {
+  const link = CONTENT_MANAGE_LINKS[currentKeyboard];
+  // اینجا فقط ترتیب عوض می‌شه؛ افزودن/ویرایش/حذف آیتم در صفحه‌ی مدیریت محتواست
+  return link
+    ? '{% trans "این آیتم‌ها از صفحه‌ی مدیریت تغییر می‌کنن — «" %}' + link.label + '{% trans "». اینجا فقط ترتیب رو عوض کن." %}'
+    : '{% trans "این آیتم‌ها داینامیکن — اینجا فقط ترتیب و فعال/غیرفعال رو تغییر بده." %}';
+}
+
 function handleCtxAction(action, btnEl) {
   if (!btnEl) return;
   const isDynamic = !!btnEl._d?.is_dynamic;
   if (action === 'edit') {
+    // آیتم داینامیک لیبلش اینجا ذخیره نمی‌شه — از صفحه‌ی مدیریت محتوا ویرایش می‌شه
+    if (isDynamic) { notify(dynManageHint(), 'error'); return; }
     startInlineEdit(btnEl);
   } else if (action === 'delete') {
-    if (isDynamic) { notify('{% trans "سرورها رو از پنل ادمین مدیریت کن" %}', 'error'); return; }
+    if (isDynamic) { notify(dynManageHint(), 'error'); return; }
     btnEl.remove();
     refreshEmptyRows();
     syncState();

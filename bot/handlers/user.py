@@ -3,6 +3,7 @@ import jdatetime
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from states import BuyVPN, TopUp, ChangeNote
+from shared_lib.formatters import fmt_traffic_bytes, fmt_traffic_gb
 from keyboards import (
     user_main_menu, user_servers_keyboard, user_services_keyboard,
     user_plans_keyboard, proforma_keyboard, payment_info_keyboard,
@@ -60,7 +61,7 @@ def _to_jalali(dt_source) -> str:
         return "نامشخص"
 
 def _fmt_gb(b: int) -> str:
-    return f"{b / (1024 ** 3):.1f} گیگابایت"
+    return fmt_traffic_bytes(b)
 
 def _service_text(order, live=None) -> str:
     STATUS_MAP = {
@@ -166,7 +167,7 @@ def register_user_handlers(dp):
         return "♾️ بی‌نهایت" if float(val or 0) == 0 else f"{val} ساعت"
 
     def _fmt_trf(val) -> str:
-        return "♾️ بی‌نهایت" if float(val or 0) == 0 else f"{val} گیگابایت"
+        return "♾️ بی‌نهایت" if float(val or 0) == 0 else fmt_traffic_gb(val)
 
     async def _check_free_test_eligibility(user_id: int):
         """بررسی واجد شرایط بودن — (ok, reason)"""
@@ -298,7 +299,7 @@ def register_user_handlers(dp):
 
     @dp.callback_query(F.data == "profile")
     async def profile_page(callback: types.CallbackQuery):
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        from keyboards import profile_keyboard
         u = callback.from_user
         user = await get_or_create_user(u.id, u.first_name, u.username)
         stats = await get_user_wallet_stats(u.id)
@@ -312,10 +313,7 @@ def register_user_handlers(dp):
             balance=f"{stats['balance']:,}",
             referral_code=user["referral_code"],
         )
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")],
-        ])
-        await _edit_or_replace(callback, text, kb)
+        await _edit_or_replace(callback, text, profile_keyboard())
         await callback.answer()
 
     # ─── شارژ حساب ────────────────────────────────

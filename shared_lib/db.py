@@ -906,6 +906,14 @@ async def delete_required_channel(channel_id: int):
 
 # ─── متن‌های ربات (کش حافظه) ─────────────────
 
+# متن‌های قدیمی که واحد حجم را هاردکد داشتند؛ اگه ادمین دستکاری نکرده باشه به نسخه‌ی جدید آپدیت می‌شن
+_TEXT_MIGRATIONS = [
+    ("extra_volume_confirm",        "➕ <b>پیش‌فاکتور افزودن حجم</b>\n────────────────────────\n📦 <b>پکیج:</b> {plan_name}\n📊 <b>حجم اضافه:</b> {traffic} گیگابایت\n💰 <b>قیمت:</b> {price} تومان"),
+    ("extra_volume_success_wallet", "✅ <b>حجم اضافه شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد."),
+    ("extra_volume_approved",       "✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد."),
+    ("admin_ev_notify",             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n💰 مبلغ: <b>{price} تومان</b>"),
+]
+
 _DEFAULT_TEXTS: dict[str, str] = {
     # ─── استارت ────────────────────────────────────────────────────────
     "start_welcome_default":      "سلام {name} 👋 خوش اومدی",
@@ -1039,14 +1047,14 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "extra_volume_no_plans":       "در حال حاضر پکیجی برای افزودن حجم موجود نیست.",
     "extra_volume_unlimited":      "ℹ️ این سرویس حجم نامحدود دارد، افزودن حجم ممکن نیست.",
     "extra_volume_select":         "➕ <b>افزودن حجم</b>\n\nیک پکیج انتخاب کنید:",
-    "extra_volume_confirm":        "➕ <b>پیش‌فاکتور افزودن حجم</b>\n────────────────────────\n📦 <b>پکیج:</b> {plan_name}\n📊 <b>حجم اضافه:</b> {traffic} گیگابایت\n💰 <b>قیمت:</b> {price} تومان",
-    "extra_volume_success_wallet": "✅ <b>حجم اضافه شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد.",
+    "extra_volume_confirm":        "➕ <b>پیش‌فاکتور افزودن حجم</b>\n────────────────────────\n📦 <b>پکیج:</b> {plan_name}\n📊 <b>حجم اضافه:</b> {traffic}\n💰 <b>قیمت:</b> {price} تومان",
+    "extra_volume_success_wallet": "✅ <b>حجم اضافه شد!</b>\n\n📊 <b>{traffic}</b> به سرویس شما اضافه شد.",
     "extra_volume_ask_receipt":    "📸 تصویر رسید پرداخت را ارسال کنید:",
     "extra_volume_submitted":      "✅ درخواست افزودن حجم ثبت شد. پس از تایید ادمین، حجم اضافه می‌شود.",
-    "extra_volume_approved":       "✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{traffic} گیگابایت</b> به سرویس شما اضافه شد.",
+    "extra_volume_approved":       "✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{traffic}</b> به سرویس شما اضافه شد.",
     "extra_volume_rejected":       "❌ درخواست افزودن حجم رد شد.",
     "extra_volume_error":          "❌ خطا در افزودن حجم. با پشتیبانی تماس بگیرید.",
-    "admin_ev_notify":             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n💰 مبلغ: <b>{price} تومان</b>",
+    "admin_ev_notify":             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic}\n💰 مبلغ: <b>{price} تومان</b>",
     # ─── توست‌ها و قطعه‌های مشترک افزودن حجم/زمان (services.py) ────────────
     "extra_package_not_found":     "❌ پکیج یافت نشد.",
     "extra_generic_error":         "❌ خطا.",
@@ -1289,6 +1297,13 @@ async def init_texts_cache() -> None:
             await db.execute(
                 "INSERT OR IGNORE INTO bot_texts (key, value) VALUES (?, ?)",
                 (key, text)
+            )
+        # اصلاح متن‌های قدیمی که واحد «گیگابایت» را هاردکد داشتند —
+        # فقط وقتی ادمین دستکاری‌شان نکرده (مقدار هنوز برابر پیش‌فرض قدیمی است)
+        for key, old_val in _TEXT_MIGRATIONS:
+            await db.execute(
+                "UPDATE bot_texts SET value = ? WHERE key = ? AND value = ?",
+                (_DEFAULT_TEXTS[key], key, old_val)
             )
         await db.commit()
         db.row_factory = aiosqlite.Row
@@ -2713,7 +2728,7 @@ async def get_servers_as_buttons() -> list[dict]:
             "SELECT id, name, is_active FROM servers ORDER BY order_index, id"
         )
         rows = await cursor.fetchall()
-        return [
+        result = [
             {
                 "id":            r["id"],
                 "keyboard_name": "buy_vpn",
@@ -2726,6 +2741,9 @@ async def get_servers_as_buttons() -> list[dict]:
             }
             for i, r in enumerate(rows)
         ]
+    # دکمه‌های ثابت (مثل بازگشت) هم ضمیمه می‌شن تا موقع ذخیره پاک نشن
+    result += await get_all_keyboard_buttons("buy_vpn")
+    return result
 
 
 async def save_server_order(buttons: list[dict]):

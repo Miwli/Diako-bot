@@ -13,6 +13,7 @@ from shared_lib.db import (
     get_text,
 )
 from shared_lib.rebecca_api import RebeccaAPI
+from shared_lib.formatters import fmt_traffic_gb
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def _alert(key: str, **fmt) -> str:
 def _plans_kb(plans: list, order_id: int) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
-            text=f"📊 {p['traffic_gb']}GB — {p['price']:,} تومان",
+            text=f"📊 {fmt_traffic_gb(p['traffic_gb'])} — {p['price']:,} تومان",
             callback_data=f"ev_plan_{p['id']}_{order_id}",
         )]
         for p in plans
@@ -118,7 +119,7 @@ def register_services_handlers(dp):
             get_text(
                 "extra_volume_confirm",
                 plan_name=plan["name"],
-                traffic=plan["traffic_gb"],
+                traffic=fmt_traffic_gb(plan["traffic_gb"]),
                 price=f"{plan['price']:,}",
             ) + balance_line,
             reply_markup=_confirm_kb(plan_id, order_id),
@@ -154,7 +155,7 @@ def register_services_handlers(dp):
             await callback.message.edit_text(get_text("extra_volume_error"), parse_mode="HTML")
             return
         await callback.message.edit_text(
-            get_text("extra_volume_success_wallet", traffic=plan["traffic_gb"]),
+            get_text("extra_volume_success_wallet", traffic=fmt_traffic_gb(plan["traffic_gb"])),
             parse_mode="HTML",
         )
 
@@ -200,7 +201,7 @@ def register_services_handlers(dp):
             username_part=f" (@{message.from_user.username})" if message.from_user.username else "",
             user_id=message.from_user.id,
             plan_name=plan["name"],
-            traffic=plan["traffic_gb"],
+            traffic=fmt_traffic_gb(plan["traffic_gb"]),
             price=f"{plan['price']:,}",
         )
         for admin_id in ADMIN_IDS:
@@ -248,7 +249,7 @@ def register_services_handlers(dp):
         try:
             await bot.send_message(
                 req["user_id"],
-                get_text("extra_volume_approved", traffic=req["traffic_gb"]),
+                get_text("extra_volume_approved", traffic=fmt_traffic_gb(req["traffic_gb"])),
                 parse_mode="HTML",
             )
         except Exception:

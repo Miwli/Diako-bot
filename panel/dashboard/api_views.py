@@ -1236,7 +1236,9 @@ def extra_request_action(request):
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
         async_to_sync(update_extra_volume_request)(int(req_id), 'approved')
-        _send_telegram(req['user_id'], f'✅ <b>افزودن حجم تایید شد!</b>\n\n📊 <b>{req["traffic_gb"]} گیگابایت</b> به سرویس شما اضافه شد.')
+        from shared_lib.db import get_text
+        from shared_lib.formatters import fmt_traffic_gb
+        _send_telegram(req['user_id'], get_text('extra_volume_approved', traffic=fmt_traffic_gb(req['traffic_gb'])))
         return JsonResponse({'ok': True})
 
     if action == 'reject_ev':

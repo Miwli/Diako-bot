@@ -451,6 +451,13 @@ def payment_info_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
+def profile_keyboard() -> InlineKeyboardMarkup:
+    # از DB می‌سازه تا ادمین بتونه از پنل دکمه اضافه/جابجا کنه
+    return _kb("profile") or InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 بازگشت", callback_data="user_main")],
+    ])
+
+
 def user_services_keyboard(orders: list) -> InlineKeyboardMarkup:
     rows = get_keyboard_rows("user_main")
     back_label = next((r["label"] for r in rows if r["callback_data"] == "user_main"), "🔙 بازگشت")
