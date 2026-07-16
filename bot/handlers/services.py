@@ -17,6 +17,11 @@ from shared_lib.rebecca_api import RebeccaAPI
 log = logging.getLogger(__name__)
 
 
+def _alert(key: str, **fmt) -> str:
+    # show_alert در تلگرام فقط تا ~۲۰۰ کاراکتر نشون می‌ده
+    return get_text(key, **fmt)[:200]
+
+
 def _plans_kb(plans: list, order_id: int) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(
@@ -77,7 +82,7 @@ def register_services_handlers(dp):
         order_id = int(callback.data.removeprefix("extra_volume_"))
         order = await get_order(order_id)
         if not order or order["user_id"] != callback.from_user.id:
-            await callback.answer("❌ سرویس یافت نشد.", show_alert=True)
+            await callback.answer(_alert("service_not_found"), show_alert=True)
             return
         # سرویس نامحدود حجم اضافه نمی‌پذیرد — add_volume بی‌صدا هیچ کاری نمی‌کند
         plan_data = await get_plan_with_server(order["plan_id"])
@@ -85,13 +90,13 @@ def register_services_handlers(dp):
             try:
                 live = await RebeccaAPI(plan_data["panel_url"], plan_data["panel_token"]).get_user(order["vpn_username"])
                 if (live.get("data_limit") or 0) == 0:
-                    await callback.answer(get_text("extra_volume_unlimited"), show_alert=True)
+                    await callback.answer(_alert("extra_volume_unlimited"), show_alert=True)
                     return
             except Exception as e:
                 log.error("extra_volume unlimited-check error: %s", e)
         plans = await get_extra_volume_plans()
         if not plans:
-            await callback.answer(get_text("extra_volume_no_plans"), show_alert=True)
+            await callback.answer(_alert("extra_volume_no_plans"), show_alert=True)
             return
         await callback.message.edit_text(
             get_text("extra_volume_select"),
@@ -105,10 +110,10 @@ def register_services_handlers(dp):
         plan_id, order_id = int(plan_id_s), int(order_id_s)
         plan = await get_extra_volume_plan(plan_id)
         if not plan:
-            await callback.answer("❌ پکیج یافت نشد.", show_alert=True)
+            await callback.answer(_alert("extra_package_not_found"), show_alert=True)
             return
         stats = await get_user_wallet_stats(callback.from_user.id)
-        balance_line = f"\n\n💎 موجودی کیف پول شما: {stats['balance']:,} تومان" if stats["balance"] > 0 else ""
+        balance_line = ("\n\n" + get_text("extra_volume_balance_line", balance=f"{stats['balance']:,}")) if stats["balance"] > 0 else ""
         await callback.message.edit_text(
             get_text(
                 "extra_volume_confirm",
@@ -127,11 +132,11 @@ def register_services_handlers(dp):
         plan  = await get_extra_volume_plan(plan_id)
         order = await get_order(order_id)
         if not plan or not order or order["user_id"] != callback.from_user.id:
-            await callback.answer("❌ خطا.", show_alert=True)
+            await callback.answer(_alert("extra_generic_error"), show_alert=True)
             return
         deducted = await deduct_balance_if_sufficient(callback.from_user.id, plan["price"])
         if not deducted:
-            await callback.answer("💎 موجودی کافی نیست.", show_alert=True)
+            await callback.answer(_alert("wallet_no_balance"), show_alert=True)
             return
         await add_transaction(
             callback.from_user.id, -plan["price"],
@@ -179,7 +184,7 @@ def register_services_handlers(dp):
 
         plan = await get_extra_volume_plan(plan_id)
         if not plan:
-            await message.answer("❌ خطا.")
+            await message.answer(get_text("extra_generic_error"))
             return
 
         receipt_file_id = message.photo[-1].file_id
@@ -284,11 +289,11 @@ def register_services_handlers(dp):
         order_id = int(callback.data.removeprefix("extra_time_"))
         order = await get_order(order_id)
         if not order or order["user_id"] != callback.from_user.id:
-            await callback.answer("❌ سرویس یافت نشد.", show_alert=True)
+            await callback.answer(_alert("service_not_found"), show_alert=True)
             return
         plans = await get_extra_time_plans()
         if not plans:
-            await callback.answer(get_text("extra_time_no_plans"), show_alert=True)
+            await callback.answer(_alert("extra_time_no_plans"), show_alert=True)
             return
         await callback.message.edit_text(
             get_text("extra_time_select"),
@@ -302,7 +307,7 @@ def register_services_handlers(dp):
         plan_id, order_id = int(plan_id_str), int(order_id_str)
         plan = await get_extra_time_plan(plan_id)
         if not plan:
-            await callback.answer("❌ پکیج یافت نشد.", show_alert=True)
+            await callback.answer(_alert("extra_package_not_found"), show_alert=True)
             return
         wallet = await get_user_wallet_stats(callback.from_user.id)
         balance = wallet["balance"] if wallet else 0
@@ -312,7 +317,7 @@ def register_services_handlers(dp):
             days=plan["days"],
             price=f"{plan['price']:,}",
         )
-        text += f"\n\n💎 موجودی کیف پول: <b>{balance:,} تومان</b>"
+        text += "\n\n" + get_text("extra_time_balance_line", balance=f"{balance:,}")
         await callback.message.edit_text(
             text,
             reply_markup=_et_confirm_kb(plan_id, order_id),
@@ -326,11 +331,11 @@ def register_services_handlers(dp):
         plan = await get_extra_time_plan(plan_id)
         order = await get_order(order_id)
         if not plan or not order:
-            await callback.answer("❌ اطلاعات یافت نشد.", show_alert=True)
+            await callback.answer(_alert("extra_info_not_found"), show_alert=True)
             return
         ok = await deduct_balance_if_sufficient(callback.from_user.id, plan["price"])
         if not ok:
-            await callback.answer("❌ موجودی کیف پول کافی نیست.", show_alert=True)
+            await callback.answer(_alert("wallet_no_balance"), show_alert=True)
             return
         await add_transaction(
             user_id=callback.from_user.id,
@@ -339,14 +344,14 @@ def register_services_handlers(dp):
         )
         plan_info = await get_plan_with_server(order.get("plan_id"))
         if not plan_info:
-            await callback.answer(get_text("extra_time_error"), show_alert=True)
+            await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
         try:
             api = RebeccaAPI(plan_info["server_url"], plan_info["server_token"])
             await api.add_time(order["vpn_username"], plan["days"])
         except Exception as e:
             log.error("extra_time wallet error: %s", e)
-            await callback.answer(get_text("extra_time_error"), show_alert=True)
+            await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
         await callback.message.edit_text(
             get_text("extra_time_success_wallet", days=plan["days"]),
@@ -367,13 +372,13 @@ def register_services_handlers(dp):
     @dp.message(ExtraTime.waiting_for_receipt)
     async def et_receipt(message: types.Message, state: FSMContext):
         if not message.photo:
-            await message.answer("❌ لطفاً تصویر رسید را ارسال کنید.")
+            await message.answer(get_text("extra_send_receipt_photo"))
             return
         data = await state.get_data()
         plan_id, order_id = data["plan_id"], data["order_id"]
         plan = await get_extra_time_plan(plan_id)
         if not plan:
-            await message.answer("❌ پکیج یافت نشد.")
+            await message.answer(get_text("extra_package_not_found"))
             await state.clear()
             return
         file_id = message.photo[-1].file_id
@@ -420,14 +425,14 @@ def register_services_handlers(dp):
         order = await get_order(req["order_id"])
         plan_info = await get_plan_with_server(order.get("plan_id") if order else None)
         if not order or not plan_info:
-            await callback.answer(get_text("plan_service_not_found"), show_alert=True)
+            await callback.answer(_alert("plan_service_not_found"), show_alert=True)
             return
         try:
             api = RebeccaAPI(plan_info["server_url"], plan_info["server_token"])
             await api.add_time(order["vpn_username"], req["days"])
         except Exception as e:
             log.error("etr_approve error: %s", e)
-            await callback.answer(get_text("extra_time_error"), show_alert=True)
+            await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
         await update_extra_time_request(req_id, "approved")
         try:

@@ -1045,6 +1045,13 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "extra_volume_rejected":       "❌ درخواست افزودن حجم رد شد.",
     "extra_volume_error":          "❌ خطا در افزودن حجم. با پشتیبانی تماس بگیرید.",
     "admin_ev_notify":             "➕ <b>درخواست افزودن حجم — #{req_id}</b>\n────────────────────────\n👤 کاربر: {full_name}{username_part}\n🆔 آیدی: <code>{user_id}</code>\n📦 پکیج: <b>{plan_name}</b>\n📊 حجم: {traffic} گیگابایت\n💰 مبلغ: <b>{price} تومان</b>",
+    # ─── توست‌ها و قطعه‌های مشترک افزودن حجم/زمان (services.py) ────────────
+    "extra_package_not_found":     "❌ پکیج یافت نشد.",
+    "extra_generic_error":         "❌ خطا.",
+    "extra_info_not_found":        "❌ اطلاعات یافت نشد.",
+    "extra_send_receipt_photo":    "❌ لطفاً تصویر رسید را ارسال کنید.",
+    "extra_volume_balance_line":   "💎 موجودی کیف پول شما: {balance} تومان",
+    "extra_time_balance_line":     "💎 موجودی کیف پول: <b>{balance} تومان</b>",
     # ─── فعال/غیرفعال کردن سرویس (user.py) ────────────────────────────────
     "changestatus_confirm_disable": "⏸️ آیا مطمئن هستید سرویس <b>{name}</b> غیرفعال شود؟",
     "changestatus_confirm_enable":  "✅ آیا مطمئن هستید سرویس <b>{name}</b> فعال شود؟",
