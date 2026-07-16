@@ -5,4 +5,5 @@ instances/
 shared_lib/__pycache__/
 wiki/
 INVENTORY.md
+*.*al.md
 pre-push.*
