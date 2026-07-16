@@ -696,7 +696,7 @@ def user_tutorials_keyboard(tutorials: list) -> InlineKeyboardMarkup:
     rows = get_keyboard_rows("back_to_tutorials")
     back_label = rows[0]["label"] if rows else "🔙 بازگشت"
     faqs_rows  = get_keyboard_rows("back_to_faqs")
-    faqs_label = "❓ سوالات متداول"
+    faqs_label = faqs_rows[0]["label"] if faqs_rows else "❓ سوالات متداول"
     result = [[InlineKeyboardButton(text=t["title"], callback_data=f"tutorial_view_{t['id']}")] for t in tutorials]
     result.append([InlineKeyboardButton(text=faqs_label, callback_data="user_faqs")])
     result.append([InlineKeyboardButton(text=back_label, callback_data="back_to_start")])
