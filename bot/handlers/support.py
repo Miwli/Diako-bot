@@ -16,6 +16,12 @@ from shared_lib.db import (
     get_text,
 )
 
+
+def _alert(key: str, **fmt) -> str:
+    # show_alert در تلگرام فقط تا ~۲۰۰ کاراکتر نشون می‌ده
+    return get_text(key, **fmt)[:200]
+
+
 def register_support_handlers(dp):
 
     # ─── منوی پشتیبانی ───────────────────────────
@@ -31,12 +37,12 @@ def register_support_handlers(dp):
     async def new_ticket_start(callback: types.CallbackQuery, state: FSMContext):
         support_group_id = await get_setting("support_group_id")
         if not support_group_id:
-            await callback.answer(get_text("support_unavailable"), show_alert=True)
+            await callback.answer(_alert("support_unavailable"), show_alert=True)
             return
 
         open_ticket = await get_user_open_ticket(callback.from_user.id)
         if open_ticket:
-            await callback.answer(get_text("support_has_open_ticket", id=open_ticket['id']), show_alert=True)
+            await callback.answer(_alert("support_has_open_ticket", id=open_ticket['id']), show_alert=True)
             return
 
         await state.set_state(Support.waiting_for_first_message)
@@ -146,7 +152,7 @@ def register_support_handlers(dp):
         ticket_id = int(callback.data.replace("view_ticket_", ""))
         ticket = await get_ticket(ticket_id)
         if not ticket or ticket["user_id"] != callback.from_user.id:
-            await callback.answer("تیکت یافت نشد.", show_alert=True)
+            await callback.answer(_alert("ticket_not_found"), show_alert=True)
             return
 
         if ticket["status"] == "open":
@@ -166,10 +172,10 @@ def register_support_handlers(dp):
         ticket_id = int(callback.data.replace("close_ticket_", ""))
         ticket = await get_ticket(ticket_id)
         if not ticket or ticket["user_id"] != callback.from_user.id:
-            await callback.answer("تیکت یافت نشد.", show_alert=True)
+            await callback.answer(_alert("ticket_not_found"), show_alert=True)
             return
         if ticket["status"] != "open":
-            await callback.answer("این تیکت قبلاً بسته شده.", show_alert=True)
+            await callback.answer(_alert("ticket_already_closed"), show_alert=True)
             return
 
         await _do_close_ticket(ticket, callback.bot)
