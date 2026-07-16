@@ -178,47 +178,46 @@
 
   </div>
 
-  <!-- ستون کناری -->
-  <div class="dash-side">
-
-    <div class="inner-card admin-card anim-card">
-      <div class="admin-card-top">
-        <a href="{% url 'diako_orders' %}?status=pending" class="ctrl-btn" style="position:relative">
-          <i class="ti ti-bell"></i>
-          <span class="header-badge order-badge hidden">0</span>
-        </a>
-        <a href="/admin/" class="ctrl-btn"><i class="ti ti-dots-vertical"></i></a>
-      </div>
-      <div class="admin-avatar-big">{{ admin_username|slice:":1"|upper }}</div>
-      <div class="admin-name">{{ admin_username }}</div>
-      <div class="admin-role">{% trans "ادمین اصلی" %}</div>
-      <div class="admin-actions">
-        <a href="{% url 'diako_servers' %}#add" class="action-btn">
-          <i class="ti ti-server-2"></i>
-          <span>{% trans "سرور جدید" %}</span>
-        </a>
-        <a href="{% url 'diako_plans' %}#add" class="action-btn">
-          <i class="ti ti-playlist-add"></i>
-          <span>{% trans "پلن جدید" %}</span>
-        </a>
-        <a href="{% url 'diako_finance' %}#discount" class="action-btn">
-          <i class="ti ti-ticket"></i>
-          <span>{% trans "کد تخفیف" %}</span>
-        </a>
-        <a href="{% url 'diako_import_export' %}" class="action-btn">
-          <i class="ti ti-database-export"></i>
-          <span>{% trans "بکاپ" %}</span>
-        </a>
-      </div>
-      <div class="revenue-mini">
-        <div class="revenue-mini-label">{% trans "درآمد این ماه" %}</div>
-        <div class="revenue-mini-val">{{ stats.rev_month|toman }}</div>
-        <div class="revenue-mini-unit">{% trans "تومان" %}</div>
-      </div>
+  <!-- کارت ادمین -->
+  <div class="inner-card admin-card anim-card">
+    <div class="admin-card-top">
+      <a href="{% url 'diako_orders' %}?status=pending" class="ctrl-btn" style="position:relative">
+        <i class="ti ti-bell"></i>
+        <span class="header-badge order-badge hidden">0</span>
+      </a>
+      <a href="/admin/" class="ctrl-btn"><i class="ti ti-dots-vertical"></i></a>
     </div>
+    <div class="admin-avatar-big">{{ admin_username|slice:":1"|upper }}</div>
+    <div class="admin-name">{{ admin_username }}</div>
+    <div class="admin-role">{% trans "ادمین اصلی" %}</div>
+    <div class="admin-actions">
+      <a href="{% url 'diako_servers' %}#add" class="action-btn">
+        <i class="ti ti-server-2"></i>
+        <span>{% trans "سرور جدید" %}</span>
+      </a>
+      <a href="{% url 'diako_plans' %}#add" class="action-btn">
+        <i class="ti ti-playlist-add"></i>
+        <span>{% trans "پلن جدید" %}</span>
+      </a>
+      <a href="{% url 'diako_finance' %}#discount" class="action-btn">
+        <i class="ti ti-ticket"></i>
+        <span>{% trans "کد تخفیف" %}</span>
+      </a>
+      <a href="{% url 'diako_import_export' %}" class="action-btn">
+        <i class="ti ti-database-export"></i>
+        <span>{% trans "بکاپ" %}</span>
+      </a>
+    </div>
+    <div class="revenue-mini">
+      <div class="revenue-mini-label">{% trans "درآمد این ماه" %}</div>
+      <div class="revenue-mini-val">{{ stats.rev_month|toman }}</div>
+      <div class="revenue-mini-unit">{% trans "تومان" %}</div>
+    </div>
+  </div>
 
-    <div class="inner-card orders-side anim-card">
-      <div class="section-title">{% trans "آخرین سفارش‌ها" %}</div>
+  <!-- آخرین سفارش‌ها -->
+  <div class="inner-card orders-side anim-card">
+    <div class="section-title">{% trans "آخرین سفارش‌ها" %}</div>
       <div class="orders-side-list">
         {% for order in recent_orders %}
         <div class="order-side-row">
@@ -248,7 +247,6 @@
       </a>
     </div>
 
-  </div>
 </div>
 {% endblock %}
 
