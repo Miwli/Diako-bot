@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 from dashboard import views as v
@@ -6,7 +5,6 @@ from dashboard import api_views
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),
     path('diako/', RedirectView.as_view(url='/diako/login/', permanent=False)),
     path('diako/login/', v.login_view, name='diako_login'),

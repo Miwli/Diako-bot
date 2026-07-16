@@ -8,19 +8,6 @@
 from django.db import models
 
 
-class DiscountCodeUses(models.Model):
-    pk = models.CompositePrimaryKey('code_id', 'user_id')
-    code_id = models.IntegerField()
-    user_id = models.IntegerField()
-    used_at = models.TextField(blank=True, null=True)  # This field type is a guess.
-
-    class Meta:
-        managed = False
-        db_table = 'discount_code_uses'
-        verbose_name = 'استفاده از کد تخفیف'
-        verbose_name_plural = 'استفاده از کدهای تخفیف'
-
-
 class DiscountCodes(models.Model):
     code = models.TextField(unique=True)
     type = models.TextField()

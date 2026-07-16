@@ -2,7 +2,6 @@ Django==5.2.15
 aiohttp==3.13.3
 aiosqlite==0.22.1
 asgiref==3.11.1
-django-unfold==0.91.0
 sqlparse==0.5.5
 gunicorn==23.0.0
 whitenoise==6.9.0

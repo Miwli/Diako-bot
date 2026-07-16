@@ -72,8 +72,6 @@ CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h and h != '*']
 # Application definition
 
 INSTALLED_APPS = [
-    'unfold',
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -85,7 +83,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'core.middleware.AdminAccessMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -197,154 +194,3 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-UNFOLD = {
-    "SITE_TITLE": "دیاکو",
-    "SITE_HEADER": "پنل مدیریت دیاکو",
-    "SITE_SYMBOL": "vpn_lock",
-    "SCRIPTS": [
-        lambda _: "/static/js/dark-mode.js",
-    ],
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": False,
-        "navigation": [
-            {
-                "title": "داشبورد",
-                "items": [
-                    {
-                        "title": "خانه",
-                        "icon": "home",
-                        "link": "/admin/",
-                    },
-                ],
-            },
-            {
-                "title": "زیرساخت",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "سرورها",
-                        "icon": "dns",
-                        "link": "/admin/dashboard/servers/",
-                    },
-                    {
-                        "title": "پلن‌ها",
-                        "icon": "sell",
-                        "link": "/admin/dashboard/plans/",
-                    },
-                ],
-            },
-            {
-                "title": "فروش",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "سفارش‌ها",
-                        "icon": "shopping_cart",
-                        "link": "/admin/dashboard/orders/",
-                    },
-                    {
-                        "title": "شارژ حساب",
-                        "icon": "payments",
-                        "link": "/admin/dashboard/topuprequests/",
-                    },
-                    {
-                        "title": "کدهای تخفیف",
-                        "icon": "local_offer",
-                        "link": "/admin/dashboard/discountcodes/",
-                    },
-                ],
-            },
-            {
-                "title": "کاربران",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "کاربران",
-                        "icon": "group",
-                        "link": "/diako/users/",
-                    },
-                    {
-                        "title": "تراکنش‌ها",
-                        "icon": "account_balance_wallet",
-                        "link": "/admin/dashboard/transactions/",
-                    },
-                    {
-                        "title": "دعوت دوستان",
-                        "icon": "share",
-                        "link": "/admin/dashboard/referrals/",
-                    },
-                ],
-            },
-            {
-                "title": "پشتیبانی و محتوا",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "تیکت‌ها",
-                        "icon": "support_agent",
-                        "link": "/admin/dashboard/tickets/",
-                    },
-                    {
-                        "title": "آموزش‌ها",
-                        "icon": "school",
-                        "link": "/admin/dashboard/tutorials/",
-                    },
-                    {
-                        "title": "سوالات متداول",
-                        "icon": "help",
-                        "link": "/admin/dashboard/faqs/",
-                    },
-                ],
-            },
-            {
-                "title": "تنظیمات",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "تنظیمات سیستم",
-                        "icon": "settings",
-                        "link": "/admin/dashboard/settings/",
-                    },
-                ],
-            },
-        ],
-    },
-    "COLORS": {
-        "base": {
-            "50":  "oklch(97% .008 232)",
-            "100": "oklch(93% .015 230)",
-            "200": "oklch(86% .022 228)",
-            "300": "oklch(76% .028 228)",
-            "400": "oklch(60% .036 230)",
-            "500": "oklch(47% .040 232)",
-            "600": "oklch(36% .038 234)",
-            "700": "oklch(26% .034 236)",
-            "800": "oklch(19% .030 237)",
-            "900": "oklch(14% .025 238)",
-            "950": "oklch(9%  .020 240)",
-        },
-        "primary": {
-            "50":  "oklch(97% .016 194)",
-            "100": "oklch(93% .040 194)",
-            "200": "oklch(87% .080 194)",
-            "300": "oklch(80% .135 194)",
-            "400": "oklch(74% .180 194)",
-            "500": "oklch(74% .200 194)",
-            "600": "oklch(63% .180 194)",
-            "700": "oklch(52% .155 194)",
-            "800": "oklch(42% .125 194)",
-            "900": "oklch(32% .095 194)",
-            "950": "oklch(21% .065 194)",
-        },
-        "font": {
-            "subtle-light":    "var(--color-base-500)",
-            "subtle-dark":     "var(--color-base-400)",
-            "default-light":   "var(--color-base-700)",
-            "default-dark":    "var(--color-base-200)",
-            "important-light": "var(--color-base-900)",
-            "important-dark":  "var(--color-base-50)",
-        },
-    },
-}
