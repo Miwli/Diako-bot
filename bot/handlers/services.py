@@ -79,6 +79,16 @@ def register_services_handlers(dp):
         if not order or order["user_id"] != callback.from_user.id:
             await callback.answer("❌ سرویس یافت نشد.", show_alert=True)
             return
+        # سرویس نامحدود حجم اضافه نمی‌پذیرد — add_volume بی‌صدا هیچ کاری نمی‌کند
+        plan_data = await get_plan_with_server(order["plan_id"])
+        if plan_data:
+            try:
+                live = await RebeccaAPI(plan_data["panel_url"], plan_data["panel_token"]).get_user(order["vpn_username"])
+                if (live.get("data_limit") or 0) == 0:
+                    await callback.answer(get_text("extra_volume_unlimited"), show_alert=True)
+                    return
+            except Exception as e:
+                log.error("extra_volume unlimited-check error: %s", e)
         plans = await get_extra_volume_plans()
         if not plans:
             await callback.answer(get_text("extra_volume_no_plans"), show_alert=True)
