@@ -45,15 +45,18 @@ def _merge_dynamic_grid(dyn_items: list[dict], static_name: str,
     static_name: نام کیبورد برای دکمه‌های ثابت (بازگشت و…) از کش
     fallback: دکمه‌های ثابت پیش‌فرض اگه هنوز چیزی در کش نبود
     """
-    # (row, col) → دکمه؛ داینامیک‌ها و ثابت‌ها توی یه فضای مختصات مشترک ادغام می‌شن
+    static_rows = get_keyboard_rows(static_name) or fallback
+    return _grid_from(dyn_items, static_rows)
+
+
+def _grid_from(dyn_items: list[dict], static_buttons: list[dict]) -> InlineKeyboardMarkup:
+    """آیتم‌های داینامیک (row/col) و دکمه‌های ثابت (row_index/col_index) رو در یه گرید ادغام می‌کنه"""
     cells: list[tuple[int, int, InlineKeyboardButton]] = []
     for it in dyn_items:
         cells.append((it["row"], it["col"],
                       InlineKeyboardButton(text=_strip_tg_emoji(it["label"]),
                                            callback_data=it["callback_data"])))
-
-    static_rows = get_keyboard_rows(static_name) or fallback
-    for r in static_rows:
+    for r in static_buttons:
         if not r.get("is_active", 1):
             continue
         cells.append((r.get("row_index", 999), r.get("col_index", 0),
@@ -450,17 +453,23 @@ def user_servers_keyboard(servers: list) -> InlineKeyboardMarkup:
 
 
 def user_plans_keyboard(plans: list, server_id: int, multiple_servers: bool = False, show_price: bool = False) -> InlineKeyboardMarkup:
-    rows = get_keyboard_rows("user_main")
-    back_label = next((r["label"] for r in rows if r["callback_data"] == "user_main"), "🔙 بازگشت")
-    buttons = []
-    for plan in plans:
+    dyn = []
+    for i, plan in enumerate(plans):
         label = plan["name"]
         if show_price:
             label += f" — {plan['price']:,} تومان"
-        buttons.append([InlineKeyboardButton(text=label, callback_data=f"user_plan_{plan['id']}")])
+        dyn.append({"label": label, "callback_data": f"user_plan_{plan['id']}", "row": i, "col": 0})
+    rows = get_keyboard_rows("user_main")
+    back_label = next((r["label"] for r in rows if r["callback_data"] == "user_main"), "🔙 بازگشت")
+    # مقصد بازگشت وابسته به تعداد سروره (تک‌سرور مستقیم پلن‌ها رو نشون می‌ده، پس باید به منوی اصلی برگرده نه buy_vpn)
     back_target = "buy_vpn" if multiple_servers else "user_main"
-    buttons.append([InlineKeyboardButton(text=back_label, callback_data=back_target)])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    static = []
+    for r in get_keyboard_rows("user_plans"):
+        cb = back_target if r["callback_data"] in ("buy_vpn", "user_main") else r["callback_data"]
+        static.append({**r, "callback_data": cb})
+    if not static:
+        static = [{"label": back_label, "callback_data": back_target, "row_index": 999, "col_index": 0}]
+    return _grid_from(dyn, static)
 
 
 def proforma_keyboard(plan_id, has_balance: bool = False, has_discount: bool = False) -> InlineKeyboardMarkup:
@@ -490,18 +499,19 @@ def profile_keyboard() -> InlineKeyboardMarkup:
 
 
 def user_services_keyboard(orders: list) -> InlineKeyboardMarkup:
+    dyn = [
+        {"label": order["vpn_username"] or f"سرویس #{order['id']}",
+         "callback_data": f"my_service_{order['id']}", "row": i, "col": 0}
+        for i, order in enumerate(orders)
+    ]
     rows = get_keyboard_rows("user_main")
     back_label = next((r["label"] for r in rows if r["callback_data"] == "user_main"), "🔙 بازگشت")
-    buttons = []
-    for order in orders:
-        label = order["vpn_username"] or f"سرویس #{order['id']}"
-        buttons.append([InlineKeyboardButton(text=label, callback_data=f"my_service_{order['id']}")])
     if not orders:
-        rows_main = get_keyboard_rows("user_main")
-        buy_label = next((r["label"] for r in rows_main if r["callback_data"] == "buy_vpn"), "🛒 خرید VPN")
-        buttons.append([InlineKeyboardButton(text=buy_label, callback_data="buy_vpn")])
-    buttons.append([InlineKeyboardButton(text=back_label, callback_data="user_main")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+        # وقتی سرویسی نیست، دکمه‌ی خرید همیشه نشون داده می‌شه (به‌عنوان آیتم داینامیک، کنار دکمه‌های ثابت)
+        buy_label = next((r["label"] for r in rows if r["callback_data"] == "buy_vpn"), "🛒 خرید VPN")
+        dyn.append({"label": buy_label, "callback_data": "buy_vpn", "row": 0, "col": 0})
+    fallback = [{"label": back_label, "callback_data": "user_main", "row_index": 999, "col_index": 0}]
+    return _merge_dynamic_grid(dyn, "my_services", fallback)
 
 
 def user_service_detail_keyboard(order_id: int, subscription_url: str = None) -> InlineKeyboardMarkup:
@@ -638,14 +648,14 @@ def ticket_keyboard(ticket_id: int) -> InlineKeyboardMarkup:
 
 
 def my_tickets_keyboard(tickets: list) -> InlineKeyboardMarkup:
+    dyn = []
+    for i, t in enumerate(tickets):
+        icon = "🟢" if t["status"] == "open" else "🔴"
+        dyn.append({"label": f"{icon} تیکت #{t['id']}", "callback_data": f"view_ticket_{t['id']}", "row": i, "col": 0})
     rows = get_keyboard_rows("support")
     back_label = next((r["label"] for r in rows if r["callback_data"] == "support"), "🔙 بازگشت")
-    result = []
-    for t in tickets:
-        icon = "🟢" if t["status"] == "open" else "🔴"
-        result.append([InlineKeyboardButton(text=f"{icon} تیکت #{t['id']}", callback_data=f"view_ticket_{t['id']}")])
-    result.append([InlineKeyboardButton(text=back_label, callback_data="support")])
-    return InlineKeyboardMarkup(inline_keyboard=result)
+    fallback = [{"label": back_label, "callback_data": "support", "row_index": 999, "col_index": 0}]
+    return _merge_dynamic_grid(dyn, "my_tickets", fallback)
 
 
 def admin_support_settings_keyboard() -> InlineKeyboardMarkup:
