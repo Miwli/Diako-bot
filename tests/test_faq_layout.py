@@ -60,7 +60,7 @@ def test_multicolumn_roundtrip(db_module):
 
 
 def test_bot_keyboard_grid(db_module):
-    import bot.keyboards as kb
+    import keyboards as kb  # bot/ is on sys.path via conftest
 
     async def go():
         ids = await _seed_faqs(2)

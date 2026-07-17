@@ -2629,6 +2629,7 @@ _DEFAULT_KEYBOARD_ACTIONS = [
     ("user_main",            "🏠 منوی اصلی",                 "user_main",            "user"),
     ("back_to_start",        "🏠 بازگشت به شروع",            "back_to_start",        "user"),
     ("user_faqs",            "❓ سوالات متداول",              "user_faqs",            "user"),
+    ("nav_back",             "🔙 بازگشت (یک مرحله)",         "nav_back",             "user"),
     ("cancel",               "❌ لغو",                       "cancel",               "user"),
     ("cancel_payment",       "❌ انصراف از پرداخت",          "cancel_payment",       "user"),
     # ── ادمین ─────────────────────────────────────────

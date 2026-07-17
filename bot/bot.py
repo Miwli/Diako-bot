@@ -21,7 +21,7 @@ from handlers.stats import register_stats_handlers
 from handlers.discount import register_discount_handlers
 from handlers.services import register_services_handlers
 from handlers.force_join import register_force_join_handlers
-from middlewares import ForceJoinMiddleware
+from middlewares import ForceJoinMiddleware, NavHistoryMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +42,8 @@ def is_admin(user_id: int) -> bool:
 
 dp.message.outer_middleware(ForceJoinMiddleware())
 dp.callback_query.outer_middleware(ForceJoinMiddleware())
+# تاریخچه‌ی ناوبری برای دکمه‌ی «یک مرحله عقب» — بعد از جوین اجباری اجرا می‌شه
+dp.callback_query.outer_middleware(NavHistoryMiddleware())
 
 # ثبت هندلرها
 register_admin_handlers(dp)

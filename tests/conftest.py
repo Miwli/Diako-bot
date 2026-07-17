@@ -1,6 +1,11 @@
 import asyncio
+import os
+import sys
 
 import pytest
+
+# bot/ modules (keyboards, middlewares) use top-level imports relative to bot/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "bot"))
 
 import shared_lib.db as db
 
