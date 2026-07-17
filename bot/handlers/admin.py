@@ -513,7 +513,8 @@ def register_admin_handlers(dp):
             user_data = await api.create_user(
                 service_id=service_id,
                 data_limit_gb=plan["traffic"],
-                duration_days=plan["duration"]
+                duration_days=plan["duration"],
+                ip_limit=plan["ip_limit"]
             )
             sub_path = user_data.get("subscription_url", "")
             subscription_url = await api.get_subscription_url(sub_path)

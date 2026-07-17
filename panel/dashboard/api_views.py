@@ -913,9 +913,11 @@ def plan_action(request):
             price = int(price)
             duration = int(duration)
             traffic = int(traffic)
+            ip_limit = int(data.get('ip_limit') or 0)
         except (TypeError, ValueError):
-            return JsonResponse({'ok': False, 'error': 'قیمت، مدت و حجم باید عدد باشند'})
-        async_to_sync(add_plan)(int(server_id) if server_id else None, name, price, duration, traffic)
+            return JsonResponse({'ok': False, 'error': 'قیمت، مدت، حجم و تعداد کاربر باید عدد باشند'})
+        async_to_sync(add_plan)(int(server_id) if server_id else None, name, price, duration, traffic,
+                                ip_limit=ip_limit)
         return JsonResponse({'ok': True})
 
     if action == 'delete':
@@ -944,9 +946,10 @@ def plan_action(request):
             price = int(price)
             duration = int(duration)
             traffic = int(traffic)
+            ip_limit = int(data.get('ip_limit') or 0)
         except (TypeError, ValueError):
-            return JsonResponse({'ok': False, 'error': 'قیمت، مدت و حجم باید عدد باشند'})
-        async_to_sync(update_plan)(int(plan_id), name, price, duration, traffic)
+            return JsonResponse({'ok': False, 'error': 'قیمت، مدت، حجم و تعداد کاربر باید عدد باشند'})
+        async_to_sync(update_plan)(int(plan_id), name, price, duration, traffic, ip_limit=ip_limit)
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)

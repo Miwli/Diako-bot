@@ -22,6 +22,7 @@
           <th>{% trans "قیمت" %}</th>
           <th>{% trans "مدت" %}</th>
           <th>{% trans "حجم" %}</th>
+          <th>{% trans "کاربر هم‌زمان" %}</th>
           <th>{% trans "وضعیت" %}</th>
           <th class="col-actions"></th>
         </tr>
@@ -34,6 +35,7 @@
           <td><span class="cell-accent">{{ p.price|toman }} {% trans "تومان" %}</span></td>
           <td><span class="cell-muted">{% if p.duration == 0 %}{% trans "نامحدود" %}{% else %}{{ p.duration }} {% trans "روز" %}{% endif %}</span></td>
           <td><span class="cell-muted">{% if p.traffic == 0 %}{% trans "نامحدود" %}{% else %}{{ p.traffic }} GB{% endif %}</span></td>
+          <td><span class="cell-muted">{% if p.ip_limit %}{{ p.ip_limit }} {% trans "کاربر" %}{% else %}{% trans "نامحدود" %}{% endif %}</span></td>
           <td>
             {% if p.is_active %}
               <span class="st-badge st-active">{% trans "فعال" %}</span>
@@ -43,7 +45,7 @@
           </td>
           <td>
             <div class="row-acts">
-              <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditModal({{ p.id }}, '{{ p.name|escapejs }}', {{ p.server_id|default:'null' }}, {{ p.price|default:0 }}, {{ p.duration|default:0 }}, {{ p.traffic|default:0 }})"><i class="ti ti-edit"></i></button>
+              <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditModal({{ p.id }}, '{{ p.name|escapejs }}', {{ p.server_id|default:'null' }}, {{ p.price|default:0 }}, {{ p.duration|default:0 }}, {{ p.traffic|default:0 }}, {{ p.ip_limit|default:0 }})"><i class="ti ti-edit"></i></button>
               <button class="row-btn" title="{% trans 'تغییر وضعیت' %}" onclick="togglePlan({{ p.id }})"><i class="ti ti-power"></i></button>
               <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="deletePlan({{ p.id }}, '{{ p.name|escapejs }}')"><i class="ti ti-trash"></i></button>
             </div>
@@ -85,6 +87,8 @@
     <input class="modal-input" id="planDuration" type="number" placeholder="30">
     <label class="modal-label">{% trans "حجم (GB — ۰ = نامحدود)" %}</label>
     <input class="modal-input" id="planTraffic" type="number" placeholder="50">
+    <label class="modal-label">{% trans "کاربر هم‌زمان (۰ = نامحدود)" %}</label>
+    <input class="modal-input" id="planIpLimit" type="number" placeholder="0">
     <div class="modal-acts">
       <button class="modal-btn" onclick="closePlanModal()">{% trans "انصراف" %}</button>
       <button class="modal-btn btn-confirm" id="planConfirmBtn" onclick="confirmPlan()">{% trans "ذخیره" %}</button>
@@ -105,10 +109,11 @@ function openAddModal() {
   document.getElementById('planPrice').value = '';
   document.getElementById('planDuration').value = '';
   document.getElementById('planTraffic').value = '';
+  document.getElementById('planIpLimit').value = '';
   document.getElementById('planModal').classList.add('open');
 }
 
-function openEditModal(id, name, serverId, price, duration, traffic) {
+function openEditModal(id, name, serverId, price, duration, traffic, ipLimit) {
   editPlanId = id;
   document.getElementById('planModalTitle').textContent = '{% trans "ویرایش پلن" %}';
   document.getElementById('planName').value = name;
@@ -116,6 +121,7 @@ function openEditModal(id, name, serverId, price, duration, traffic) {
   document.getElementById('planPrice').value = price;
   document.getElementById('planDuration').value = duration;
   document.getElementById('planTraffic').value = traffic;
+  document.getElementById('planIpLimit').value = ipLimit;
   document.getElementById('planModal').classList.add('open');
 }
 
@@ -133,6 +139,7 @@ async function confirmPlan() {
     price: document.getElementById('planPrice').value,
     duration: document.getElementById('planDuration').value,
     traffic: document.getElementById('planTraffic').value,
+    ip_limit: document.getElementById('planIpLimit').value || 0,
   };
   if (editPlanId) body.plan_id = editPlanId;
   const data = await apiCall(body);

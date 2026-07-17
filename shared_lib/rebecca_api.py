@@ -38,8 +38,8 @@ class RebeccaAPI:
                 return data.get("services", [])
 
     async def create_user(self, service_id: int, data_limit_gb: float, duration_days: float = 0,
-                          duration_hours: float = 0) -> dict:
-        """ساخت یوزر — duration_days یا duration_hours (0 = بی‌نهایت) | data_limit_gb=0 = نامحدود"""
+                          duration_hours: float = 0, ip_limit: int = 0) -> dict:
+        """ساخت یوزر — duration (0 = بی‌نهایت) | data_limit_gb=0 = نامحدود | ip_limit=0 = نامحدود"""
         username = self._random_username()
         total_hours = duration_hours if duration_hours else duration_days * 24
         expire_ts = 0 if total_hours == 0 else int(time.time()) + int(total_hours * 3600)
@@ -51,6 +51,7 @@ class RebeccaAPI:
             "expire": expire_ts,
             "data_limit": data_limit_bytes,
             "data_limit_reset_strategy": "no_reset",
+            "ip_limit": ip_limit,
             "status": "active"
         }
 

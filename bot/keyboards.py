@@ -334,6 +334,7 @@ def plan_settings_keyboard(plan_id: int, server_id: int, is_active: bool) -> Inl
             InlineKeyboardButton(text="📅 ویرایش روز",      callback_data=f"edit_plan_duration_{pid}_{sid}"),
             InlineKeyboardButton(text="📊 ویرایش حجم",      callback_data=f"edit_plan_traffic_{pid}_{sid}"),
         ],
+        [InlineKeyboardButton(text="👥 ویرایش کاربر هم‌زمان", callback_data=f"edit_plan_ip_limit_{pid}_{sid}")],
         [
             InlineKeyboardButton(text=toggle_text,           callback_data=f"toggle_plan_settings_{pid}_{sid}"),
             InlineKeyboardButton(text="🗑 حذف پلن",         callback_data=f"delete_plan_{pid}_{sid}"),

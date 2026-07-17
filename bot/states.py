@@ -5,6 +5,7 @@ class AddPlan(StatesGroup):
     waiting_for_price    = State()
     waiting_for_duration = State()
     waiting_for_traffic  = State()
+    waiting_for_ip_limit = State()
 
 class AddServer(StatesGroup):
     waiting_for_name    = State()
@@ -38,6 +39,7 @@ class EditPlan(StatesGroup):
     waiting_for_price    = State()
     waiting_for_duration = State()
     waiting_for_traffic  = State()
+    waiting_for_ip_limit = State()
 
 class GeneralSettings(StatesGroup):
     waiting_for_banner     = State()

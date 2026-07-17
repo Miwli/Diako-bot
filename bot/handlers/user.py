@@ -858,7 +858,8 @@ def register_user_handlers(dp):
                 if not sid:
                     await callback.answer(get_text("plan_service_not_found"), show_alert=True)
                     return
-                user_data = await api.create_user(sid, plan["traffic"], plan["duration"])
+                user_data = await api.create_user(sid, plan["traffic"], plan["duration"],
+                                                  ip_limit=plan["ip_limit"])
                 sub_path = user_data.get("subscription_url", "")
                 subscription_url = await api.get_subscription_url(sub_path)
                 vpn_username = user_data.get("username", "")
@@ -941,7 +942,8 @@ def register_user_handlers(dp):
             user_data = await api.create_user(
                 service_id=service_ids[0],
                 data_limit_gb=plan["traffic"],
-                duration_days=plan["duration"]
+                duration_days=plan["duration"],
+                ip_limit=plan["ip_limit"]
             )
             sub_path = user_data.get("subscription_url", "")
             subscription_url = await api.get_subscription_url(sub_path)

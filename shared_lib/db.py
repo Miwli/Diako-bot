@@ -83,6 +83,16 @@ async def init_db():
                 await db.execute("ALTER TABLE plans_new RENAME TO plans")
                 await db.commit()
                 break
+        # migration: اضافه کردن ستون‌های جدید به plans (۰ = نامحدود)
+        plan_migrations = {
+            "ip_limit": "INTEGER DEFAULT 0",
+        }
+        for col, col_type in plan_migrations.items():
+            try:
+                await db.execute(f"ALTER TABLE plans ADD COLUMN {col} {col_type}")
+                await db.commit()
+            except Exception:
+                pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS settings (
                 key   TEXT PRIMARY KEY,
@@ -723,12 +733,14 @@ async def reset_free_test_uses(user_id: int = None):
 
 # ─── توابع پلن‌ها ──────────────────────────────
 
-async def add_plan(server_id: int, name: str, price: int, duration: int, traffic: int):
-    """اضافه کردن پلن جدید"""
+async def add_plan(server_id: int, name: str, price: int, duration: int, traffic: int,
+                   ip_limit: int = 0):
+    """اضافه کردن پلن جدید — ip_limit=0 یعنی نامحدود"""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT INTO plans (server_id, name, price, duration, traffic) VALUES (?, ?, ?, ?, ?)",
-            (server_id, name, price, duration, traffic)
+            "INSERT INTO plans (server_id, name, price, duration, traffic, ip_limit) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (server_id, name, price, duration, traffic, ip_limit)
         )
         await db.commit()
 
@@ -770,7 +782,7 @@ async def toggle_plan_status(plan_id: int):
         )
         await db.commit()
 
-_ALLOWED_PLAN_FIELDS = {"price", "duration", "traffic"}
+_ALLOWED_PLAN_FIELDS = {"price", "duration", "traffic", "ip_limit"}
 
 async def update_plan_field(plan_id: int, field: str, value: int):
     """ویرایش یک فیلد از پلن"""
@@ -780,12 +792,13 @@ async def update_plan_field(plan_id: int, field: str, value: int):
         await db.execute(f"UPDATE plans SET {field} = ? WHERE id = ?", (value, plan_id))
         await db.commit()
 
-async def update_plan(plan_id: int, name: str, price: int, duration: int, traffic: int):
-    """ویرایش پلن"""
+async def update_plan(plan_id: int, name: str, price: int, duration: int, traffic: int,
+                      ip_limit: int = 0):
+    """ویرایش پلن — ip_limit=0 یعنی نامحدود"""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "UPDATE plans SET name=?, price=?, duration=?, traffic=? WHERE id=?",
-            (name, price, duration, traffic, plan_id)
+            "UPDATE plans SET name=?, price=?, duration=?, traffic=?, ip_limit=? WHERE id=?",
+            (name, price, duration, traffic, ip_limit, plan_id)
         )
         await db.commit()
 
@@ -1178,16 +1191,19 @@ _DEFAULT_TEXTS: dict[str, str] = {
     "admin_plan_ask_price":           "💰 قیمت رو بفرست (تومان):",
     "admin_plan_ask_duration":        "📅 مدت رو بفرست (روز):\n<i>برای بی‌نهایت عدد 0 وارد کن</i>",
     "admin_plan_ask_traffic":         "📊 حجم رو بفرست (گیگابایت):\n<i>برای بی‌نهایت عدد 0 وارد کن</i>",
+    "admin_plan_ask_ip_limit":        "👥 چند کاربر هم‌زمان بتونن از این پلن استفاده کنن؟\n<i>برای نامحدود عدد 0 وارد کن</i>",
+    "admin_plan_ip_limit_invalid":    "❌ عدد صحیح وارد کن. مثال: 2 یا 0 برای نامحدود",
     "admin_plan_added":               "✅ پلن با موفقیت اضافه شد!",
     "admin_plans_empty_for_server":   "❌ هیچ پلنی برای این سرور ثبت نشده!",
     "admin_plans_list_text":          "📦 <b>لیست پلن‌ها</b>\n\n💡 برای تنظیمات پلن روی اسمش کلیک کن.",
-    "admin_plan_settings_text":       "⚙️ <b>تنظیمات پلن</b>\n────────────────────────\n📦 <b>{name}</b>\n📊 حجم: {traffic}\n📅 مدت: {duration}\n💰 قیمت: {price} تومان\n📌 وضعیت: {status}",
+    "admin_plan_settings_text":       "⚙️ <b>تنظیمات پلن</b>\n────────────────────────\n📦 <b>{name}</b>\n📊 حجم: {traffic}\n📅 مدت: {duration}\n👥 کاربر هم‌زمان: {ip_limit}\n💰 قیمت: {price} تومان\n📌 وضعیت: {status}",
     "admin_plan_ask_edit_price":      "💰 قیمت فعلی پلن <b>{name}</b>: {price} تومان\n\nقیمت جدید را به <b>تومان</b> وارد کنید:",
     "admin_plan_price_invalid":       "❌ قیمت معتبر نیست. حداقل ۱,۰۰۰ تومان وارد کنید.",
     "admin_plan_price_ask_int":       "❌ قیمت باید عدد باشه! دوباره بفرست:",
     "admin_plan_updated_list":        "✅ {field} بروزرسانی شد.\n\n📦 <b>لیست پلن‌ها</b>\n\n💡 برای ویرایش روز، حجم یا قیمت روی مقدار مربوطه کلیک کنید.",
     "admin_plan_ask_edit_duration":   "📅 مدت فعلی پلن <b>{name}</b>: {duration}\n\nمدت جدید را به <b>روز</b> وارد کنید:\n<i>برای بی‌نهایت عدد 0 وارد کنید</i>",
     "admin_plan_ask_edit_traffic":    "📊 حجم فعلی پلن <b>{name}</b>: {traffic}\n\nحجم جدید را به <b>گیگابایت</b> وارد کنید:\n<i>برای بی‌نهایت عدد 0 وارد کنید</i>",
+    "admin_plan_ask_edit_ip_limit":   "👥 کاربر هم‌زمان فعلی پلن <b>{name}</b>: {ip_limit}\n\nتعداد جدید کاربر هم‌زمان را وارد کنید:\n<i>برای نامحدود عدد 0 وارد کنید</i>",
     "admin_plan_duration_invalid":    "❌ عدد صحیح وارد کن. مثال: 30 یا 0 برای بی‌نهایت",
     "admin_plan_traffic_invalid":     "❌ عدد صحیح وارد کن. مثال: 50 یا 0 برای بی‌نهایت",
     "admin_plan_delete_confirm":      "⚠️ مطمئنی می‌خوای پلن <b>{name}</b> رو حذف کنی؟\nاین عمل قابل بازگشت نیست.",

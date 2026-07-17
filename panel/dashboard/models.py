@@ -70,6 +70,7 @@ class Plans(models.Model):
     duration = models.IntegerField()
     traffic = models.IntegerField()
     is_active = models.IntegerField(blank=True, null=True)
+    ip_limit = models.IntegerField(blank=True, null=True, default=0)
 
     class Meta:
         managed = False

@@ -18,12 +18,16 @@ def _fmt_dur(val) -> str:
 def _fmt_trf(val) -> str:
     return "♾️ بی‌نهایت" if int(val) == 0 else f"{val} گیگابایت"
 
+def _fmt_ip(val) -> str:
+    return "♾️ نامحدود" if int(val or 0) == 0 else f"{val} کاربر"
+
 def _plan_settings_text(plan) -> str:
     status = "✅ فعال" if plan["is_active"] else "❌ غیرفعال"
     return get_text("admin_plan_settings_text",
                     name=plan["name"],
                     traffic=_fmt_trf(plan["traffic"]),
                     duration=_fmt_dur(plan["duration"]),
+                    ip_limit=_fmt_ip(plan["ip_limit"]),
                     price=f"{plan['price']:,}",
                     status=status)
 
@@ -108,13 +112,24 @@ def register_plan_handlers(dp):
         if not raw.isdigit() or int(raw) < 0:
             await message.answer(get_text("admin_plan_traffic_invalid"))
             return
+        await state.update_data(traffic=int(raw))
+        await message.answer(get_text("admin_plan_ask_ip_limit"), reply_markup=cancel_keyboard(), parse_mode="HTML")
+        await state.set_state(AddPlan.waiting_for_ip_limit)
+
+    @dp.message(AddPlan.waiting_for_ip_limit)
+    async def add_plan_ip_limit(message: types.Message, state: FSMContext):
+        raw = message.text.strip()
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer(get_text("admin_plan_ip_limit_invalid"))
+            return
         data = await state.get_data()
         await add_plan(
             server_id=data["server_id"],
             name=data["name"],
             price=data["price"],
             duration=data["duration"],
-            traffic=int(raw)
+            traffic=data["traffic"],
+            ip_limit=int(raw)
         )
         await state.clear()
         await message.answer(get_text("admin_plan_added"), reply_markup=admin_plans_menu())
@@ -257,6 +272,36 @@ def register_plan_handlers(dp):
         plans = await get_plans(data["server_id"], only_active=False)
         await message.answer(
             get_text("admin_plan_updated_list", field="حجم"),
+            reply_markup=plans_table_keyboard(plans, data["server_id"]),
+            parse_mode="HTML"
+        )
+
+    @dp.callback_query(F.data.startswith("edit_plan_ip_limit_"))
+    async def edit_plan_ip_limit_start(callback: types.CallbackQuery, state: FSMContext):
+        parts = callback.data.replace("edit_plan_ip_limit_", "").split("_")
+        plan_id, server_id = int(parts[0]), int(parts[1])
+        plan = await get_plan(plan_id)
+        await state.update_data(plan_id=plan_id, server_id=server_id)
+        await state.set_state(EditPlan.waiting_for_ip_limit)
+        await callback.message.edit_text(
+            get_text("admin_plan_ask_edit_ip_limit", name=plan["name"], ip_limit=_fmt_ip(plan["ip_limit"])),
+            reply_markup=cancel_keyboard(),
+            parse_mode="HTML"
+        )
+        await callback.answer()
+
+    @dp.message(EditPlan.waiting_for_ip_limit)
+    async def edit_plan_ip_limit_save(message: types.Message, state: FSMContext):
+        raw = message.text.strip()
+        if not raw.isdigit() or int(raw) < 0:
+            await message.answer(get_text("admin_plan_ip_limit_invalid"))
+            return
+        data = await state.get_data()
+        await update_plan_field(data["plan_id"], "ip_limit", int(raw))
+        await state.clear()
+        plans = await get_plans(data["server_id"], only_active=False)
+        await message.answer(
+            get_text("admin_plan_updated_list", field="کاربر هم‌زمان"),
             reply_markup=plans_table_keyboard(plans, data["server_id"]),
             parse_mode="HTML"
         )
