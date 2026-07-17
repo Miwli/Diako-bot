@@ -199,6 +199,12 @@ async def init_db():
                 await db.commit()
             except Exception:
                 pass
+        # ستون ستون برای چیدمان چندستونه‌ی دکمه‌ها در کیبورد آموزش‌ها
+        try:
+            await db.execute("ALTER TABLE tutorials ADD COLUMN col_index INTEGER DEFAULT 0")
+            await db.commit()
+        except Exception:
+            pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS faqs (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,6 +222,12 @@ async def init_db():
                 await db.commit()
             except Exception:
                 pass
+        # ستون ستون برای چیدمان چندستونه‌ی دکمه‌ها در کیبورد سوالات متداول
+        try:
+            await db.execute("ALTER TABLE faqs ADD COLUMN col_index INTEGER DEFAULT 0")
+            await db.commit()
+        except Exception:
+            pass
         await db.execute("""
             CREATE TABLE IF NOT EXISTS discount_codes (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -395,6 +407,29 @@ async def init_db():
             SELECT 'buy_vpn','🔙 بازگشت','user_main',999,0,1,0
             WHERE NOT EXISTS (
               SELECT 1 FROM keyboard_buttons WHERE keyboard_name='buy_vpn'
+            )
+        """)
+        # دکمه‌ی بازگشت در سوالات متداول — قابل‌جابجایی از ادیتور (کنار سوال هم می‌شه گذاشت)
+        await db.execute("""
+            INSERT OR IGNORE INTO keyboard_buttons
+              (keyboard_name, label, callback_data, row_index, col_index, is_active, admin_only)
+            SELECT 'user_faqs','🔙 بازگشت','tutorial',999,0,1,0
+            WHERE NOT EXISTS (
+              SELECT 1 FROM keyboard_buttons WHERE keyboard_name='user_faqs'
+            )
+        """)
+        # دکمه‌های ثابت آموزش‌ها — لینک سوالات متداول و بازگشت، هر دو قابل‌جابجایی
+        # هر دو ردیف با یک guard واحد اضافه می‌شن تا فقط روی کیبورد خالی seed بشن
+        await db.execute("""
+            INSERT INTO keyboard_buttons
+              (keyboard_name, label, callback_data, row_index, col_index, is_active, admin_only)
+            SELECT * FROM (
+              SELECT 'user_tutorials','❓ سوالات متداول','user_faqs',998,0,1,0
+              UNION ALL
+              SELECT 'user_tutorials','🔙 بازگشت','back_to_start',999,0,1,0
+            )
+            WHERE NOT EXISTS (
+              SELECT 1 FROM keyboard_buttons WHERE keyboard_name='user_tutorials'
             )
         """)
         await db.commit()
@@ -1661,7 +1696,7 @@ async def get_tutorials(active_only: bool = False):
         q = "SELECT * FROM tutorials"
         if active_only:
             q += " WHERE is_active = 1"
-        q += " ORDER BY order_index, id"
+        q += " ORDER BY order_index, col_index, id"
         cursor = await db.execute(q)
         return await cursor.fetchall()
 
@@ -1727,7 +1762,7 @@ async def get_faqs(active_only: bool = False):
         q = "SELECT * FROM faqs"
         if active_only:
             q += " WHERE is_active = 1"
-        q += " ORDER BY order_index, id"
+        q += " ORDER BY order_index, col_index, id"
         cursor = await db.execute(q)
         return await cursor.fetchall()
 
@@ -2777,7 +2812,7 @@ async def save_tutorial_order(buttons: list[dict]):
 
 
 async def _save_dynamic_order(buttons: list[dict], prefix: str, table: str):
-    """order_index رکوردها را از روی چینش دکمه‌های داینامیک ادیتور آپدیت می‌کند"""
+    """ردیف و ستون رکوردها را از روی چینش دکمه‌های داینامیک ادیتور آپدیت می‌کند"""
     async with aiosqlite.connect(DB_PATH) as db:
         for btn in buttons:
             cb = btn.get("callback_data", "")
@@ -2786,10 +2821,9 @@ async def _save_dynamic_order(buttons: list[dict], prefix: str, table: str):
             id_str = cb[len(prefix):]
             if not id_str.isdigit():
                 continue
-            order_idx = btn.get("row_index", 0) * 10 + btn.get("col_index", 0)
             await db.execute(
-                f"UPDATE {table} SET order_index = ? WHERE id = ?",
-                (order_idx, int(id_str)),
+                f"UPDATE {table} SET order_index = ?, col_index = ? WHERE id = ?",
+                (btn.get("row_index", 0), btn.get("col_index", 0), int(id_str)),
             )
         await db.commit()
 
@@ -2918,12 +2952,14 @@ async def get_tutorials_as_buttons() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            "SELECT id, title FROM tutorials WHERE is_active=1 ORDER BY order_index, id"
+            "SELECT id, title, order_index, col_index FROM tutorials "
+            "WHERE is_active=1 ORDER BY order_index, col_index, id"
         )
         rows = await cur.fetchall()
     result = [
-        _dyn("user_tutorials", f"📖 {r['title'][:30]}", f"tutorial_detail_{r['id']}", i)
-        for i, r in enumerate(rows)
+        _dyn("user_tutorials", f"📖 {r['title'][:30]}", f"tutorial_detail_{r['id']}",
+             r["order_index"], col=r["col_index"])
+        for r in rows
     ]
     if not result:
         result = [_dyn("user_tutorials", "📖 راهنمای نصب ویندوز", "tutorial_detail_1", 0)]
@@ -2936,12 +2972,14 @@ async def get_faqs_as_buttons() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
-            "SELECT id, question FROM faqs WHERE is_active=1 ORDER BY order_index, id"
+            "SELECT id, question, order_index, col_index FROM faqs "
+            "WHERE is_active=1 ORDER BY order_index, col_index, id"
         )
         rows = await cur.fetchall()
     result = [
-        _dyn("user_faqs", f"❓ {r['question'][:30]}", f"faq_detail_{r['id']}", i)
-        for i, r in enumerate(rows)
+        _dyn("user_faqs", f"❓ {r['question'][:30]}", f"faq_detail_{r['id']}",
+             r["order_index"], col=r["col_index"])
+        for r in rows
     ]
     if not result:
         result = [_dyn("user_faqs", "❓ چطور وصل شم؟", "faq_detail_1", 0)]

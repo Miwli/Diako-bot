@@ -1282,6 +1282,10 @@ const DYNAMIC_KEYBOARDS = new Set([
   'admin_tutorial_list','admin_faqs','admin_user_list',
 ]);
 
+// کیبوردهای داینامیکی که چیدمان چندستونه رو کامل پشتیبانی می‌کنن —
+// می‌شه ردیف جدید ساخت و دکمه‌ی آماده از کاتالوگ کنار آیتم‌ها گذاشت
+const MIXED_KEYBOARDS = new Set(['user_faqs','user_tutorials']);
+
 // کیبوردهای داینامیکی که محتواشون از یه صفحه‌ی دیگه مدیریت می‌شه —
 // اینجا فقط ترتیب عوض می‌شه، افزودن/ویرایش آیتم اونجاست
 const CONTENT_MANAGE_LINKS = {
@@ -1572,9 +1576,15 @@ function renderBoard() {
   const addRowBtn = document.getElementById('add-row-btn');
   const dynBanner = document.getElementById('ke-dyn-banner');
   const dynLink   = document.getElementById('ke-dyn-banner-link');
+  const dynText   = document.getElementById('ke-dyn-banner-text');
   if (DYNAMIC_KEYBOARDS.has(currentKeyboard)) {
-    if (addRowBtn) addRowBtn.style.display = 'none';
+    const isMixed = MIXED_KEYBOARDS.has(currentKeyboard);
+    // روی کیبوردهای mixed می‌شه ردیف جدید ساخت و دکمه‌ی آماده اضافه کرد
+    if (addRowBtn) addRowBtn.style.display = isMixed ? '' : 'none';
     if (dynBanner) dynBanner.style.display = 'block';
+    if (dynText) dynText.textContent = isMixed
+      ? '{% trans "⚡ محتوای این کیبورد از دیتابیس میاد. می‌تونی چیدمان و ترتیبش رو عوض کنی، ردیف جدید بسازی و دکمه‌ی آماده کنارش بذاری." %}'
+      : '{% trans "⚡ این کیبورد داینامیکه — آیتم‌ها از دیتابیس میان. فقط ترتیب و فعال/غیرفعال رو تغییر بده." %}';
     const link = CONTENT_MANAGE_LINKS[currentKeyboard];
     if (dynLink && link) {
       dynLink.href = link.url;
@@ -1591,14 +1601,15 @@ function renderBoard() {
 }
 
 function initRowSortable(rowEl) {
-  const isDyn = DYNAMIC_KEYBOARDS.has(currentKeyboard);
+  const isDyn   = DYNAMIC_KEYBOARDS.has(currentKeyboard);
+  const isMixed = MIXED_KEYBOARDS.has(currentKeyboard);
   return Sortable.create(rowEl, {
-    // روی کیبورد داینامیک جابجایی آیتم‌های موجود مجازه، ولی افزودن دکمه‌ی جدید از کاتالوگ نه
+    // روی کیبورد داینامیک ساده فقط جابجایی مجازه؛ روی mixed افزودن دکمه‌ی آماده هم مجازه
     group: {
       name: 'keyboard',
       pull: true,
       put: (to, from, dragEl) => {
-        if (!isDyn) return true;
+        if (!isDyn || isMixed) return true;
         return !(dragEl.classList.contains('ke-cat-item') || dragEl.classList.contains('ke-staging-chip'));
       },
     },

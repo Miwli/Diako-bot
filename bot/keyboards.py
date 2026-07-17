@@ -37,6 +37,36 @@ def _kb(name: str, template_id=None) -> InlineKeyboardMarkup | None:
     return _build_from_rows(rows, template_id)
 
 
+def _merge_dynamic_grid(dyn_items: list[dict], static_name: str,
+                        fallback: list[dict]) -> InlineKeyboardMarkup:
+    """کیبورد داینامیک (سوالات/آموزش‌ها) رو با چیدمان چندستونه می‌سازه.
+
+    dyn_items: آیتم‌های داینامیک، هرکدوم dict با label/callback_data/row/col
+    static_name: نام کیبورد برای دکمه‌های ثابت (بازگشت و…) از کش
+    fallback: دکمه‌های ثابت پیش‌فرض اگه هنوز چیزی در کش نبود
+    """
+    # (row, col) → دکمه؛ داینامیک‌ها و ثابت‌ها توی یه فضای مختصات مشترک ادغام می‌شن
+    cells: list[tuple[int, int, InlineKeyboardButton]] = []
+    for it in dyn_items:
+        cells.append((it["row"], it["col"],
+                      InlineKeyboardButton(text=_strip_tg_emoji(it["label"]),
+                                           callback_data=it["callback_data"])))
+
+    static_rows = get_keyboard_rows(static_name) or fallback
+    for r in static_rows:
+        if not r.get("is_active", 1):
+            continue
+        cells.append((r.get("row_index", 999), r.get("col_index", 0),
+                      InlineKeyboardButton(text=_strip_tg_emoji(r["label"]),
+                                           callback_data=r["callback_data"])))
+
+    grid: dict[int, list[tuple[int, InlineKeyboardButton]]] = {}
+    for row, col, btn in cells:
+        grid.setdefault(row, []).append((col, btn))
+    keyboard = [[btn for _, btn in sorted(grid[k], key=lambda x: x[0])] for k in sorted(grid)]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
 # ─── منوی اصلی ────────────────────────────────────────────────────────────────
 
 def user_main_menu(rows: list[dict] | None = None) -> InlineKeyboardMarkup:
@@ -700,22 +730,26 @@ def admin_faq_item_keyboard(faq_id: int, is_active: bool) -> InlineKeyboardMarku
 # ─── آموزش‌ها (کاربر) ──────────────────────────────────────────────────────────
 
 def user_tutorials_keyboard(tutorials: list) -> InlineKeyboardMarkup:
-    rows = get_keyboard_rows("back_to_tutorials")
-    back_label = rows[0]["label"] if rows else "🔙 بازگشت"
-    faqs_rows  = get_keyboard_rows("back_to_faqs")
-    faqs_label = faqs_rows[0]["label"] if faqs_rows else "❓ سوالات متداول"
-    result = [[InlineKeyboardButton(text=t["title"], callback_data=f"tutorial_view_{t['id']}")] for t in tutorials]
-    result.append([InlineKeyboardButton(text=faqs_label, callback_data="user_faqs")])
-    result.append([InlineKeyboardButton(text=back_label, callback_data="back_to_start")])
-    return InlineKeyboardMarkup(inline_keyboard=result)
+    dyn = [
+        {"label": t["title"], "callback_data": f"tutorial_view_{t['id']}",
+         "row": t["order_index"], "col": t["col_index"]}
+        for t in tutorials
+    ]
+    fallback = [
+        {"label": "❓ سوالات متداول", "callback_data": "user_faqs",     "row_index": 998, "col_index": 0},
+        {"label": "🔙 بازگشت",        "callback_data": "back_to_start", "row_index": 999, "col_index": 0},
+    ]
+    return _merge_dynamic_grid(dyn, "user_tutorials", fallback)
 
 
 def user_faqs_keyboard(faqs: list) -> InlineKeyboardMarkup:
-    rows = get_keyboard_rows("back_to_faqs")
-    back_label = rows[0]["label"] if rows else "🔙 بازگشت"
-    result = [[InlineKeyboardButton(text=f["question"], callback_data=f"faq_view_{f['id']}")] for f in faqs]
-    result.append([InlineKeyboardButton(text=back_label, callback_data="tutorial")])
-    return InlineKeyboardMarkup(inline_keyboard=result)
+    dyn = [
+        {"label": f["question"], "callback_data": f"faq_view_{f['id']}",
+         "row": f["order_index"], "col": f["col_index"]}
+        for f in faqs
+    ]
+    fallback = [{"label": "🔙 بازگشت", "callback_data": "tutorial", "row_index": 999, "col_index": 0}]
+    return _merge_dynamic_grid(dyn, "user_faqs", fallback)
 
 
 def back_to_tutorials_keyboard() -> InlineKeyboardMarkup:
