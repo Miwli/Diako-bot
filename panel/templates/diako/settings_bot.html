@@ -5,6 +5,7 @@
 
 {% block content %}
 <div class="widget-grid anim-card">
+  <div class="settings-section"><i class="ti ti-headset"></i>{% trans "ارتباط و پشتیبانی" %}</div>
   <!-- گروه‌ها -->
   <div class="widget-card">
     <div class="widget-head">
@@ -39,6 +40,7 @@
     </div>
   </div>
 
+  <div class="settings-section"><i class="ti ti-coin"></i>{% trans "درآمد و تشویق" %}</div>
   <!-- رفرال -->
   <div class="widget-card">
     <div class="widget-head">
@@ -110,6 +112,7 @@
     </div>
   </div>
 
+  <div class="settings-section"><i class="ti ti-books"></i>{% trans "محتوا و دسترسی" %}</div>
   <!-- جوین اجباری -->
   <div class="widget-card">
     <div class="widget-head">
@@ -282,6 +285,11 @@
 
 {% block extra_scripts %}
 <style>
+  .settings-section { grid-column:1 / -1; display:flex; align-items:center; gap:8px;
+    margin:10px 2px 0; font-size:12px; font-weight:600; color:var(--text-muted); letter-spacing:.2px; }
+  .settings-section:first-child { margin-top:0; }
+  .settings-section i { color:var(--accent); font-size:15px; }
+  .settings-section::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
   .ref-row { display:flex; align-items:center; gap:11px; padding:9px 0; cursor:pointer; }
   .ref-text { flex:1; display:flex; flex-direction:column; gap:2px; }
   .ref-title { font-size:12.5px; color:var(--text); }
