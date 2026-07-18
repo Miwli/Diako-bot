@@ -1525,6 +1525,13 @@ def bot_settings_action(request):
         async_to_sync(apply_free_test_to_all)(duration, traffic)
         return JsonResponse({'ok': True})
 
+    if action == 'save_ticket_msg':
+        text = (data.get('text') or '').strip()
+        async_to_sync(set_setting)('support_ticket_msg', text)
+        # panel edits plain text; drop any Telegram entities saved from the bot
+        async_to_sync(set_setting)('support_ticket_msg_entities', '')
+        return JsonResponse({'ok': True})
+
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 

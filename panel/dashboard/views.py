@@ -435,6 +435,7 @@ def settings_bot_view(request):
             'duration': async_to_sync(get_setting)('free_test_duration') or '1',
             'traffic':  async_to_sync(get_setting)('free_test_traffic') or '1',
         },
+        'ticket_msg': async_to_sync(get_setting)('support_ticket_msg') or '',
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

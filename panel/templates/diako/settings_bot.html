@@ -25,6 +25,20 @@
     </div>
   </div>
 
+  <!-- پیام اول تیکت -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-message-2"></i>{% trans "پیام اول تیکت" %}</div>
+    </div>
+    <div class="widget-body">
+      <p class="cell-muted" style="font-size:10px;margin-bottom:8px">{% trans "پیامی که کاربر بلافاصله بعد از ثبت تیکت می‌بیند. خالی بگذاری، پیام پیش‌فرض بات استفاده می‌شود." %}</p>
+      <textarea class="modal-textarea" id="ticketMsg" style="min-height:110px" placeholder="{% trans 'پیام پیش‌فرض بات استفاده می‌شود…' %}">{{ ticket_msg }}</textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button class="btn-primary" id="saveTicketMsgBtn" onclick="saveTicketMsg()"><i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}</button>
+      </div>
+    </div>
+  </div>
+
   <!-- رفرال -->
   <div class="widget-card">
     <div class="widget-head">
@@ -290,6 +304,19 @@ async function saveGroups() {
     action: 'save_groups',
     ticket_group: document.getElementById('ticketGroup').value,
     notif_group: document.getElementById('notifGroup').value,
+  });
+  if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
+  else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}';
+}
+
+/* ─── پیام اول تیکت ─── */
+async function saveTicketMsg() {
+  var btn = document.getElementById('saveTicketMsgBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var data = await apiPost('/diako/api/bot-settings-action/', {
+    action: 'save_ticket_msg',
+    text: document.getElementById('ticketMsg').value,
   });
   if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
   else { showToast('{% trans "خطا" %}', data.error, 'error'); }
