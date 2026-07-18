@@ -18,6 +18,13 @@
       </div>
       <p class="cell-muted" style="font-size:10px;margin:5px 0 14px">{% trans "تم پیش‌فرض برای کاربرانی که هنوز تمی انتخاب نکرده‌اند. هر کاربر می‌تواند از نوار بالا تم خودش را عوض کند." %}</p>
 
+      <label class="modal-label">{% trans "زبان پیش‌فرض" %}</label>
+      <div class="seg seg-full" id="langSeg">
+        <button type="button" class="seg-btn {% if language == 'fa' %}active{% endif %}" data-v="fa" onclick="pickSeg('langSeg', this)">فارسی</button>
+        <button type="button" class="seg-btn {% if language == 'en' %}active{% endif %}" data-v="en" onclick="pickSeg('langSeg', this)">English</button>
+      </div>
+      <p class="cell-muted" style="font-size:10px;margin:5px 0 14px">{% trans "زبان پیش‌فرض برای کاربرانی که هنوز زبانی انتخاب نکرده‌اند. هر کاربر می‌تواند از نوار بالا زبان خودش را عوض کند." %}</p>
+
       <label class="modal-label">{% trans "تقویم" %}</label>
       <div class="seg seg-full" id="calSeg">
         <button type="button" class="seg-btn {% if calendar == 'jalali' %}active{% endif %}" data-v="jalali" onclick="pickSeg('calSeg', this)">{% trans "شمسی" %}</button>
@@ -57,6 +64,7 @@ async function savePanelAppearance() {
   const data = await apiPost('/diako/api/panel-settings-action/', {
     action: 'save_appearance',
     theme: segVal('themeSeg'),
+    language: segVal('langSeg'),
     calendar: segVal('calSeg'),
   });
   if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); setTimeout(() => location.reload(), 400); }

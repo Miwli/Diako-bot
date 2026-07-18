@@ -1553,10 +1553,13 @@ def panel_settings_action(request):
     if data.get('action') == 'save_appearance':
         theme = data.get('theme')
         calendar = data.get('calendar')
+        language = data.get('language')
         if theme in ('cool', 'warm'):
             async_to_sync(set_setting)('panel_default_theme', theme)
         if calendar in ('jalali', 'gregorian'):
             async_to_sync(set_setting)('panel_default_calendar', calendar)
+        if language in ('fa', 'en'):
+            async_to_sync(set_setting)('panel_default_lang', language)
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)

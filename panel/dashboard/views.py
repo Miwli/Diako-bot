@@ -465,6 +465,7 @@ def settings_panel_view(request):
     ctx = {
         'theme':    async_to_sync(get_setting)('panel_default_theme') or 'cool',
         'calendar': async_to_sync(get_setting)('panel_default_calendar') or 'jalali',
+        'language': async_to_sync(get_setting)('panel_default_lang') or 'fa',
     }
     ctx.update(_page_ctx(request, 'settings', 'panel'))
     return render(request, 'diako/settings_panel.html', ctx)
