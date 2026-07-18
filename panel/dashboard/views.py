@@ -12,6 +12,8 @@ from django.db.models.functions import Coalesce
 from shared_lib.db import (
     get_admin_stats, get_all_keyboard_buttons, get_keyboard_actions, get_all_texts,
     get_setting, get_all_keyboard_buttons_grouped,
+    get_admins, get_admin_by_panel_user, count_admin_actions, can_manage_admins,
+    role_default_permissions, ADMIN_SECTIONS, ADMIN_ROLES,
 )
 from .models import (
     Orders, Servers, Users, Plans, DiscountCodes, TopUpRequests, Transactions,
@@ -43,6 +45,7 @@ def _page_ctx(request, nav, tab=None):
         ],
         'settings': [
             ('bot',      'diako_settings_bot',    _('ربات'),              'ti-robot'),
+            ('admins',   'diako_settings_admins', _('ادمین‌ها'),           'ti-user-shield'),
             ('database', 'diako_import_export',   _('دیتابیس'),           'ti-database'),
         ],
         'customize': [
@@ -427,3 +430,103 @@ def settings_bot_view(request):
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)
+
+
+# ─── admins (access control) ─────────────────────────────────────────────────
+
+def _bootstrap_admin_ids():
+    """Owner telegram ids from .env — always sudo, locked in the UI."""
+    raw = os.environ.get('ADMIN_IDS', '')
+    if not raw:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(dj_settings.BASE_DIR)), 'bot', '.env')
+        try:
+            with open(env_path) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('ADMIN_IDS='):
+                        raw = line[len('ADMIN_IDS='):].strip()
+                        break
+        except OSError:
+            pass
+    ids = []
+    for part in raw.replace(',', ' ').split():
+        part = part.strip()
+        if part.lstrip('-').isdigit():
+            ids.append(int(part))
+    return ids
+
+
+def can_manage_admins_request(request):
+    """Panel-side gate for the admins tab: Django superuser, or a linked
+    admin whose permissions allow managing admins."""
+    if request.user.is_superuser:
+        return True
+    admin = async_to_sync(get_admin_by_panel_user)(request.user.id)
+    return can_manage_admins(admin) if admin else False
+
+
+def _is_online(last_seen):
+    if not last_seen:
+        return False
+    try:
+        from datetime import datetime, timezone, timedelta
+        dt = datetime.fromisoformat(str(last_seen).replace('Z', '+00:00'))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt) < timedelta(minutes=5)
+    except (ValueError, TypeError):
+        return False
+
+
+@login_required
+def settings_admins_view(request):
+    if not can_manage_admins_request(request):
+        return redirect('diako_settings_bot')
+
+    db_admins = async_to_sync(get_admins)()
+    bootstrap_ids = set(_bootstrap_admin_ids())
+    known_tg = {a['telegram_id'] for a in db_admins if a['telegram_id']}
+
+    from django.contrib.auth.models import User
+    panel_usernames = {
+        u['id']: u['username']
+        for u in User.objects.filter(
+            id__in=[a['panel_user_id'] for a in db_admins if a['panel_user_id']]
+        ).values('id', 'username')
+    }
+
+    admins = []
+    edit_data = {}
+    # bootstrap owners that are not yet a managed row
+    for tid in bootstrap_ids:
+        if tid in known_tg:
+            continue
+        admins.append({
+            'id': None, 'telegram_id': tid, 'display_name': None,
+            'role': 'sudo', 'is_bot_admin': 1, 'is_panel_admin': 0,
+            'status': 1, 'note': None, 'created_at': None, 'last_seen': None,
+            'is_owner': True, 'online': False, 'action_count': 0, 'panel_username': None,
+        })
+    for a in db_admins:
+        a['is_owner'] = a['telegram_id'] in bootstrap_ids
+        a['online'] = _is_online(a.get('last_seen'))
+        a['action_count'] = async_to_sync(count_admin_actions)(a['id'])
+        a['panel_username'] = panel_usernames.get(a['panel_user_id'])
+        admins.append(a)
+        edit_data[a['id']] = {
+            'id': a['id'], 'display_name': a['display_name'] or '',
+            'telegram_id': a['telegram_id'], 'role': a['role'],
+            'is_bot_admin': a['is_bot_admin'], 'is_panel_admin': a['is_panel_admin'],
+            'note': a['note'] or '', 'permissions': a['permissions'],
+            'panel_username': a['panel_username'] or '',
+        }
+
+    ctx = {
+        'admins': admins,
+        'sections': ADMIN_SECTIONS,
+        'roles': ADMIN_ROLES,
+        'role_presets': json.dumps({r: role_default_permissions(r) for r in ADMIN_ROLES}),
+        'admins_json': json.dumps(edit_data),
+    }
+    ctx.update(_page_ctx(request, 'settings', 'admins'))
+    return render(request, 'diako/settings_admins.html', ctx)

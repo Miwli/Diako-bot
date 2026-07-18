@@ -1,0 +1,271 @@
+{% extends 'diako/base.html' %}
+{% load static i18n diako_tags %}
+
+{% block title %}{% trans "ادمین‌ها" %} — {% trans "دیاکو" %}{% endblock %}
+
+{% block content %}
+<div class="widget-grid anim-card">
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-user-shield"></i>{% trans "ادمین‌ها و دسترسی" %}</div>
+      <div class="widget-head-acts">
+        <button class="btn-ghost" onclick="openAddAdminModal()"><i class="ti ti-plus"></i> {% trans "ادمین" %}</button>
+      </div>
+    </div>
+    <div class="widget-body">
+      <p class="cell-muted" style="margin-bottom:12px">{% trans "ادمین‌های بات و پنل را اینجا مدیریت کن. نقش، دسترسی هر بخش را از پیش پر می‌کند و بعد قابل تغییر است." %}</p>
+      {% if admins %}
+      <div class="item-list">
+        {% for a in admins %}
+        <div class="item-row {% if not a.status %}inactive{% endif %}">
+          <div class="item-ico" style="position:relative">
+            <i class="ti ti-user"></i>
+            {% if a.online %}<span title="{% trans 'آنلاین' %}" style="position:absolute;bottom:-1px;left:-1px;width:9px;height:9px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 2px var(--bg-base)"></span>{% endif %}
+          </div>
+          <div class="item-text">
+            <div class="item-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span>{{ a.display_name|default:a.telegram_id|default:a.panel_username|default:"—" }}</span>
+              {% if a.role == 'sudo' %}<span class="chip" style="padding:2px 9px;font-size:10px;color:#ffd479"><i class="ti ti-crown" style="color:#ffd479"></i>{% trans "سودو" %}</span>
+              {% elif a.role == 'full' %}<span class="chip" style="padding:2px 9px;font-size:10px"><i class="ti ti-shield-check"></i>{% trans "فول‌اکسس" %}</span>
+              {% else %}<span class="chip" style="padding:2px 9px;font-size:10px;color:var(--text-muted)"><i class="ti ti-user-check" style="color:var(--text-muted)"></i>{% trans "استاندارد" %}</span>{% endif %}
+              {% if a.is_owner %}<span class="chip" style="padding:2px 9px;font-size:10px;color:#ff9f6b"><i class="ti ti-lock" style="color:#ff9f6b"></i>{% trans "مالک (env)" %}</span>{% endif %}
+              {% if not a.status %}<span class="chip" style="padding:2px 9px;font-size:10px;color:var(--text-muted)">{% trans "غیرفعال" %}</span>{% endif %}
+            </div>
+            <div class="item-sub" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              {% if a.is_bot_admin %}<span><i class="ti ti-brand-telegram" style="font-size:12px"></i> {% trans "بات" %}{% if a.telegram_id %} · {{ a.telegram_id }}{% endif %}</span>{% endif %}
+              {% if a.is_panel_admin %}<span><i class="ti ti-layout-dashboard" style="font-size:12px"></i> {% trans "پنل" %}{% if a.panel_username %} · {{ a.panel_username }}{% endif %}</span>{% endif %}
+              {% if a.created_at %}<span title="{% trans 'تاریخ افزودن' %}"><i class="ti ti-calendar-plus" style="font-size:12px"></i> {{ a.created_at|jdate:'short' }}</span>{% endif %}
+              <span title="{% trans 'شمار اقدامات' %}"><i class="ti ti-activity" style="font-size:12px"></i> {{ a.action_count }}</span>
+              {% if a.last_seen %}<span title="{% trans 'آخرین فعالیت' %}"><i class="ti ti-clock" style="font-size:12px"></i> {{ a.last_seen|jdate }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="row-acts">
+            {% if a.is_owner %}
+            <span class="cell-muted" style="font-size:11px;padding:0 6px" title="{% trans 'از فایل env مدیریت می‌شود' %}"><i class="ti ti-lock"></i></span>
+            {% else %}
+            <button class="row-btn" title="{% trans 'ویرایش' %}" onclick="openEditAdminModal({{ a.id }})"><i class="ti ti-edit"></i></button>
+            <button class="row-btn" title="{% trans 'فعال/غیرفعال' %}" onclick="admToggle({{ a.id }})"><i class="ti ti-power"></i></button>
+            <button class="row-btn danger" title="{% trans 'حذف' %}" onclick="admDelete({{ a.id }}, '{{ a.display_name|default:a.telegram_id|default:a.panel_username|escapejs }}')"><i class="ti ti-trash"></i></button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-user-off"></i></div>
+        <div class="empty-title">{% trans "هنوز ادمینی اضافه نشده" %}</div>
+        <div class="empty-sub">{% trans "ادمین بات یا پنل اضافه کن و سطح دسترسی‌اش را تعیین کن." %}</div>
+        <button class="btn-primary" onclick="openAddAdminModal()"><i class="ti ti-plus"></i> {% trans "افزودن ادمین" %}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal-bg" id="adminModal">
+  <div class="modal-box wide">
+    <div class="modal-title"><i class="ti ti-user-shield"></i><span id="admModalTitle">{% trans "ادمین جدید" %}</span></div>
+
+    <label class="modal-label">{% trans "اسم نمایشی" %}</label>
+    <input class="modal-input" id="admName" placeholder="{% trans 'مثلاً: پشتیبانی شب' %}">
+
+    <!-- platforms -->
+    <label class="modal-label" style="margin-top:12px">{% trans "دسترسی در" %}</label>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label class="perm-toggle"><span><i class="ti ti-brand-telegram"></i> {% trans "بات" %}</span>
+        <span class="switch"><input type="checkbox" id="admBot" onchange="syncPlatformFields()"><span class="track"></span></span></label>
+      <label class="perm-toggle"><span><i class="ti ti-layout-dashboard"></i> {% trans "پنل وب" %}</span>
+        <span class="switch"><input type="checkbox" id="admPanel" onchange="syncPlatformFields()"><span class="track"></span></span></label>
+    </div>
+
+    <!-- bot fields -->
+    <div id="botFields" style="display:none;margin-top:10px">
+      <label class="modal-label">{% trans "آیدی عددی تلگرام" %}</label>
+      <input class="modal-input" id="admTgId" inputmode="numeric" placeholder="123456789" style="direction:ltr;text-align:left">
+    </div>
+
+    <!-- panel fields -->
+    <div id="panelFields" style="display:none;margin-top:10px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:150px">
+          <label class="modal-label">{% trans "یوزرنیم پنل" %}</label>
+          <input class="modal-input" id="admUser" autocomplete="off" placeholder="username" style="direction:ltr;text-align:left">
+        </div>
+        <div style="flex:1;min-width:150px">
+          <label class="modal-label">{% trans "پسورد" %}</label>
+          <input class="modal-input" id="admPass" type="password" autocomplete="new-password" placeholder="••••••" style="direction:ltr;text-align:left">
+        </div>
+      </div>
+      <p class="cell-muted" id="admPassHint" style="font-size:10px;margin-top:4px"></p>
+    </div>
+
+    <!-- role -->
+    <label class="modal-label" style="margin-top:14px">{% trans "نقش" %}</label>
+    <div class="seg" id="admRoleSeg" style="width:100%">
+      <button type="button" class="seg-btn" data-role="sudo" onclick="selectRole('sudo')">{% trans "سودو" %}</button>
+      <button type="button" class="seg-btn" data-role="full" onclick="selectRole('full')">{% trans "فول‌اکسس" %}</button>
+      <button type="button" class="seg-btn" data-role="standard" onclick="selectRole('standard')">{% trans "استاندارد" %}</button>
+    </div>
+    <p class="cell-muted" style="font-size:10px;margin-top:5px">{% trans "نقش، تیک‌های زیر را پیش‌پر می‌کند؛ می‌توانی جداگانه تغییرشان دهی." %}</p>
+
+    <!-- permission matrix -->
+    <label class="modal-label" style="margin-top:12px">{% trans "دسترسی بخش‌ها" %}</label>
+    <div class="perm-grid">
+      {% for key, label in sections %}
+      <label class="perm-toggle"><span>{{ label }}</span>
+        <span class="switch"><input type="checkbox" class="perm-sec" data-key="{{ key }}" id="perm_{{ key }}"><span class="track"></span></span></label>
+      {% endfor %}
+    </div>
+
+    <!-- admin management -->
+    <label class="modal-label" style="margin-top:12px">{% trans "مدیریت ادمین‌ها" %}</label>
+    <div class="perm-grid">
+      <label class="perm-toggle"><span>{% trans "دیدن ادمین‌ها" %}</span>
+        <span class="switch"><input type="checkbox" id="mgmt_can_view"><span class="track"></span></span></label>
+      <label class="perm-toggle"><span>{% trans "افزودن/ویرایش ادمین" %}</span>
+        <span class="switch"><input type="checkbox" id="mgmt_can_edit"><span class="track"></span></span></label>
+      <label class="perm-toggle"><span>{% trans "مدیریت سودوها" %}</span>
+        <span class="switch"><input type="checkbox" id="mgmt_can_manage_sudo"><span class="track"></span></span></label>
+    </div>
+
+    <label class="modal-label" style="margin-top:12px">{% trans "یادداشت" %}</label>
+    <textarea class="modal-textarea" id="admNote" placeholder="{% trans 'اختیاری…' %}"></textarea>
+
+    <div class="modal-acts" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('adminModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="admConfirmBtn" onclick="confirmAdmin()">{% trans "ذخیره" %}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .perm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px 10px; }
+  .perm-toggle { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 11px; border-radius:10px; background:rgba(0,0,0,0.22);
+    border:1px solid rgba(255,255,255,0.06); font-size:12px; cursor:pointer; }
+  .perm-toggle span:first-child { display:flex; align-items:center; gap:6px; }
+  .perm-toggle i { color:var(--accent); font-size:14px; }
+</style>
+<script>
+const ADMINS_DATA = {{ admins_json|safe }};
+const ROLE_PRESETS = {{ role_presets|safe }};
+let admEditId = null;
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function syncPlatformFields() {
+  document.getElementById('botFields').style.display = document.getElementById('admBot').checked ? 'block' : 'none';
+  document.getElementById('panelFields').style.display = document.getElementById('admPanel').checked ? 'block' : 'none';
+}
+
+function selectRole(role) {
+  document.querySelectorAll('#admRoleSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+  applyPreset(role);
+}
+function currentRole() {
+  const b = document.querySelector('#admRoleSeg .seg-btn.active');
+  return b ? b.dataset.role : 'standard';
+}
+
+// fill the matrix from a role preset (option A: bot == panel)
+function applyPreset(role) {
+  const p = ROLE_PRESETS[role]; if (!p) return;
+  const sec = p.bot || {};
+  document.querySelectorAll('.perm-sec').forEach(cb => { cb.checked = !!sec[cb.dataset.key]; });
+  const m = p.admin_management || {};
+  document.getElementById('mgmt_can_view').checked = !!m.can_view;
+  document.getElementById('mgmt_can_edit').checked = !!m.can_edit;
+  document.getElementById('mgmt_can_manage_sudo').checked = !!m.can_manage_sudo;
+}
+
+function fillMatrix(perms) {
+  const sec = (perms && perms.bot) || {};
+  document.querySelectorAll('.perm-sec').forEach(cb => { cb.checked = !!sec[cb.dataset.key]; });
+  const m = (perms && perms.admin_management) || {};
+  document.getElementById('mgmt_can_view').checked = !!m.can_view;
+  document.getElementById('mgmt_can_edit').checked = !!m.can_edit;
+  document.getElementById('mgmt_can_manage_sudo').checked = !!m.can_manage_sudo;
+}
+
+function openAddAdminModal() {
+  admEditId = null;
+  document.getElementById('admModalTitle').textContent = '{% trans "ادمین جدید" %}';
+  document.getElementById('admName').value = '';
+  document.getElementById('admTgId').value = '';
+  document.getElementById('admUser').value = '';
+  document.getElementById('admPass').value = '';
+  document.getElementById('admNote').value = '';
+  document.getElementById('admBot').checked = false;
+  document.getElementById('admPanel').checked = false;
+  document.getElementById('admPassHint').textContent = '';
+  syncPlatformFields();
+  selectRole('standard');
+  document.getElementById('adminModal').classList.add('open');
+}
+
+function openEditAdminModal(id) {
+  const a = ADMINS_DATA[id]; if (!a) return;
+  admEditId = id;
+  document.getElementById('admModalTitle').textContent = '{% trans "ویرایش ادمین" %}';
+  document.getElementById('admName').value = a.display_name || '';
+  document.getElementById('admTgId').value = a.telegram_id || '';
+  document.getElementById('admUser').value = a.panel_username || '';
+  document.getElementById('admPass').value = '';
+  document.getElementById('admNote').value = a.note || '';
+  document.getElementById('admBot').checked = !!a.is_bot_admin;
+  document.getElementById('admPanel').checked = !!a.is_panel_admin;
+  document.getElementById('admPassHint').textContent = a.panel_username ? '{% trans "برای تغییر پسورد پرش کن، خالی بگذاری تغییری نمی‌کند." %}' : '';
+  syncPlatformFields();
+  // set role button without re-applying preset (keep saved matrix)
+  document.querySelectorAll('#admRoleSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.role === (a.role || 'standard')));
+  fillMatrix(a.permissions);
+  document.getElementById('adminModal').classList.add('open');
+}
+
+function collectPayload() {
+  const sections = {};
+  document.querySelectorAll('.perm-sec').forEach(cb => { sections[cb.dataset.key] = cb.checked; });
+  return {
+    action: admEditId ? 'update' : 'add',
+    id: admEditId || undefined,
+    display_name: document.getElementById('admName').value.trim(),
+    is_bot_admin: document.getElementById('admBot').checked,
+    is_panel_admin: document.getElementById('admPanel').checked,
+    telegram_id: document.getElementById('admTgId').value.trim(),
+    username: document.getElementById('admUser').value.trim(),
+    password: document.getElementById('admPass').value,
+    role: currentRole(),
+    sections: sections,
+    admin_management: {
+      can_view: document.getElementById('mgmt_can_view').checked,
+      can_edit: document.getElementById('mgmt_can_edit').checked,
+      can_manage_sudo: document.getElementById('mgmt_can_manage_sudo').checked,
+    },
+    note: document.getElementById('admNote').value.trim(),
+  };
+}
+
+async function admApi(body, confirmMsg) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  const data = await apiPost('/diako/api/admin-action/', body);
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+}
+
+async function confirmAdmin() {
+  const btn = document.getElementById('admConfirmBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const data = await apiPost('/diako/api/admin-action/', collectPayload());
+  if (data.ok) { location.reload(); } else { showToast('{% trans "خطا" %}', data.error, 'error'); btn.disabled = false; btn.innerHTML = '{% trans "ذخیره" %}'; }
+}
+
+function admToggle(id) { admApi({ action: 'toggle', id: id }); }
+function admDelete(id, name) { admApi({ action: 'delete', id: id }, '{% trans "حذف ادمین" %} «' + name + '»؟'); }
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal('adminModal'); });
+</script>
+{% endblock %}

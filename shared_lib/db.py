@@ -1,4 +1,5 @@
 import aiosqlite
+import json
 import os
 
 # در محیط Docker، DB_PATH از متغیر محیطی خوانده می‌شود تا بات و پنل
@@ -509,9 +510,41 @@ async def init_db():
         """)
         await db.commit()
 
+    # admin accounts (unified: same row can hold bot access and/or panel access)
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS admins (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id    INTEGER UNIQUE,
+                panel_user_id  INTEGER,
+                display_name   TEXT,
+                role           TEXT NOT NULL DEFAULT 'standard',
+                is_bot_admin   INTEGER NOT NULL DEFAULT 0,
+                is_panel_admin INTEGER NOT NULL DEFAULT 0,
+                permissions    TEXT NOT NULL DEFAULT '{}',
+                status         INTEGER NOT NULL DEFAULT 1,
+                note           TEXT,
+                added_by       INTEGER,
+                created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen      TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS admin_audit_log (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                admin_id   INTEGER,
+                actor_name TEXT,
+                action     TEXT NOT NULL,
+                target     TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+
     await _seed_keyboard_buttons()
     await init_texts_cache()
     await init_keyboards_cache()
+    await init_admins_cache()
 
 # ─── توابع تیکت ──────────────────────────────
 
@@ -839,6 +872,241 @@ async def set_setting(key: str, value: str):
             (key, value)
         )
         await db.commit()
+
+# ─── admin accounts & permissions ───────────────
+
+# section keys enforced across bot and panel; labels are user-facing (kept Persian)
+ADMIN_SECTIONS = [
+    ("orders",    "سفارش‌ها"),
+    ("users",     "کاربران"),
+    ("servers",   "زیرساخت"),
+    ("plans",     "پلن‌ها"),
+    ("finance",   "مالی"),
+    ("discounts", "تخفیف‌ها"),
+    ("referral",  "رفرال"),
+    ("support",   "پشتیبانی"),
+    ("broadcast", "پیام همگانی"),
+    ("tutorials", "آموزش‌ها"),
+    ("extra",     "درخواست‌های اضافه"),
+    ("stats",     "آمار"),
+    ("settings",  "تنظیمات"),
+]
+
+ADMIN_ROLES = ("sudo", "full", "standard")
+
+_SECTION_KEYS = [k for k, _label in ADMIN_SECTIONS]
+
+
+def _sections_all(value: bool) -> dict:
+    return {k: value for k in _SECTION_KEYS}
+
+
+def role_default_permissions(role: str) -> dict:
+    """Default permissions for a role. One section matrix is mirrored to both
+    bot and panel (option A); the bot/panel split stays in the stored shape so
+    per-platform editing can be unlocked later without a data migration."""
+    if role == "sudo":
+        sections = _sections_all(True)
+        mgmt = {"can_view": True, "can_edit": True, "can_manage_sudo": True}
+    elif role == "full":
+        sections = _sections_all(True)
+        mgmt = {"can_view": False, "can_edit": False, "can_manage_sudo": False}
+    else:  # standard
+        sections = _sections_all(False)
+        sections["orders"] = True
+        sections["support"] = True
+        mgmt = {"can_view": False, "can_edit": False, "can_manage_sudo": False}
+    return {"bot": dict(sections), "panel": dict(sections), "admin_management": mgmt}
+
+
+def build_permissions(sections: dict, admin_management: dict) -> dict:
+    """Option A: a single section matrix applied to both bot and panel."""
+    clean = {k: bool(sections.get(k)) for k in _SECTION_KEYS}
+    mgmt = {
+        "can_view":        bool(admin_management.get("can_view")),
+        "can_edit":        bool(admin_management.get("can_edit")),
+        "can_manage_sudo": bool(admin_management.get("can_manage_sudo")),
+    }
+    return {"bot": dict(clean), "panel": dict(clean), "admin_management": mgmt}
+
+
+def _parse_permissions(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = json.loads(raw) if raw else {}
+    except (ValueError, TypeError):
+        data = {}
+    return data if isinstance(data, dict) else {}
+
+
+def has_permission(admin: dict, platform: str, section: str) -> bool:
+    """Whether an admin row grants a section on a platform (bot/panel)."""
+    if not admin or admin.get("status") == 0:
+        return False
+    if admin.get("role") == "sudo":
+        return True
+    perms = _parse_permissions(admin.get("permissions"))
+    return bool((perms.get(platform) or {}).get(section))
+
+
+def can_manage_admins(admin: dict) -> bool:
+    if not admin:
+        return False
+    if admin.get("role") == "sudo":
+        return True
+    perms = _parse_permissions(admin.get("permissions"))
+    return bool((perms.get("admin_management") or {}).get("can_edit"))
+
+
+def _admin_row_to_dict(row) -> dict:
+    d = dict(row)
+    d["permissions"] = _parse_permissions(d.get("permissions"))
+    return d
+
+
+async def get_admins() -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM admins ORDER BY id")
+        return [_admin_row_to_dict(r) for r in await cursor.fetchall()]
+
+
+async def get_admin(admin_id: int) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM admins WHERE id = ?", (admin_id,))
+        row = await cursor.fetchone()
+        return _admin_row_to_dict(row) if row else None
+
+
+async def get_admin_by_telegram(telegram_id: int) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM admins WHERE telegram_id = ?", (telegram_id,))
+        row = await cursor.fetchone()
+        return _admin_row_to_dict(row) if row else None
+
+
+async def get_admin_by_panel_user(panel_user_id: int) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute("SELECT * FROM admins WHERE panel_user_id = ?", (panel_user_id,))
+        row = await cursor.fetchone()
+        return _admin_row_to_dict(row) if row else None
+
+
+async def add_admin(display_name=None, role="standard", telegram_id=None,
+                    panel_user_id=None, is_bot_admin=0, is_panel_admin=0,
+                    permissions=None, note=None, added_by=None) -> int:
+    if permissions is None:
+        permissions = role_default_permissions(role)
+    perms_json = json.dumps(permissions)
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """INSERT INTO admins
+               (telegram_id, panel_user_id, display_name, role, is_bot_admin,
+                is_panel_admin, permissions, note, added_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (telegram_id, panel_user_id, display_name, role, int(is_bot_admin),
+             int(is_panel_admin), perms_json, note, added_by)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def update_admin(admin_id: int, **fields) -> None:
+    if not fields:
+        return
+    if isinstance(fields.get("permissions"), (dict, list)):
+        fields["permissions"] = json.dumps(fields["permissions"])
+    cols = ", ".join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [admin_id]
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(f"UPDATE admins SET {cols} WHERE id = ?", values)
+        await db.commit()
+
+
+async def set_admin_status(admin_id: int, status: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE admins SET status = ? WHERE id = ?", (int(status), admin_id))
+        await db.commit()
+
+
+async def delete_admin(admin_id: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM admins WHERE id = ?", (admin_id,))
+        await db.commit()
+
+
+async def touch_admin_last_seen(telegram_id: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE admins SET last_seen = CURRENT_TIMESTAMP WHERE telegram_id = ?",
+            (telegram_id,)
+        )
+        await db.commit()
+
+
+# in-memory cache of active bot admins (telegram_id -> admin dict), refreshed like other caches
+_admins_cache: dict[int, dict] = {}
+
+
+async def init_admins_cache() -> None:
+    global _admins_cache
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM admins WHERE is_bot_admin = 1 AND status = 1 AND telegram_id IS NOT NULL"
+        )
+        rows = await cursor.fetchall()
+        _admins_cache = {row["telegram_id"]: _admin_row_to_dict(row) for row in rows}
+
+
+async def reload_admins_cache() -> None:
+    await init_admins_cache()
+
+
+def is_bot_admin_cached(telegram_id: int) -> bool:
+    return telegram_id in _admins_cache
+
+
+def get_bot_admin_cached(telegram_id: int) -> dict | None:
+    return _admins_cache.get(telegram_id)
+
+
+async def log_admin_action(admin_id, actor_name: str, action: str, target: str = None) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO admin_audit_log (admin_id, actor_name, action, target) VALUES (?, ?, ?, ?)",
+            (admin_id, actor_name, action, target)
+        )
+        await db.commit()
+
+
+async def get_audit_log(limit: int = 100, admin_id: int = None) -> list:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        if admin_id is not None:
+            cursor = await db.execute(
+                "SELECT * FROM admin_audit_log WHERE admin_id = ? ORDER BY id DESC LIMIT ?",
+                (admin_id, limit)
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT * FROM admin_audit_log ORDER BY id DESC LIMIT ?", (limit,)
+            )
+        return [dict(r) for r in await cursor.fetchall()]
+
+
+async def count_admin_actions(admin_id: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM admin_audit_log WHERE admin_id = ?", (admin_id,)
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
 
 # ─── کارت‌های پرداخت (کارت به کارت) ─────────────
 

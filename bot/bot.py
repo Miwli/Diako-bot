@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from shared_lib.db import init_db, reload_texts_cache, reload_keyboards_cache, set_setting
+from shared_lib.db import (
+    init_db, reload_texts_cache, reload_keyboards_cache, set_setting,
+    reload_admins_cache, is_bot_admin_cached,
+)
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
 from handlers.plans import register_plan_handlers
@@ -38,7 +41,8 @@ dp = Dispatcher()
 
 def is_admin(user_id: int) -> bool:
     """چک می‌کنه آیا کاربر ادمین است یا نه"""
-    return user_id in ADMIN_IDS
+    # bootstrap owners from .env, plus DB-managed bot admins (from cache)
+    return user_id in ADMIN_IDS or is_bot_admin_cached(user_id)
 
 dp.message.outer_middleware(ForceJoinMiddleware())
 dp.callback_query.outer_middleware(ForceJoinMiddleware())
@@ -66,6 +70,7 @@ async def _texts_refresh_loop():
         await asyncio.sleep(10)
         await reload_texts_cache()
         await reload_keyboards_cache()
+        await reload_admins_cache()
 
 
 async def _heartbeat_loop():

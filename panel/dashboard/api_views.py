@@ -18,6 +18,12 @@ from shared_lib.db import (
 )
 from shared_lib.db import update_order_status, delete_order
 from shared_lib.db import (
+    get_admins, get_admin, add_admin, update_admin, set_admin_status, delete_admin,
+    get_admin_by_panel_user, get_admin_by_telegram, build_permissions,
+    can_manage_admins, log_admin_action, role_default_permissions,
+    ADMIN_SECTIONS, ADMIN_ROLES,
+)
+from shared_lib.db import (
     get_user, ban_user, unban_user, admin_adjust_balance,
     get_transactions, get_free_test_uses,
     get_user_ticket_counts, get_user_order_counts, get_referral_stats,
@@ -1457,3 +1463,197 @@ def global_search(request):
         })
 
     return JsonResponse({'results': results[:14]})
+
+
+# ─── admins (access control) ─────────────────────────────────────────────────
+
+def _bootstrap_ids():
+    raw = os.environ.get('ADMIN_IDS', '')
+    if not raw:
+        env_path = pathlib.Path(__file__).parent.parent.parent / 'bot' / '.env'
+        try:
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line.startswith('ADMIN_IDS='):
+                    raw = line[len('ADMIN_IDS='):].strip()
+                    break
+        except Exception:
+            pass
+    ids = set()
+    for part in raw.replace(',', ' ').split():
+        if part.strip().lstrip('-').isdigit():
+            ids.add(int(part))
+    return ids
+
+
+def _panel_can_manage(request):
+    if request.user.is_superuser:
+        return True
+    admin = async_to_sync(get_admin_by_panel_user)(request.user.id)
+    return can_manage_admins(admin) if admin else False
+
+
+def _actor(request):
+    """(admin_id, name) of the acting panel user, for the audit log."""
+    admin = async_to_sync(get_admin_by_panel_user)(request.user.id)
+    if admin:
+        return admin['id'], (admin.get('display_name') or request.user.username)
+    return None, request.user.username
+
+
+@require_http_methods(["POST"])
+@login_required
+def admin_action(request):
+    if not _panel_can_manage(request):
+        return JsonResponse({'ok': False, 'error': 'دسترسی مدیریت ادمین‌ها را نداری'}, status=403)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    from django.contrib.auth.models import User
+
+    action = data.get('action')
+    admin_id = data.get('id')
+    actor_id, actor_name = _actor(request)
+
+    def _clean_perms(d):
+        role = d.get('role') or 'standard'
+        if role not in ADMIN_ROLES:
+            role = 'standard'
+        sections = d.get('sections') or {}
+        mgmt = d.get('admin_management') or {}
+        if not sections and not mgmt:
+            return role, role_default_permissions(role)
+        return role, build_permissions(sections, mgmt)
+
+    if action == 'add':
+        display_name = (data.get('display_name') or '').strip() or None
+        is_bot = 1 if data.get('is_bot_admin') else 0
+        is_panel = 1 if data.get('is_panel_admin') else 0
+        note = (data.get('note') or '').strip() or None
+        if not is_bot and not is_panel:
+            return JsonResponse({'ok': False, 'error': 'حداقل یکی از بات یا پنل را انتخاب کن'})
+        role, permissions = _clean_perms(data)
+
+        telegram_id = None
+        if is_bot:
+            tid = str(data.get('telegram_id') or '').strip()
+            if not tid.lstrip('-').isdigit():
+                return JsonResponse({'ok': False, 'error': 'آیدی تلگرام باید عددی باشد'})
+            telegram_id = int(tid)
+            if telegram_id in _bootstrap_ids():
+                return JsonResponse({'ok': False, 'error': 'این آیدی از قبل مالک (env) است'})
+            if async_to_sync(get_admin_by_telegram)(telegram_id):
+                return JsonResponse({'ok': False, 'error': 'ادمینی با این آیدی تلگرام وجود دارد'})
+
+        panel_user_id = None
+        if is_panel:
+            username = (data.get('username') or '').strip()
+            password = data.get('password') or ''
+            if not username or not password:
+                return JsonResponse({'ok': False, 'error': 'یوزرنیم و پسورد پنل لازم است'})
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({'ok': False, 'error': 'این یوزرنیم قبلاً ثبت شده'})
+            user = User.objects.create_user(username=username, password=password)
+            user.is_staff = True
+            user.is_superuser = (role == 'sudo')
+            user.save()
+            panel_user_id = user.id
+
+        new_id = async_to_sync(add_admin)(
+            display_name=display_name, role=role, telegram_id=telegram_id,
+            panel_user_id=panel_user_id, is_bot_admin=is_bot, is_panel_admin=is_panel,
+            permissions=permissions, note=note, added_by=actor_id,
+        )
+        async_to_sync(log_admin_action)(
+            actor_id, actor_name, 'admin.add',
+            display_name or (str(telegram_id) if telegram_id else data.get('username')))
+        return JsonResponse({'ok': True, 'id': new_id})
+
+    # everything below targets an existing managed admin
+    if not admin_id:
+        return JsonResponse({'ok': False, 'error': 'id الزامی است'}, status=400)
+    target = async_to_sync(get_admin)(int(admin_id))
+    if not target:
+        return JsonResponse({'ok': False, 'error': 'ادمین پیدا نشد'}, status=404)
+    if target['telegram_id'] in _bootstrap_ids():
+        return JsonResponse({'ok': False, 'error': 'مالک اصلی (env) قابل تغییر نیست'})
+
+    if action == 'toggle':
+        new_status = 0 if target['status'] else 1
+        async_to_sync(set_admin_status)(target['id'], new_status)
+        if target['panel_user_id']:
+            User.objects.filter(id=target['panel_user_id']).update(is_active=bool(new_status))
+        async_to_sync(log_admin_action)(actor_id, actor_name, 'admin.toggle',
+                                        target.get('display_name') or str(target['id']))
+        return JsonResponse({'ok': True})
+
+    if action == 'update':
+        display_name = (data.get('display_name') or '').strip() or None
+        is_bot = 1 if data.get('is_bot_admin') else 0
+        is_panel = 1 if data.get('is_panel_admin') else 0
+        note = (data.get('note') or '').strip() or None
+        if not is_bot and not is_panel:
+            return JsonResponse({'ok': False, 'error': 'حداقل یکی از بات یا پنل را انتخاب کن'})
+        role, permissions = _clean_perms(data)
+
+        fields = {
+            'display_name': display_name, 'role': role, 'permissions': permissions,
+            'is_bot_admin': is_bot, 'is_panel_admin': is_panel, 'note': note,
+        }
+
+        if is_bot:
+            tid = str(data.get('telegram_id') or '').strip()
+            if not tid.lstrip('-').isdigit():
+                return JsonResponse({'ok': False, 'error': 'آیدی تلگرام باید عددی باشد'})
+            telegram_id = int(tid)
+            existing = async_to_sync(get_admin_by_telegram)(telegram_id)
+            if existing and existing['id'] != target['id']:
+                return JsonResponse({'ok': False, 'error': 'ادمین دیگری با این آیدی تلگرام هست'})
+            fields['telegram_id'] = telegram_id
+        else:
+            fields['telegram_id'] = None
+
+        username = (data.get('username') or '').strip()
+        password = data.get('password') or ''
+        if is_panel:
+            if target['panel_user_id']:
+                user = User.objects.filter(id=target['panel_user_id']).first()
+                if user:
+                    if username and username != user.username:
+                        if User.objects.filter(username=username).exclude(id=user.id).exists():
+                            return JsonResponse({'ok': False, 'error': 'این یوزرنیم قبلاً ثبت شده'})
+                        user.username = username
+                    if password:
+                        user.set_password(password)
+                    user.is_superuser = (role == 'sudo')
+                    user.is_active = True
+                    user.save()
+            else:
+                if not username or not password:
+                    return JsonResponse({'ok': False, 'error': 'برای دسترسی پنل، یوزرنیم و پسورد لازم است'})
+                if User.objects.filter(username=username).exists():
+                    return JsonResponse({'ok': False, 'error': 'این یوزرنیم قبلاً ثبت شده'})
+                user = User.objects.create_user(username=username, password=password)
+                user.is_staff = True
+                user.is_superuser = (role == 'sudo')
+                user.save()
+                fields['panel_user_id'] = user.id
+        elif target['panel_user_id']:
+            User.objects.filter(id=target['panel_user_id']).update(is_active=False)
+
+        async_to_sync(update_admin)(target['id'], **fields)
+        async_to_sync(log_admin_action)(actor_id, actor_name, 'admin.update',
+                                        display_name or str(target['id']))
+        return JsonResponse({'ok': True})
+
+    if action == 'delete':
+        if target['panel_user_id']:
+            User.objects.filter(id=target['panel_user_id']).delete()
+        async_to_sync(delete_admin)(target['id'])
+        async_to_sync(log_admin_action)(actor_id, actor_name, 'admin.delete',
+                                        target.get('display_name') or str(target['id']))
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
