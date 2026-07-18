@@ -430,6 +430,11 @@ def settings_bot_view(request):
         'ticket_group_id': async_to_sync(get_setting)('support_group_id') or '',
         'notif_group_id': async_to_sync(get_setting)('notif_group_id') or '',
         'referral': _referral_settings(),
+        'free_test': {
+            'max_uses': async_to_sync(get_setting)('free_test_max_uses') or '1',
+            'duration': async_to_sync(get_setting)('free_test_duration') or '1',
+            'traffic':  async_to_sync(get_setting)('free_test_traffic') or '1',
+        },
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

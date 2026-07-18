@@ -31,7 +31,7 @@ from shared_lib.db import (
     get_setting, set_setting,
     add_server, delete_server, toggle_server_status, update_server_name,
     update_server_url, update_server_token,
-    update_server_services, update_server_free_test, get_servers,
+    update_server_services, update_server_free_test, get_servers, apply_free_test_to_all,
     add_plan, delete_plan, toggle_plan_status, update_plan, get_plan,
     create_discount_code, toggle_discount_code, delete_discount_code,
     create_tutorial, update_tutorial, toggle_tutorial, delete_tutorial, move_tutorial,
@@ -1503,6 +1503,26 @@ def bot_settings_action(request):
         async_to_sync(set_setting)('referral_percent_value', _num(data.get('percent_value'), '0'))
         async_to_sync(set_setting)('referral_discount_enabled', _bit(data.get('discount_enabled')))
         async_to_sync(set_setting)('referral_discount_value', _num(data.get('discount_value'), '0'))
+        return JsonResponse({'ok': True})
+
+    if action == 'save_free_test':
+        def _int(v, default):
+            s = str(v or '').strip()
+            return s if s.isdigit() else default
+
+        def _dec(v, default):
+            s = str(v or '').strip()
+            return s if s.replace('.', '', 1).isdigit() else default
+
+        async_to_sync(set_setting)('free_test_max_uses', _int(data.get('max_uses'), '1'))
+        async_to_sync(set_setting)('free_test_duration', _dec(data.get('duration'), '1'))
+        async_to_sync(set_setting)('free_test_traffic', _dec(data.get('traffic'), '1'))
+        return JsonResponse({'ok': True})
+
+    if action == 'apply_free_test':
+        duration = float(async_to_sync(get_setting)('free_test_duration') or '1')
+        traffic = float(async_to_sync(get_setting)('free_test_traffic') or '1')
+        async_to_sync(apply_free_test_to_all)(duration, traffic)
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
