@@ -1,13 +1,30 @@
+import time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import jdatetime
+from asgiref.sync import async_to_sync
 from django import template
-from django.utils.translation import get_language
 
 register = template.Library()
 
 TEHRAN = ZoneInfo("Asia/Tehran")
+
+# short-lived cache for the calendar preference so a page full of dates
+# does not hit the DB per value
+_cal_cache = {'value': None, 'ts': 0.0}
+
+
+def _calendar_pref():
+    now = time.time()
+    if now - _cal_cache['ts'] > 5:
+        try:
+            from shared_lib.db import get_setting
+            _cal_cache['value'] = async_to_sync(get_setting)('panel_default_calendar') or 'jalali'
+        except Exception:
+            _cal_cache['value'] = 'jalali'
+        _cal_cache['ts'] = now
+    return _cal_cache['value']
 
 
 def _to_tehran(value):
@@ -28,7 +45,7 @@ def jdate(value, fmt='full'):
     dt = _to_tehran(value)
     if dt is None:
         return '—'
-    if get_language() == 'en':
+    if _calendar_pref() == 'gregorian':
         if fmt == 'short':
             return dt.strftime('%Y/%m/%d')
         return dt.strftime('%Y/%m/%d %H:%M')

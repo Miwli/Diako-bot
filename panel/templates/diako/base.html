@@ -134,6 +134,7 @@ window.DIAKO_I18N = {
   success: "{% trans 'انجام شد' %}",
 };
 </script>
+<script>window.PANEL_DEFAULT_THEME = "{{ panel_default_theme|default:'cool' }}";</script>
 <script src="{% static 'diako/js/app.js' %}"></script>
 {% block extra_scripts %}{% endblock %}
 </body>

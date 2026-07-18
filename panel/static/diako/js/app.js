@@ -270,7 +270,7 @@ document.addEventListener('keydown', (e) => {
 
 /* ─── Init ─── */
 document.addEventListener('DOMContentLoaded', () => {
-  applyTheme(localStorage.getItem(THEME_KEY) || 'cool');
+  applyTheme(localStorage.getItem(THEME_KEY) || window.PANEL_DEFAULT_THEME || 'cool');
 
   const overlay = document.querySelector('.sidebar-overlay');
   if (overlay) overlay.addEventListener('click', closeSidebar);

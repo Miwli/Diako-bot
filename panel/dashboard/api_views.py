@@ -1542,6 +1542,26 @@ def bot_settings_action(request):
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 
+@require_http_methods(["POST"])
+@login_required
+def panel_settings_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    if data.get('action') == 'save_appearance':
+        theme = data.get('theme')
+        calendar = data.get('calendar')
+        if theme in ('cool', 'warm'):
+            async_to_sync(set_setting)('panel_default_theme', theme)
+        if calendar in ('jalali', 'gregorian'):
+            async_to_sync(set_setting)('panel_default_calendar', calendar)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
 # ─── admins (access control) ─────────────────────────────────────────────────
 
 def _bootstrap_ids():

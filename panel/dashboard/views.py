@@ -45,6 +45,7 @@ def _page_ctx(request, nav, tab=None):
         ],
         'settings': [
             ('bot',      'diako_settings_bot',    _('ربات'),              'ti-robot'),
+            ('panel',    'diako_settings_panel',  _('پنل'),               'ti-browser'),
             ('admins',   'diako_settings_admins', _('ادمین‌ها'),           'ti-user-shield'),
             ('database', 'diako_import_export',   _('دیتابیس'),           'ti-database'),
         ],
@@ -62,6 +63,7 @@ def _page_ctx(request, nav, tab=None):
         'tabs': tabs,
         'page_title': titles.get(nav, _('دیاکو')),
         'admin_username': request.user.username,
+        'panel_default_theme': async_to_sync(get_setting)('panel_default_theme') or 'cool',
     }
 
 
@@ -454,6 +456,18 @@ def _referral_settings():
         'discount_enabled': _s('referral_discount_enabled') == '1',
         'discount_value':   _s('referral_discount_value', '10'),
     }
+
+
+# ─── panel settings (appearance) ─────────────────────────────────────────────
+
+@login_required
+def settings_panel_view(request):
+    ctx = {
+        'theme':    async_to_sync(get_setting)('panel_default_theme') or 'cool',
+        'calendar': async_to_sync(get_setting)('panel_default_calendar') or 'jalali',
+    }
+    ctx.update(_page_ctx(request, 'settings', 'panel'))
+    return render(request, 'diako/settings_panel.html', ctx)
 
 
 # ─── admins (access control) ─────────────────────────────────────────────────

@@ -31,6 +31,7 @@ urlpatterns = [
     path('diako/finance/', v.finance_view, name='diako_finance'),
     path('diako/extra-requests/', v.extra_requests_view, name='diako_extra_requests'),
     path('diako/settings/bot/', v.settings_bot_view, name='diako_settings_bot'),
+    path('diako/settings/panel/', v.settings_panel_view, name='diako_settings_panel'),
     path('diako/settings/admins/', v.settings_admins_view, name='diako_settings_admins'),
     # مسیرهای قدیمی — این صفحه‌ها داخل مالی/تنظیمات ادغام شدن
     path('diako/discounts/', RedirectView.as_view(url='/diako/finance/', permanent=False)),
@@ -55,5 +56,6 @@ urlpatterns = [
     path('diako/api/bot-status/', api_views.bot_status, name='diako_bot_status'),
     path('diako/api/admin-action/', api_views.admin_action, name='diako_admin_action'),
     path('diako/api/bot-settings-action/', api_views.bot_settings_action, name='diako_bot_settings_action'),
+    path('diako/api/panel-settings-action/', api_views.panel_settings_action, name='diako_panel_settings_action'),
     path('diako/api/search/', api_views.global_search, name='diako_global_search'),
 ]
