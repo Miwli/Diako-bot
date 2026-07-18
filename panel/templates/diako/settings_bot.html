@@ -47,33 +47,33 @@
       <div class="widget-title"><i class="ti ti-gift"></i>{% trans "رفرال (دعوت دوستان)" %}</div>
     </div>
     <div class="widget-body">
-      <label class="ref-row">
-        <span class="switch"><input type="checkbox" id="refEnabled" {% if referral.enabled %}checked{% endif %}><span class="track"></span></span>
+      <div class="pick-row{% if referral.enabled %} sel{% endif %}" id="refEnabledRow" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
         <span class="ref-text"><span class="ref-title">{% trans "سیستم رفرال فعال باشد" %}</span>
           <span class="ref-sub">{% trans "کلید اصلی — اگر خاموش باشد هیچ پاداشی داده نمی‌شود." %}</span></span>
-      </label>
+      </div>
       <div class="ref-divider"></div>
 
-      <label class="ref-row">
-        <span class="switch"><input type="checkbox" id="refFlatEn" {% if referral.flat_enabled %}checked{% endif %}><span class="track"></span></span>
+      <div class="pick-row{% if referral.flat_enabled %} sel{% endif %}" id="refFlatRow" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
         <span class="ref-text"><span class="ref-title">{% trans "پاداش ثابت به دعوت‌کننده" %}</span>
           <span class="ref-sub">{% trans "مبلغ ثابت (تومان) بعد از اولین خرید کاربر دعوت‌شده." %}</span></span>
-        <input class="modal-input ref-val" id="refFlatAmt" value="{{ referral.flat_amount }}" inputmode="numeric">
-      </label>
+        <input class="modal-input ref-val" id="refFlatAmt" value="{{ referral.flat_amount }}" inputmode="numeric" onclick="event.stopPropagation()">
+      </div>
 
-      <label class="ref-row">
-        <span class="switch"><input type="checkbox" id="refPctEn" {% if referral.percent_enabled %}checked{% endif %}><span class="track"></span></span>
+      <div class="pick-row{% if referral.percent_enabled %} sel{% endif %}" id="refPctRow" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
         <span class="ref-text"><span class="ref-title">{% trans "پاداش درصدی به دعوت‌کننده" %}</span>
           <span class="ref-sub">{% trans "درصدی از مبلغ اولین خرید کاربر دعوت‌شده." %}</span></span>
-        <input class="modal-input ref-val" id="refPctVal" value="{{ referral.percent_value }}" inputmode="numeric">
-      </label>
+        <input class="modal-input ref-val" id="refPctVal" value="{{ referral.percent_value }}" inputmode="numeric" onclick="event.stopPropagation()">
+      </div>
 
-      <label class="ref-row">
-        <span class="switch"><input type="checkbox" id="refDiscEn" {% if referral.discount_enabled %}checked{% endif %}><span class="track"></span></span>
+      <div class="pick-row{% if referral.discount_enabled %} sel{% endif %}" id="refDiscRow" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
         <span class="ref-text"><span class="ref-title">{% trans "تخفیف برای کاربر دعوت‌شده" %}</span>
           <span class="ref-sub">{% trans "درصد تخفیف روی اولین خرید کاربر تازه‌وارد." %}</span></span>
-        <input class="modal-input ref-val" id="refDiscVal" value="{{ referral.discount_value }}" inputmode="numeric">
-      </label>
+        <input class="modal-input ref-val" id="refDiscVal" value="{{ referral.discount_value }}" inputmode="numeric" onclick="event.stopPropagation()">
+      </div>
 
       <div style="display:flex;justify-content:flex-end;margin-top:12px">
         <button class="btn-primary" id="saveRefBtn" onclick="saveReferral()"><i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}</button>
@@ -119,14 +119,15 @@
       <div class="widget-title"><i class="ti ti-lock"></i>{% trans "جوین اجباری" %}</div>
       <div class="widget-head-acts">
         <button class="btn-ghost" onclick="openAddChannelModal()"><i class="ti ti-plus"></i> {% trans "کانال" %}</button>
-        <label class="switch" title="{% trans 'روشن/خاموش' %}">
-          <input type="checkbox" {% if force_join_enabled %}checked{% endif %} onchange="toggleForceJoin()">
-          <span class="track"></span>
-        </label>
       </div>
     </div>
     <div class="widget-body">
-      <p class="cell-muted" style="margin-bottom:12px">{% trans "کاربران قبل از استفاده از بات باید عضو این کانال‌ها باشند. بات باید در هر کانال ادمین باشد." %}</p>
+      <div class="pick-row{% if force_join_enabled %} sel{% endif %}" id="fjEnabledRow" onclick="toggleForceJoin()">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="ref-text"><span class="ref-title">{% trans "جوین اجباری فعال باشد" %}</span>
+          <span class="ref-sub">{% trans "کاربران قبل از استفاده از بات باید عضو کانال‌ها باشند. بات باید در هر کانال ادمین باشد." %}</span></span>
+      </div>
+      <div class="ref-divider" style="margin-bottom:12px"></div>
       {% if channels %}
       <div class="item-list">
         {% for c in channels %}
@@ -363,14 +364,15 @@ async function saveTicketMsg() {
 async function saveReferral() {
   var btn = document.getElementById('saveRefBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var sel = id => document.getElementById(id).classList.contains('sel');
   var data = await apiPost('/diako/api/bot-settings-action/', {
     action: 'save_referral',
-    enabled: document.getElementById('refEnabled').checked,
-    flat_enabled: document.getElementById('refFlatEn').checked,
+    enabled: sel('refEnabledRow'),
+    flat_enabled: sel('refFlatRow'),
     flat_amount: document.getElementById('refFlatAmt').value,
-    percent_enabled: document.getElementById('refPctEn').checked,
+    percent_enabled: sel('refPctRow'),
     percent_value: document.getElementById('refPctVal').value,
-    discount_enabled: document.getElementById('refDiscEn').checked,
+    discount_enabled: sel('refDiscRow'),
     discount_value: document.getElementById('refDiscVal').value,
   });
   if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
