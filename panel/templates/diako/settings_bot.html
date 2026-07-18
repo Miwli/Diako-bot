@@ -106,7 +106,7 @@
       </label>
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px">
-        <button class="btn-ghost" id="applyFtBtn" onclick="applyFreeTest()"><i class="ti ti-arrow-bounce"></i> {% trans "اعمال روز/حجم به همه سرورها" %}</button>
+        <button class="btn-ghost" id="applyFtBtn" onclick="openFtServersModal()"><i class="ti ti-arrow-bounce"></i> {% trans "اعمال روز/حجم به سرورها" %}</button>
         <button class="btn-primary" id="saveFtBtn" onclick="saveFreeTest()"><i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}</button>
       </div>
     </div>
@@ -236,6 +236,34 @@
 {% endblock %}
 
 {% block modals %}
+<!-- انتخاب سرور برای اعمال تست رایگان -->
+<div class="modal-bg" id="ftServersModal">
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-arrow-bounce"></i>{% trans "اعمال به سرورها" %}</div>
+    <p class="cell-muted" style="font-size:11px;margin-bottom:10px">{% trans "مدت و حجم پیش‌فرض روی سرورهای انتخاب‌شده اعمال می‌شود." %}</p>
+    {% if servers %}
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn-ghost" onclick="ftPickAll(true)"><i class="ti ti-checks"></i> {% trans "انتخاب همه" %}</button>
+      <button class="btn-ghost" onclick="ftPickAll(false)"><i class="ti ti-square"></i> {% trans "هیچ‌کدام" %}</button>
+    </div>
+    <div class="pick-list" id="ftServerList">
+      {% for s in servers %}
+      <div class="pick-row" data-id="{{ s.id }}" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="pick-label"><i class="ti ti-server" style="font-size:13px;margin-inline-end:6px;color:var(--accent)"></i>{{ s.name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="cell-muted" style="font-size:12px">{% trans "سروری ثبت نشده." %}</p>
+    {% endif %}
+    <div class="modal-acts" style="margin-top:14px">
+      <button class="modal-btn" onclick="closeModal('ftServersModal')">{% trans "انصراف" %}</button>
+      <button class="modal-btn btn-confirm" id="ftApplyConfirmBtn" onclick="confirmApplyFt()">{% trans "اعمال" %}</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="channelModal">
   <div class="modal-box">
     <div class="modal-title"><i class="ti ti-lock"></i><span id="channelModalTitle">{% trans "کانال جدید" %}</span></div>
@@ -364,18 +392,27 @@ async function saveFreeTest() {
   else { showToast('{% trans "خطا" %}', data.error, 'error'); }
   btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}';
 }
-async function applyFreeTest() {
-  if (!confirm('{% trans "مدت و حجم پیش‌فرض روی همه‌ی سرورها اعمال شود؟" %}')) return;
-  var btn = document.getElementById('applyFtBtn');
+function openFtServersModal() {
+  ftPickAll(false);
+  document.getElementById('ftServersModal').classList.add('open');
+}
+function ftPickAll(on) {
+  document.querySelectorAll('#ftServerList .pick-row').forEach(r => r.classList.toggle('sel', on));
+}
+async function confirmApplyFt() {
+  var ids = Array.from(document.querySelectorAll('#ftServerList .pick-row.sel')).map(r => Number(r.dataset.id));
+  if (!ids.length) { showToast('{% trans "خطا" %}', '{% trans "حداقل یک سرور انتخاب کن" %}', 'error'); return; }
+  var btn = document.getElementById('ftApplyConfirmBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  // persist current values first, then apply to the chosen servers
   await apiPost('/diako/api/bot-settings-action/', { action: 'save_free_test',
     max_uses: document.getElementById('ftMaxUses').value,
     duration: document.getElementById('ftDuration').value,
     traffic: document.getElementById('ftTraffic').value });
-  var data = await apiPost('/diako/api/bot-settings-action/', { action: 'apply_free_test' });
-  if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
+  var data = await apiPost('/diako/api/bot-settings-action/', { action: 'apply_free_test', server_ids: ids });
+  if (data.ok) { closeModal('ftServersModal'); showToast('{% trans "انجام شد" %}', '', 'success'); }
   else { showToast('{% trans "خطا" %}', data.error, 'error'); }
-  btn.disabled = false; btn.innerHTML = '<i class="ti ti-arrow-bounce"></i> {% trans "اعمال روز/حجم به همه سرورها" %}';
+  btn.disabled = false; btn.innerHTML = '{% trans "اعمال" %}';
 }
 
 /* ─── جوین اجباری ─── */
@@ -484,7 +521,7 @@ async function confirmFaq() {
 function deleteFaq(id, q) { tutAction({ action: 'delete_faq', id: id }, '{% trans "حذف" %} «' + q + '»؟'); }
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { closeModal('channelModal'); closeModal('tutorialModal'); closeModal('faqModal'); }
+  if (e.key === 'Escape') { closeModal('channelModal'); closeModal('tutorialModal'); closeModal('faqModal'); closeModal('ftServersModal'); }
 });
 </script>
 {% endblock %}

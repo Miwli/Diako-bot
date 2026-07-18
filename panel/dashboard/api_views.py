@@ -1520,10 +1520,17 @@ def bot_settings_action(request):
         return JsonResponse({'ok': True})
 
     if action == 'apply_free_test':
+        ids = data.get('server_ids') or []
         duration = float(async_to_sync(get_setting)('free_test_duration') or '1')
         traffic = float(async_to_sync(get_setting)('free_test_traffic') or '1')
-        async_to_sync(apply_free_test_to_all)(duration, traffic)
-        return JsonResponse({'ok': True})
+        if data.get('all'):
+            async_to_sync(apply_free_test_to_all)(duration, traffic)
+            return JsonResponse({'ok': True})
+        if not ids:
+            return JsonResponse({'ok': False, 'error': 'حداقل یک سرور انتخاب کن'})
+        for sid in ids:
+            async_to_sync(update_server_free_test)(int(sid), duration=duration, traffic=traffic)
+        return JsonResponse({'ok': True, 'count': len(ids)})
 
     if action == 'save_ticket_msg':
         text = (data.get('text') or '').strip()
