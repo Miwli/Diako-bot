@@ -25,6 +25,46 @@
     </div>
   </div>
 
+  <!-- رفرال -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-gift"></i>{% trans "رفرال (دعوت دوستان)" %}</div>
+    </div>
+    <div class="widget-body">
+      <label class="ref-row">
+        <span class="switch"><input type="checkbox" id="refEnabled" {% if referral.enabled %}checked{% endif %}><span class="track"></span></span>
+        <span class="ref-text"><span class="ref-title">{% trans "سیستم رفرال فعال باشد" %}</span>
+          <span class="ref-sub">{% trans "کلید اصلی — اگر خاموش باشد هیچ پاداشی داده نمی‌شود." %}</span></span>
+      </label>
+      <div class="ref-divider"></div>
+
+      <label class="ref-row">
+        <span class="switch"><input type="checkbox" id="refFlatEn" {% if referral.flat_enabled %}checked{% endif %}><span class="track"></span></span>
+        <span class="ref-text"><span class="ref-title">{% trans "پاداش ثابت به دعوت‌کننده" %}</span>
+          <span class="ref-sub">{% trans "مبلغ ثابت (تومان) بعد از اولین خرید کاربر دعوت‌شده." %}</span></span>
+        <input class="modal-input ref-val" id="refFlatAmt" value="{{ referral.flat_amount }}" inputmode="numeric">
+      </label>
+
+      <label class="ref-row">
+        <span class="switch"><input type="checkbox" id="refPctEn" {% if referral.percent_enabled %}checked{% endif %}><span class="track"></span></span>
+        <span class="ref-text"><span class="ref-title">{% trans "پاداش درصدی به دعوت‌کننده" %}</span>
+          <span class="ref-sub">{% trans "درصدی از مبلغ اولین خرید کاربر دعوت‌شده." %}</span></span>
+        <input class="modal-input ref-val" id="refPctVal" value="{{ referral.percent_value }}" inputmode="numeric">
+      </label>
+
+      <label class="ref-row">
+        <span class="switch"><input type="checkbox" id="refDiscEn" {% if referral.discount_enabled %}checked{% endif %}><span class="track"></span></span>
+        <span class="ref-text"><span class="ref-title">{% trans "تخفیف برای کاربر دعوت‌شده" %}</span>
+          <span class="ref-sub">{% trans "درصد تخفیف روی اولین خرید کاربر تازه‌وارد." %}</span></span>
+        <input class="modal-input ref-val" id="refDiscVal" value="{{ referral.discount_value }}" inputmode="numeric">
+      </label>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button class="btn-primary" id="saveRefBtn" onclick="saveReferral()"><i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}</button>
+      </div>
+    </div>
+  </div>
+
   <!-- جوین اجباری -->
   <div class="widget-card">
     <div class="widget-head">
@@ -196,6 +236,14 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+  .ref-row { display:flex; align-items:center; gap:11px; padding:9px 0; cursor:pointer; }
+  .ref-text { flex:1; display:flex; flex-direction:column; gap:2px; }
+  .ref-title { font-size:12.5px; color:var(--text); }
+  .ref-sub { font-size:10px; color:var(--text-muted); }
+  .ref-val { width:110px; direction:ltr; text-align:center; padding:8px 10px; }
+  .ref-divider { height:1px; background:rgba(255,255,255,0.06); margin:4px 0; }
+</style>
 <script>
 let editChannelId = null;
 let editTutId = null;
@@ -211,6 +259,25 @@ async function saveGroups() {
     action: 'save_groups',
     ticket_group: document.getElementById('ticketGroup').value,
     notif_group: document.getElementById('notifGroup').value,
+  });
+  if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
+  else { showToast('{% trans "خطا" %}', data.error, 'error'); }
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}';
+}
+
+/* ─── رفرال ─── */
+async function saveReferral() {
+  var btn = document.getElementById('saveRefBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  var data = await apiPost('/diako/api/bot-settings-action/', {
+    action: 'save_referral',
+    enabled: document.getElementById('refEnabled').checked,
+    flat_enabled: document.getElementById('refFlatEn').checked,
+    flat_amount: document.getElementById('refFlatAmt').value,
+    percent_enabled: document.getElementById('refPctEn').checked,
+    percent_value: document.getElementById('refPctVal').value,
+    discount_enabled: document.getElementById('refDiscEn').checked,
+    discount_value: document.getElementById('refDiscVal').value,
   });
   if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); }
   else { showToast('{% trans "خطا" %}', data.error, 'error'); }

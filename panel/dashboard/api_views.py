@@ -1488,6 +1488,23 @@ def bot_settings_action(request):
         async_to_sync(set_setting)('notif_group_id', notif)
         return JsonResponse({'ok': True})
 
+    if action == 'save_referral':
+        def _bit(v):
+            return '1' if v else '0'
+
+        def _num(v, default):
+            s = str(v or '').strip()
+            return s if s.isdigit() else default
+
+        async_to_sync(set_setting)('referral_enabled', _bit(data.get('enabled')))
+        async_to_sync(set_setting)('referral_flat_enabled', _bit(data.get('flat_enabled')))
+        async_to_sync(set_setting)('referral_flat_amount', _num(data.get('flat_amount'), '0'))
+        async_to_sync(set_setting)('referral_percent_enabled', _bit(data.get('percent_enabled')))
+        async_to_sync(set_setting)('referral_percent_value', _num(data.get('percent_value'), '0'))
+        async_to_sync(set_setting)('referral_discount_enabled', _bit(data.get('discount_enabled')))
+        async_to_sync(set_setting)('referral_discount_value', _num(data.get('discount_value'), '0'))
+        return JsonResponse({'ok': True})
+
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 

@@ -429,9 +429,24 @@ def settings_bot_view(request):
         'faqs': faqs,
         'ticket_group_id': async_to_sync(get_setting)('support_group_id') or '',
         'notif_group_id': async_to_sync(get_setting)('notif_group_id') or '',
+        'referral': _referral_settings(),
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)
+
+
+def _referral_settings():
+    def _s(key, default=''):
+        return async_to_sync(get_setting)(key) or default
+    return {
+        'enabled':          _s('referral_enabled') == '1',
+        'flat_enabled':     _s('referral_flat_enabled') == '1',
+        'flat_amount':      _s('referral_flat_amount', '50000'),
+        'percent_enabled':  _s('referral_percent_enabled') == '1',
+        'percent_value':    _s('referral_percent_value', '10'),
+        'discount_enabled': _s('referral_discount_enabled') == '1',
+        'discount_value':   _s('referral_discount_value', '10'),
+    }
 
 
 # ─── admins (access control) ─────────────────────────────────────────────────
