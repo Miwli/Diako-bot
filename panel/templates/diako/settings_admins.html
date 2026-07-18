@@ -74,11 +74,15 @@
 
     <!-- platforms -->
     <label class="modal-label" style="margin-top:12px">{% trans "دسترسی در" %}</label>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <label class="perm-toggle"><span><i class="ti ti-brand-telegram"></i> {% trans "بات" %}</span>
-        <span class="switch"><input type="checkbox" id="admBot" onchange="syncPlatformFields()"><span class="track"></span></span></label>
-      <label class="perm-toggle"><span><i class="ti ti-layout-dashboard"></i> {% trans "پنل وب" %}</span>
-        <span class="switch"><input type="checkbox" id="admPanel" onchange="syncPlatformFields()"><span class="track"></span></span></label>
+    <div class="perm-grid">
+      <div class="pick-row" id="admBot" onclick="togglePlatform('admBot')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="pick-label"><i class="ti ti-brand-telegram" style="font-size:14px;margin-inline-end:6px;color:var(--accent)"></i>{% trans "بات" %}</span>
+      </div>
+      <div class="pick-row" id="admPanel" onclick="togglePlatform('admPanel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="pick-label"><i class="ti ti-layout-dashboard" style="font-size:14px;margin-inline-end:6px;color:var(--accent)"></i>{% trans "پنل وب" %}</span>
+      </div>
     </div>
 
     <!-- bot fields -->
@@ -115,20 +119,25 @@
     <label class="modal-label" style="margin-top:12px">{% trans "دسترسی بخش‌ها" %}</label>
     <div class="perm-grid">
       {% for key, label in sections %}
-      <label class="perm-toggle"><span>{{ label }}</span>
-        <span class="switch"><input type="checkbox" class="perm-sec" data-key="{{ key }}" id="perm_{{ key }}"><span class="track"></span></span></label>
+      <div class="pick-row perm-sec" data-key="{{ key }}" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="pick-label">{{ label }}</span>
+      </div>
       {% endfor %}
     </div>
 
     <!-- admin management -->
     <label class="modal-label" style="margin-top:12px">{% trans "مدیریت ادمین‌ها" %}</label>
     <div class="perm-grid">
-      <label class="perm-toggle"><span>{% trans "دیدن ادمین‌ها" %}</span>
-        <span class="switch"><input type="checkbox" id="mgmt_can_view"><span class="track"></span></span></label>
-      <label class="perm-toggle"><span>{% trans "افزودن/ویرایش ادمین" %}</span>
-        <span class="switch"><input type="checkbox" id="mgmt_can_edit"><span class="track"></span></span></label>
-      <label class="perm-toggle"><span>{% trans "مدیریت سودوها" %}</span>
-        <span class="switch"><input type="checkbox" id="mgmt_can_manage_sudo"><span class="track"></span></span></label>
+      <div class="pick-row" id="mgmt_can_view" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span><span class="pick-label">{% trans "دیدن ادمین‌ها" %}</span>
+      </div>
+      <div class="pick-row" id="mgmt_can_edit" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span><span class="pick-label">{% trans "افزودن/ویرایش ادمین" %}</span>
+      </div>
+      <div class="pick-row" id="mgmt_can_manage_sudo" onclick="this.classList.toggle('sel')">
+        <span class="pick-check"><i class="ti ti-check"></i></span><span class="pick-label">{% trans "مدیریت سودوها" %}</span>
+      </div>
     </div>
 
     <label class="modal-label" style="margin-top:12px">{% trans "یادداشت" %}</label>
@@ -144,12 +153,7 @@
 
 {% block extra_scripts %}
 <style>
-  .perm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px 10px; }
-  .perm-toggle { display:flex; align-items:center; justify-content:space-between; gap:8px;
-    padding:8px 11px; border-radius:10px; background:rgba(0,0,0,0.22);
-    border:1px solid rgba(255,255,255,0.06); font-size:12px; cursor:pointer; }
-  .perm-toggle span:first-child { display:flex; align-items:center; gap:6px; }
-  .perm-toggle i { color:var(--accent); font-size:14px; }
+  .perm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
 </style>
 <script>
 const ADMINS_DATA = {{ admins_json|safe }};
@@ -158,9 +162,13 @@ let admEditId = null;
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+function togglePlatform(id) {
+  document.getElementById(id).classList.toggle('sel');
+  syncPlatformFields();
+}
 function syncPlatformFields() {
-  document.getElementById('botFields').style.display = document.getElementById('admBot').checked ? 'block' : 'none';
-  document.getElementById('panelFields').style.display = document.getElementById('admPanel').checked ? 'block' : 'none';
+  document.getElementById('botFields').style.display = document.getElementById('admBot').classList.contains('sel') ? 'block' : 'none';
+  document.getElementById('panelFields').style.display = document.getElementById('admPanel').classList.contains('sel') ? 'block' : 'none';
 }
 
 function selectRole(role) {
@@ -172,24 +180,19 @@ function currentRole() {
   return b ? b.dataset.role : 'standard';
 }
 
+function _setMatrix(sec, m) {
+  document.querySelectorAll('.perm-sec').forEach(r => r.classList.toggle('sel', !!sec[r.dataset.key]));
+  document.getElementById('mgmt_can_view').classList.toggle('sel', !!m.can_view);
+  document.getElementById('mgmt_can_edit').classList.toggle('sel', !!m.can_edit);
+  document.getElementById('mgmt_can_manage_sudo').classList.toggle('sel', !!m.can_manage_sudo);
+}
 // fill the matrix from a role preset (option A: bot == panel)
 function applyPreset(role) {
   const p = ROLE_PRESETS[role]; if (!p) return;
-  const sec = p.bot || {};
-  document.querySelectorAll('.perm-sec').forEach(cb => { cb.checked = !!sec[cb.dataset.key]; });
-  const m = p.admin_management || {};
-  document.getElementById('mgmt_can_view').checked = !!m.can_view;
-  document.getElementById('mgmt_can_edit').checked = !!m.can_edit;
-  document.getElementById('mgmt_can_manage_sudo').checked = !!m.can_manage_sudo;
+  _setMatrix(p.bot || {}, p.admin_management || {});
 }
-
 function fillMatrix(perms) {
-  const sec = (perms && perms.bot) || {};
-  document.querySelectorAll('.perm-sec').forEach(cb => { cb.checked = !!sec[cb.dataset.key]; });
-  const m = (perms && perms.admin_management) || {};
-  document.getElementById('mgmt_can_view').checked = !!m.can_view;
-  document.getElementById('mgmt_can_edit').checked = !!m.can_edit;
-  document.getElementById('mgmt_can_manage_sudo').checked = !!m.can_manage_sudo;
+  _setMatrix((perms && perms.bot) || {}, (perms && perms.admin_management) || {});
 }
 
 function openAddAdminModal() {
@@ -200,8 +203,8 @@ function openAddAdminModal() {
   document.getElementById('admUser').value = '';
   document.getElementById('admPass').value = '';
   document.getElementById('admNote').value = '';
-  document.getElementById('admBot').checked = false;
-  document.getElementById('admPanel').checked = false;
+  document.getElementById('admBot').classList.remove('sel');
+  document.getElementById('admPanel').classList.remove('sel');
   document.getElementById('admPassHint').textContent = '';
   syncPlatformFields();
   selectRole('standard');
@@ -217,8 +220,8 @@ function openEditAdminModal(id) {
   document.getElementById('admUser').value = a.panel_username || '';
   document.getElementById('admPass').value = '';
   document.getElementById('admNote').value = a.note || '';
-  document.getElementById('admBot').checked = !!a.is_bot_admin;
-  document.getElementById('admPanel').checked = !!a.is_panel_admin;
+  document.getElementById('admBot').classList.toggle('sel', !!a.is_bot_admin);
+  document.getElementById('admPanel').classList.toggle('sel', !!a.is_panel_admin);
   document.getElementById('admPassHint').textContent = a.panel_username ? '{% trans "برای تغییر پسورد پرش کن، خالی بگذاری تغییری نمی‌کند." %}' : '';
   syncPlatformFields();
   // set role button without re-applying preset (keep saved matrix)
@@ -229,22 +232,23 @@ function openEditAdminModal(id) {
 
 function collectPayload() {
   const sections = {};
-  document.querySelectorAll('.perm-sec').forEach(cb => { sections[cb.dataset.key] = cb.checked; });
+  document.querySelectorAll('.perm-sec').forEach(r => { sections[r.dataset.key] = r.classList.contains('sel'); });
+  const sel = id => document.getElementById(id).classList.contains('sel');
   return {
     action: admEditId ? 'update' : 'add',
     id: admEditId || undefined,
     display_name: document.getElementById('admName').value.trim(),
-    is_bot_admin: document.getElementById('admBot').checked,
-    is_panel_admin: document.getElementById('admPanel').checked,
+    is_bot_admin: sel('admBot'),
+    is_panel_admin: sel('admPanel'),
     telegram_id: document.getElementById('admTgId').value.trim(),
     username: document.getElementById('admUser').value.trim(),
     password: document.getElementById('admPass').value,
     role: currentRole(),
     sections: sections,
     admin_management: {
-      can_view: document.getElementById('mgmt_can_view').checked,
-      can_edit: document.getElementById('mgmt_can_edit').checked,
-      can_manage_sudo: document.getElementById('mgmt_can_manage_sudo').checked,
+      can_view: sel('mgmt_can_view'),
+      can_edit: sel('mgmt_can_edit'),
+      can_manage_sudo: sel('mgmt_can_manage_sudo'),
     },
     note: document.getElementById('admNote').value.trim(),
   };
