@@ -1465,6 +1465,32 @@ def global_search(request):
     return JsonResponse({'results': results[:14]})
 
 
+@require_http_methods(["POST"])
+@login_required
+def bot_settings_action(request):
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+
+    action = data.get('action')
+
+    def _valid_group(v):
+        v = (v or '').strip()
+        return v == '' or v.lstrip('-').isdigit()
+
+    if action == 'save_groups':
+        ticket = (data.get('ticket_group') or '').strip()
+        notif = (data.get('notif_group') or '').strip()
+        if not _valid_group(ticket) or not _valid_group(notif):
+            return JsonResponse({'ok': False, 'error': 'آیدی گروه باید عددی باشد (مثل -1001234567890)'})
+        async_to_sync(set_setting)('support_group_id', ticket)
+        async_to_sync(set_setting)('notif_group_id', notif)
+        return JsonResponse({'ok': True})
+
+    return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
+
+
 # ─── admins (access control) ─────────────────────────────────────────────────
 
 def _bootstrap_ids():

@@ -427,6 +427,8 @@ def settings_bot_view(request):
         'force_join_enabled': force_join_enabled,
         'tutorials': tutorials,
         'faqs': faqs,
+        'ticket_group_id': async_to_sync(get_setting)('support_group_id') or '',
+        'notif_group_id': async_to_sync(get_setting)('notif_group_id') or '',
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

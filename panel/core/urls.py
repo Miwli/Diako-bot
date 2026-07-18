@@ -54,5 +54,6 @@ urlpatterns = [
     path('diako/api/force-join-action/', api_views.force_join_action, name='diako_force_join_action'),
     path('diako/api/bot-status/', api_views.bot_status, name='diako_bot_status'),
     path('diako/api/admin-action/', api_views.admin_action, name='diako_admin_action'),
+    path('diako/api/bot-settings-action/', api_views.bot_settings_action, name='diako_bot_settings_action'),
     path('diako/api/search/', api_views.global_search, name='diako_global_search'),
 ]
