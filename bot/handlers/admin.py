@@ -1,4 +1,3 @@
-import json
 import html as html_lib
 import qrcode
 from io import BytesIO
@@ -11,75 +10,16 @@ from keyboards import admin_main_menu, admin_panel_menu, user_main_menu, after_o
 from states import AdminAction, GeneralSettings, FreeTestSettings
 from aiogram.filters import Command
 from shared_lib.db import (
-    get_order, get_plan_with_server, update_order_status, update_order_vpn_info,
+    get_order,
     get_top_up_request, update_top_up_status, approve_top_up_atomic,
     add_balance, add_balance_and_transaction, get_or_create_user,
     get_setting, set_setting,
     get_servers, get_server, update_server_free_test, apply_free_test_to_all,
     reset_free_test_uses,
-    get_referral_by_referred, mark_first_purchase_rewarded,
-    add_referral_commission, get_user,
+    get_user,
     get_text,
 )
-from shared_lib.services import provisioning
-
-async def _apply_referral_rewards(bot, buyer_id: int, price: int):
-    from bot import logger
-    referral = await get_referral_by_referred(buyer_id)
-    if not referral:
-        return
-    referrer_id = referral["referrer_id"]
-    is_first = not referral["first_purchase_rewarded"]
-
-    cfg_keys = [
-        "referral_enabled", "referral_flat_enabled", "referral_flat_amount",
-        "referral_percent_enabled", "referral_percent_value",
-        "referral_free_test_enabled",
-        "referral_discount_enabled", "referral_discount_value",
-    ]
-    cfg = {k: (await get_setting(k) or "0") for k in cfg_keys}
-    if cfg["referral_enabled"] != "1":
-        return
-
-    total_reward = 0
-
-    if is_first:
-        if cfg["referral_flat_enabled"] == "1":
-            flat = int(cfg["referral_flat_amount"] or "0")
-            if flat > 0:
-                await add_balance_and_transaction(referrer_id, flat, f"جایزه دعوت کاربر {buyer_id}")
-                total_reward += flat
-
-        if cfg["referral_free_test_enabled"] == "1":
-            try:
-                from shared_lib.db import decrement_free_test_uses
-                await decrement_free_test_uses(referrer_id)
-            except Exception as e:
-                logger.error(f"خطا در اعطای تست رایگان به {referrer_id}: {e}")
-
-        if cfg["referral_discount_enabled"] == "1":
-            pct = int(cfg["referral_discount_value"] or "0")
-            if pct > 0:
-                credit = price * pct // 100
-                await add_balance_and_transaction(buyer_id, credit, f"اعتبار خوش‌آمدگویی {pct}٪ اولین خرید")
-
-        await mark_first_purchase_rewarded(buyer_id, total_reward)
-
-    if cfg["referral_percent_enabled"] == "1":
-        pct = int(cfg["referral_percent_value"] or "0")
-        if pct > 0:
-            commission = price * pct // 100
-            if commission > 0:
-                await add_balance_and_transaction(referrer_id, commission, f"پورسانت {pct}٪ خرید کاربر {buyer_id}")
-                await add_referral_commission(buyer_id, commission)
-                try:
-                    await bot.send_message(
-                        referrer_id,
-                        get_text("referral_commission_notify", amount=f"{commission:,}"),
-                        parse_mode="HTML"
-                    )
-                except Exception:
-                    pass
+from shared_lib.services import orders
 
 def _make_qr(data: str) -> BufferedInputFile:
     qr = qrcode.QRCode(box_size=10, border=4)
@@ -482,87 +422,76 @@ def register_admin_handlers(dp):
     @dp.callback_query(F.data.startswith("order_approve_"))
     async def order_approve(callback: types.CallbackQuery):
         order_id = int(callback.data.replace("order_approve_", ""))
-        order = await get_order(order_id)
-        if not order:
+        res = await orders.approve(order_id, actor=f"admin:{callback.from_user.id}")
+
+        if res.status == "not_found":
             await callback.answer("سفارش یافت نشد.", show_alert=True)
             return
-        if order["status"] != "pending":
+        if res.status == "already_processed":
             await callback.answer("این سفارش قبلاً پردازش شده.", show_alert=True)
             return
-
-        plan = await get_plan_with_server(order["plan_id"])
-
-        try:
-            stored_ids = json.loads(plan["service_ids"] or "[]")
-            if not stored_ids:
-                await callback.answer("سرویسی برای این سرور تنظیم نشده!", show_alert=True)
-                return
-            result = await provisioning.provision_service(
-                plan["panel_url"], plan["panel_token"],
-                stored_ids, plan["traffic"],
-                duration_days=plan["duration"], ip_limit=plan["ip_limit"],
-            )
-            subscription_url = result["subscription_url"]
-            username = result["username"]
-        except provisioning.NoLiveServiceError:
+        if res.status == "no_service_config":
+            await callback.answer("سرویسی برای این سرور تنظیم نشده!", show_alert=True)
+            return
+        if res.status == "no_live_service":
             await callback.answer(
                 "❌ سرویس‌های انتخاب‌شده برای این سرور دیگه توی پنل Rebecca وجود ندارن.\n"
                 "از پنل ادمین → مدیریت سرورها → سرویس‌ها رو آپدیت کن.",
                 show_alert=True
             )
             return
-        except Exception as e:
+        if res.status == "api_error":
             from bot import logger
-            logger.error(f"خطا در ساخت یوزر برای سفارش #{order_id}: {e}")
-            await callback.answer(f"خطا در ساخت یوزر: {e}", show_alert=True)
+            logger.error(f"خطا در ساخت یوزر برای سفارش #{order_id}: {res.error}")
+            await callback.answer(f"خطا در ساخت یوزر: {res.error}", show_alert=True)
+            return
+        if res.status == "save_error":
+            from bot import logger
+            logger.error(f"خطا در ذخیره سفارش #{order_id} — حذف یوزر {res.username}: {res.error}")
+            await callback.answer(f"خطا در ثبت اطلاعات: {res.error}", show_alert=True)
             return
 
-        try:
-            await update_order_status(order_id, "approved")
-            await update_order_vpn_info(order_id, username, subscription_url)
-        except Exception as e:
-            from bot import logger
-            logger.error(f"خطا در ذخیره سفارش #{order_id} — حذف یوزر {username}: {e}")
+        if res.referrer_notify:
+            referrer_id, commission = res.referrer_notify
             try:
-                await provisioning.remove_service(plan["panel_url"], plan["panel_token"], username)
+                await callback.bot.send_message(
+                    referrer_id,
+                    get_text("referral_commission_notify", amount=f"{commission:,}"),
+                    parse_mode="HTML"
+                )
             except Exception:
                 pass
-            await callback.answer(f"خطا در ثبت اطلاعات: {e}", show_alert=True)
-            return
-
-        await _apply_referral_rewards(callback.bot, order["user_id"], plan["price"])
 
         await callback.message.edit_caption(
-            callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{username}</code>",
+            callback.message.caption + f"\n\n✅ <b>تایید شد</b> — یوزر: <code>{res.username}</code>",
             parse_mode="HTML",
             reply_markup=after_order_keyboard()
         )
-        qr_file = _make_qr(subscription_url)
+        qr_file = _make_qr(res.subscription_url)
         try:
             await callback.bot.send_photo(
-                chat_id=order["user_id"],
+                chat_id=res.user_id,
                 photo=qr_file,
-                caption=get_text("order_approved", url=subscription_url),
-                reply_markup=subscription_approved_keyboard(subscription_url),
+                caption=get_text("order_approved", url=res.subscription_url),
+                reply_markup=subscription_approved_keyboard(res.subscription_url),
                 parse_mode="HTML"
             )
         except TelegramForbiddenError:
             from bot import logger
-            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه سفارش ارسال نشد")
+            logger.warning(f"کاربر {res.user_id} بات را بلاک کرده — اطلاعیه سفارش ارسال نشد")
         await callback.answer("سفارش تایید شد.")
 
     @dp.callback_query(F.data.startswith("order_reject_") & ~F.data.startswith("order_reject_reason_"))
     async def order_reject(callback: types.CallbackQuery):
         order_id = int(callback.data.replace("order_reject_", ""))
-        order = await get_order(order_id)
-        if not order:
+        res = await orders.reject(order_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("سفارش یافت نشد.", show_alert=True)
             return
-        if order["status"] != "pending":
+        if res.status == "already_processed":
             await callback.answer("این سفارش قبلاً پردازش شده.", show_alert=True)
             return
 
-        await update_order_status(order_id, "rejected")
         await callback.message.edit_caption(
             callback.message.caption + "\n\n❌ <b>رد شد</b>",
             parse_mode="HTML",
@@ -570,12 +499,12 @@ def register_admin_handlers(dp):
         )
         try:
             await callback.bot.send_message(
-                chat_id=order["user_id"],
+                chat_id=res.user_id,
                 text=get_text("order_rejected"),
             )
         except TelegramForbiddenError:
             from bot import logger
-            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
+            logger.warning(f"کاربر {res.user_id} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
         await callback.answer("سفارش رد شد.")
 
     @dp.callback_query(F.data.startswith("order_reject_reason_"))
@@ -651,26 +580,23 @@ def register_admin_handlers(dp):
     async def order_reject_with_reason(message: types.Message, state: FSMContext):
         data = await state.get_data()
         order_id = data["order_id"]
-        order = await get_order(order_id)
+        reason = message.text if message.text and message.text != "/skip" else None
+        res = await orders.reject(order_id, actor=f"admin:{message.from_user.id}", reason=reason)
+        await state.clear()
 
-        if not order or order["status"] != "pending":
-            await state.clear()
+        if res.status != "ok":
             await message.answer("این سفارش قبلاً پردازش شده.", reply_markup=after_order_keyboard())
             return
 
-        reason = message.text if message.text and message.text != "/skip" else None
-        await update_order_status(order_id, "rejected", rejection_reason=reason)
-        await state.clear()
-
         try:
             await message.bot.send_message(
-                chat_id=order["user_id"],
+                chat_id=res.user_id,
                 text=get_text("order_rejected_with_reason"),
             )
             if message.text != "/skip":
-                await message.copy_to(chat_id=order["user_id"])
+                await message.copy_to(chat_id=res.user_id)
         except TelegramForbiddenError:
             from bot import logger
-            logger.warning(f"کاربر {order['user_id']} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
+            logger.warning(f"کاربر {res.user_id} بات را بلاک کرده — اطلاعیه رد سفارش ارسال نشد")
 
         await message.answer("✅ سفارش رد شد و کاربر مطلع شد.", reply_markup=after_order_keyboard())
