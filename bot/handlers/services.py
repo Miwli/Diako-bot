@@ -12,7 +12,7 @@ from shared_lib.db import (
     get_user_wallet_stats, deduct_balance_if_sufficient, add_transaction,
     get_text,
 )
-from shared_lib.rebecca_api import RebeccaAPI
+from shared_lib.services import provisioning
 from shared_lib.formatters import fmt_traffic_gb
 
 log = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def register_services_handlers(dp):
         plan_data = await get_plan_with_server(order["plan_id"])
         if plan_data:
             try:
-                live = await RebeccaAPI(plan_data["panel_url"], plan_data["panel_token"]).get_user(order["vpn_username"])
+                live = await provisioning.get_live_user(plan_data["panel_url"], plan_data["panel_token"], order["vpn_username"])
                 if (live.get("data_limit") or 0) == 0:
                     await callback.answer(_alert("extra_volume_unlimited"), show_alert=True)
                     return
@@ -147,9 +147,8 @@ def register_services_handlers(dp):
         if not plan_data:
             await callback.message.edit_text(get_text("extra_volume_error"), parse_mode="HTML")
             return
-        api = RebeccaAPI(plan_data["panel_url"], plan_data["panel_token"])
         try:
-            await api.add_volume(order["vpn_username"], plan["traffic_gb"])
+            await provisioning.extend_volume(plan_data["panel_url"], plan_data["panel_token"], order["vpn_username"], plan["traffic_gb"])
         except Exception as e:
             log.error("ev_wallet add_volume error: %s", e)
             await callback.message.edit_text(get_text("extra_volume_error"), parse_mode="HTML")
@@ -230,9 +229,8 @@ def register_services_handlers(dp):
         if not plan_data:
             await callback.answer("❌ سرور یافت نشد.", show_alert=True)
             return
-        api = RebeccaAPI(plan_data["panel_url"], plan_data["panel_token"])
         try:
-            await api.add_volume(req["vpn_username"], req["traffic_gb"])
+            await provisioning.extend_volume(plan_data["panel_url"], plan_data["panel_token"], req["vpn_username"], req["traffic_gb"])
         except Exception as e:
             log.error("evr_approve add_volume error: %s", e)
             await callback.answer(f"❌ خطای API: {e}", show_alert=True)
@@ -348,8 +346,7 @@ def register_services_handlers(dp):
             await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
         try:
-            api = RebeccaAPI(plan_info["server_url"], plan_info["server_token"])
-            await api.add_time(order["vpn_username"], plan["days"])
+            await provisioning.extend_time(plan_info["server_url"], plan_info["server_token"], order["vpn_username"], plan["days"])
         except Exception as e:
             log.error("extra_time wallet error: %s", e)
             await callback.answer(_alert("extra_time_error"), show_alert=True)
@@ -429,8 +426,7 @@ def register_services_handlers(dp):
             await callback.answer(_alert("plan_service_not_found"), show_alert=True)
             return
         try:
-            api = RebeccaAPI(plan_info["server_url"], plan_info["server_token"])
-            await api.add_time(order["vpn_username"], req["days"])
+            await provisioning.extend_time(plan_info["server_url"], plan_info["server_token"], order["vpn_username"], req["days"])
         except Exception as e:
             log.error("etr_approve error: %s", e)
             await callback.answer(_alert("extra_time_error"), show_alert=True)

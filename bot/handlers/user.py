@@ -27,7 +27,7 @@ from shared_lib.db import (
     get_pending_location_change, update_location_change_request,
     perform_location_change,
 )
-from shared_lib.rebecca_api import RebeccaAPI
+from shared_lib.services import provisioning
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
@@ -250,26 +250,20 @@ def register_user_handlers(dp):
         await callback.message.edit_text(get_text("free_test_creating"))
 
         try:
-            api = RebeccaAPI(server["panel_url"], server["panel_token"])
-
-            live_services = await api.get_services()
-            live_ids = {s["id"] for s in live_services}
-            service_id = next((sid for sid in service_ids if sid in live_ids), None)
-            if service_id is None:
-                await callback.message.edit_text(
-                    get_text("free_test_error_no_service"),
-                    reply_markup=free_test_confirm_keyboard(server_id)
-                )
-                return
-
-            user_data = await api.create_user(
-                service_id=service_id,
-                data_limit_gb=float(server["free_test_traffic"] or 0),
+            result = await provisioning.provision_service(
+                server["panel_url"], server["panel_token"],
+                service_ids,
+                float(server["free_test_traffic"] or 0),
                 duration_hours=float(server["free_test_duration"] or 0),
             )
-            sub_path = user_data.get("subscription_url", "")
-            subscription_url = await api.get_subscription_url(sub_path)
-            username = user_data.get("username", "")
+            subscription_url = result["subscription_url"]
+            username = result["username"]
+        except provisioning.NoLiveServiceError:
+            await callback.message.edit_text(
+                get_text("free_test_error_no_service"),
+                reply_markup=free_test_confirm_keyboard(server_id)
+            )
+            return
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ساخت تست رایگان برای سرور #{server_id}: {e}")
@@ -466,8 +460,9 @@ def register_user_handlers(dp):
         await callback.answer()
         live = None
         try:
-            api = RebeccaAPI(order["panel_url"], order["panel_token"])
-            live = await api.get_user(order["vpn_username"])
+            live = await provisioning.get_live_user(
+                order["panel_url"], order["panel_token"], order["vpn_username"]
+            )
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در دریافت اطلاعات سرویس {order['vpn_username']}: {e}")
@@ -527,8 +522,9 @@ def register_user_handlers(dp):
             return
         await callback.answer()
         try:
-            api = RebeccaAPI(order["panel_url"], order["panel_token"])
-            await api.delete_user(order["vpn_username"])
+            await provisioning.remove_service(
+                order["panel_url"], order["panel_token"], order["vpn_username"]
+            )
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در حذف سرویس {order['vpn_username']}: {e}")
@@ -549,8 +545,9 @@ def register_user_handlers(dp):
             await callback.answer(get_text("service_not_found"), show_alert=True)
             return
         try:
-            api = RebeccaAPI(order["panel_url"], order["panel_token"])
-            live = await api.get_user(order["vpn_username"])
+            live = await provisioning.get_live_user(
+                order["panel_url"], order["panel_token"], order["vpn_username"]
+            )
         except Exception as e:
             await callback.answer(get_text("changestatus_error", error=str(e)), show_alert=True)
             return
@@ -571,15 +568,18 @@ def register_user_handlers(dp):
             await callback.answer(get_text("service_not_found"), show_alert=True)
             return
         try:
-            api = RebeccaAPI(order["panel_url"], order["panel_token"])
-            await api.toggle_status(order["vpn_username"], target_active)
+            await provisioning.set_status(
+                order["panel_url"], order["panel_token"], order["vpn_username"], target_active
+            )
         except Exception as e:
             await callback.answer(get_text("changestatus_error", error=str(e)), show_alert=True)
             return
         await callback.answer(get_text("changestatus_active" if target_active else "changestatus_disabled"))
         live = None
         try:
-            live = await api.get_user(order["vpn_username"])
+            live = await provisioning.get_live_user(
+                order["panel_url"], order["panel_token"], order["vpn_username"]
+            )
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در دریافت اطلاعات سرویس {order['vpn_username']}: {e}")
@@ -851,18 +851,16 @@ def register_user_handlers(dp):
             u = callback.from_user
             await get_or_create_user(u.id, u.first_name, u.username)
             try:
-                api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
-                live = await api.get_services()
-                live_ids = {s["id"] for s in live}
-                sid = next((s for s in service_ids if s in live_ids), None)
-                if not sid:
-                    await callback.answer(get_text("plan_service_not_found"), show_alert=True)
-                    return
-                user_data = await api.create_user(sid, plan["traffic"], plan["duration"],
-                                                  ip_limit=plan["ip_limit"])
-                sub_path = user_data.get("subscription_url", "")
-                subscription_url = await api.get_subscription_url(sub_path)
-                vpn_username = user_data.get("username", "")
+                result = await provisioning.provision_service(
+                    plan["panel_url"], plan["panel_token"],
+                    service_ids, plan["traffic"],
+                    duration_days=plan["duration"], ip_limit=plan["ip_limit"],
+                )
+                subscription_url = result["subscription_url"]
+                vpn_username = result["username"]
+            except provisioning.NoLiveServiceError:
+                await callback.answer(get_text("plan_service_not_found"), show_alert=True)
+                return
             except Exception as e:
                 from bot import logger
                 logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {e}")
@@ -938,16 +936,14 @@ def register_user_handlers(dp):
                 return
 
         try:
-            api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
-            user_data = await api.create_user(
-                service_id=service_ids[0],
-                data_limit_gb=plan["traffic"],
-                duration_days=plan["duration"],
-                ip_limit=plan["ip_limit"]
+            result = await provisioning.provision_service(
+                plan["panel_url"], plan["panel_token"],
+                service_ids, plan["traffic"],
+                duration_days=plan["duration"], ip_limit=plan["ip_limit"],
+                verify_live=False,
             )
-            sub_path = user_data.get("subscription_url", "")
-            subscription_url = await api.get_subscription_url(sub_path)
-            username = user_data.get("username", "")
+            subscription_url = result["subscription_url"]
+            username = result["username"]
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {e}")

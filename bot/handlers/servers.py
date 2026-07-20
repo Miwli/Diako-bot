@@ -14,7 +14,7 @@ from shared_lib.db import (
     update_server_url, update_server_token,
     get_text,
 )
-from shared_lib.rebecca_api import RebeccaAPI
+from shared_lib.services import provisioning
 
 def _server_settings_text(server, svc_ids: list) -> str:
     status = "✅ فعال" if server["is_active"] else "❌ غیرفعال"
@@ -159,8 +159,7 @@ def register_server_handlers(dp):
     async def _fetch_and_show_services(msg, state, panel_url, token,
                                         current_ids=None, edit_mode=False):
         try:
-            api = RebeccaAPI(panel_url, token)
-            services = await api.get_services()
+            services = await provisioning.list_services(panel_url, token)
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در اتصال به پنل {panel_url}: {e}")

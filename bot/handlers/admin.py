@@ -21,7 +21,7 @@ from shared_lib.db import (
     add_referral_commission, get_user,
     get_text,
 )
-from shared_lib.rebecca_api import RebeccaAPI
+from shared_lib.services import provisioning
 
 async def _apply_referral_rewards(bot, buyer_id: int, price: int):
     from bot import logger
@@ -497,28 +497,20 @@ def register_admin_handlers(dp):
             if not stored_ids:
                 await callback.answer("سرویسی برای این سرور تنظیم نشده!", show_alert=True)
                 return
-            api = RebeccaAPI(plan["panel_url"], plan["panel_token"])
-
-            live_services = await api.get_services()
-            live_ids = {s["id"] for s in live_services}
-            service_id = next((sid for sid in stored_ids if sid in live_ids), None)
-            if service_id is None:
-                await callback.answer(
-                    "❌ سرویس‌های انتخاب‌شده برای این سرور دیگه توی پنل Rebecca وجود ندارن.\n"
-                    "از پنل ادمین → مدیریت سرورها → سرویس‌ها رو آپدیت کن.",
-                    show_alert=True
-                )
-                return
-
-            user_data = await api.create_user(
-                service_id=service_id,
-                data_limit_gb=plan["traffic"],
-                duration_days=plan["duration"],
-                ip_limit=plan["ip_limit"]
+            result = await provisioning.provision_service(
+                plan["panel_url"], plan["panel_token"],
+                stored_ids, plan["traffic"],
+                duration_days=plan["duration"], ip_limit=plan["ip_limit"],
             )
-            sub_path = user_data.get("subscription_url", "")
-            subscription_url = await api.get_subscription_url(sub_path)
-            username = user_data.get("username", "")
+            subscription_url = result["subscription_url"]
+            username = result["username"]
+        except provisioning.NoLiveServiceError:
+            await callback.answer(
+                "❌ سرویس‌های انتخاب‌شده برای این سرور دیگه توی پنل Rebecca وجود ندارن.\n"
+                "از پنل ادمین → مدیریت سرورها → سرویس‌ها رو آپدیت کن.",
+                show_alert=True
+            )
+            return
         except Exception as e:
             from bot import logger
             logger.error(f"خطا در ساخت یوزر برای سفارش #{order_id}: {e}")
@@ -532,7 +524,7 @@ def register_admin_handlers(dp):
             from bot import logger
             logger.error(f"خطا در ذخیره سفارش #{order_id} — حذف یوزر {username}: {e}")
             try:
-                await api.delete_user(username)
+                await provisioning.remove_service(plan["panel_url"], plan["panel_token"], username)
             except Exception:
                 pass
             await callback.answer(f"خطا در ثبت اطلاعات: {e}", show_alert=True)
