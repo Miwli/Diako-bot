@@ -6,13 +6,13 @@ from states import ExtraVolume, ExtraTime
 from shared_lib.db import (
     get_order, get_plan_with_server,
     get_extra_volume_plans, get_extra_volume_plan,
-    create_extra_volume_request, get_extra_volume_request, update_extra_volume_request,
+    create_extra_volume_request, update_extra_volume_request,
     get_extra_time_plans, get_extra_time_plan,
-    create_extra_time_request, get_extra_time_request, update_extra_time_request,
+    create_extra_time_request, update_extra_time_request,
     get_user_wallet_stats, deduct_balance_if_sufficient, add_transaction,
     get_text,
 )
-from shared_lib.services import provisioning
+from shared_lib.services import provisioning, extras
 from shared_lib.formatters import fmt_traffic_gb
 
 log = logging.getLogger(__name__)
@@ -218,24 +218,20 @@ def register_services_handlers(dp):
     @dp.callback_query(F.data.startswith("evr_approve_"))
     async def evr_approve(callback: types.CallbackQuery, bot):
         req_id = int(callback.data.removeprefix("evr_approve_"))
-        req = await get_extra_volume_request(req_id)
-        if not req:
+        res = await extras.approve_volume_request(req_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("❌ درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] == "approved":
+        if res.status == "already_processed":
             await callback.answer("⚠️ قبلاً تایید شده.", show_alert=True)
             return
-        plan_data = await get_plan_with_server(req["vpn_plan_id"])
-        if not plan_data:
+        if res.status == "plan_not_found":
             await callback.answer("❌ سرور یافت نشد.", show_alert=True)
             return
-        try:
-            await provisioning.extend_volume(plan_data["panel_url"], plan_data["panel_token"], req["vpn_username"], req["traffic_gb"])
-        except Exception as e:
-            log.error("evr_approve add_volume error: %s", e)
-            await callback.answer(f"❌ خطای API: {e}", show_alert=True)
+        if res.status == "api_error":
+            log.error("evr_approve add_volume error: %s", res.error)
+            await callback.answer(f"❌ خطای API: {res.error}", show_alert=True)
             return
-        await update_extra_volume_request(req_id, "approved")
         try:
             await callback.message.edit_caption(
                 caption=(callback.message.caption or "") + "\n\n✅ <b>تایید شد</b>",
@@ -246,8 +242,8 @@ def register_services_handlers(dp):
             pass
         try:
             await bot.send_message(
-                req["user_id"],
-                get_text("extra_volume_approved", traffic=fmt_traffic_gb(req["traffic_gb"])),
+                res.user_id,
+                get_text("extra_volume_approved", traffic=fmt_traffic_gb(res.traffic_gb)),
                 parse_mode="HTML",
             )
         except Exception:
@@ -256,14 +252,13 @@ def register_services_handlers(dp):
     @dp.callback_query(F.data.startswith("evr_reject_"))
     async def evr_reject(callback: types.CallbackQuery, bot):
         req_id = int(callback.data.removeprefix("evr_reject_"))
-        req = await get_extra_volume_request(req_id)
-        if not req:
+        res = await extras.reject_volume_request(req_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("❌ درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] in ("approved", "rejected"):
+        if res.status == "already_processed":
             await callback.answer("⚠️ قبلاً پردازش شده.", show_alert=True)
             return
-        await update_extra_volume_request(req_id, "rejected")
         try:
             await callback.message.edit_caption(
                 caption=(callback.message.caption or "") + "\n\n❌ <b>رد شد</b>",
@@ -274,7 +269,7 @@ def register_services_handlers(dp):
             pass
         try:
             await bot.send_message(
-                req["user_id"],
+                res.user_id,
                 get_text("extra_volume_rejected"),
                 parse_mode="HTML",
             )
@@ -346,7 +341,7 @@ def register_services_handlers(dp):
             await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
         try:
-            await provisioning.extend_time(plan_info["server_url"], plan_info["server_token"], order["vpn_username"], plan["days"])
+            await provisioning.extend_time(plan_info["panel_url"], plan_info["panel_token"], order["vpn_username"], plan["days"])
         except Exception as e:
             log.error("extra_time wallet error: %s", e)
             await callback.answer(_alert("extra_time_error"), show_alert=True)
@@ -413,25 +408,20 @@ def register_services_handlers(dp):
     async def etr_approve(callback: types.CallbackQuery):
         from bot import bot
         req_id = int(callback.data.removeprefix("etr_approve_"))
-        req = await get_extra_time_request(req_id)
-        if not req:
+        res = await extras.approve_time_request(req_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("❌ درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] in ("approved", "rejected"):
+        if res.status == "already_processed":
             await callback.answer("⚠️ قبلاً پردازش شده.", show_alert=True)
             return
-        order = await get_order(req["order_id"])
-        plan_info = await get_plan_with_server(order.get("plan_id") if order else None)
-        if not order or not plan_info:
+        if res.status == "plan_not_found":
             await callback.answer(_alert("plan_service_not_found"), show_alert=True)
             return
-        try:
-            await provisioning.extend_time(plan_info["server_url"], plan_info["server_token"], order["vpn_username"], req["days"])
-        except Exception as e:
-            log.error("etr_approve error: %s", e)
+        if res.status == "api_error":
+            log.error("etr_approve error: %s", res.error)
             await callback.answer(_alert("extra_time_error"), show_alert=True)
             return
-        await update_extra_time_request(req_id, "approved")
         try:
             await callback.message.edit_caption(
                 caption=(callback.message.caption or "") + "\n\n✅ <b>تایید شد</b>",
@@ -442,8 +432,8 @@ def register_services_handlers(dp):
             pass
         try:
             await bot.send_message(
-                req["service_user_id"],
-                get_text("extra_time_approved", days=req["days"]),
+                res.user_id,
+                get_text("extra_time_approved", days=res.days),
                 parse_mode="HTML",
             )
         except Exception:
@@ -453,14 +443,13 @@ def register_services_handlers(dp):
     async def etr_reject(callback: types.CallbackQuery):
         from bot import bot
         req_id = int(callback.data.removeprefix("etr_reject_"))
-        req = await get_extra_time_request(req_id)
-        if not req:
+        res = await extras.reject_time_request(req_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("❌ درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] in ("approved", "rejected"):
+        if res.status == "already_processed":
             await callback.answer("⚠️ قبلاً پردازش شده.", show_alert=True)
             return
-        await update_extra_time_request(req_id, "rejected")
         try:
             await callback.message.edit_caption(
                 caption=(callback.message.caption or "") + "\n\n❌ <b>رد شد</b>",
@@ -471,7 +460,7 @@ def register_services_handlers(dp):
             pass
         try:
             await bot.send_message(
-                req["service_user_id"],
+                res.user_id,
                 get_text("extra_time_rejected"),
                 parse_mode="HTML",
             )

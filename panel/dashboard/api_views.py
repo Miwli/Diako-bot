@@ -1228,70 +1228,60 @@ def extra_request_action(request):
     action = data.get('action')
     req_id = data.get('req_id')
 
+    from shared_lib.services import extras
+
     if action == 'approve_ev':
         if not req_id:
             return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
-        req = async_to_sync(get_extra_volume_request)(int(req_id))
-        if not req:
+        res = async_to_sync(extras.approve_volume_request)(int(req_id), actor=f"panel:{request.user.username}")
+        if res.status == 'not_found':
             return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
-        if req['status'] == 'approved':
+        if res.status == 'already_processed':
             return JsonResponse({'ok': False, 'error': 'قبلاً تایید شده'})
-        from shared_lib.db import get_plan_with_server
-        plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
-        if not plan_data:
+        if res.status == 'plan_not_found':
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        from shared_lib.services import provisioning
-        try:
-            async_to_sync(provisioning.extend_volume)(
-                plan_data['panel_url'], plan_data['panel_token'], req['vpn_username'], req['traffic_gb']
-            )
-        except Exception as e:
-            return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
-        async_to_sync(update_extra_volume_request)(int(req_id), 'approved')
+        if res.status == 'api_error':
+            return JsonResponse({'ok': False, 'error': f'خطای API: {res.error}'})
         from shared_lib.db import get_text
         from shared_lib.formatters import fmt_traffic_gb
-        _send_telegram(req['user_id'], get_text('extra_volume_approved', traffic=fmt_traffic_gb(req['traffic_gb'])))
+        _send_telegram(res.user_id, get_text('extra_volume_approved', traffic=fmt_traffic_gb(res.traffic_gb)))
         return JsonResponse({'ok': True})
 
     if action == 'reject_ev':
         if not req_id:
             return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
-        async_to_sync(update_extra_volume_request)(int(req_id), 'rejected')
-        req = async_to_sync(get_extra_volume_request)(int(req_id))
-        if req:
-            _send_telegram(req['user_id'], '❌ درخواست افزودن حجم رد شد.')
+        res = async_to_sync(extras.reject_volume_request)(int(req_id), actor=f"panel:{request.user.username}")
+        if res.status == 'not_found':
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if res.status == 'already_processed':
+            return JsonResponse({'ok': False, 'error': 'قبلاً پردازش شده'})
+        _send_telegram(res.user_id, '❌ درخواست افزودن حجم رد شد.')
         return JsonResponse({'ok': True})
 
     if action == 'approve_et':
         if not req_id:
             return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
-        req = async_to_sync(get_extra_time_request)(int(req_id))
-        if not req:
+        res = async_to_sync(extras.approve_time_request)(int(req_id), actor=f"panel:{request.user.username}")
+        if res.status == 'not_found':
             return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
-        if req['status'] == 'approved':
+        if res.status == 'already_processed':
             return JsonResponse({'ok': False, 'error': 'قبلاً تایید شده'})
-        from shared_lib.db import get_plan_with_server
-        plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
-        if not plan_data:
+        if res.status == 'plan_not_found':
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        from shared_lib.services import provisioning
-        try:
-            async_to_sync(provisioning.extend_time)(
-                plan_data['panel_url'], plan_data['panel_token'], req['vpn_username'], req['days']
-            )
-        except Exception as e:
-            return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
-        async_to_sync(update_extra_time_request)(int(req_id), 'approved')
-        _send_telegram(req['user_id'], f'✅ <b>افزودن زمان تایید شد!</b>\n\n📅 <b>{req["days"]} روز</b> به سرویس شما اضافه شد.')
+        if res.status == 'api_error':
+            return JsonResponse({'ok': False, 'error': f'خطای API: {res.error}'})
+        _send_telegram(res.user_id, f'✅ <b>افزودن زمان تایید شد!</b>\n\n📅 <b>{res.days} روز</b> به سرویس شما اضافه شد.')
         return JsonResponse({'ok': True})
 
     if action == 'reject_et':
         if not req_id:
             return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
-        async_to_sync(update_extra_time_request)(int(req_id), 'rejected')
-        req = async_to_sync(get_extra_time_request)(int(req_id))
-        if req:
-            _send_telegram(req['user_id'], '❌ درخواست افزودن زمان رد شد.')
+        res = async_to_sync(extras.reject_time_request)(int(req_id), actor=f"panel:{request.user.username}")
+        if res.status == 'not_found':
+            return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
+        if res.status == 'already_processed':
+            return JsonResponse({'ok': False, 'error': 'قبلاً پردازش شده'})
+        _send_telegram(res.user_id, '❌ درخواست افزودن زمان رد شد.')
         return JsonResponse({'ok': True})
 
     if action == 'approve_lc':

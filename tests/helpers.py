@@ -50,3 +50,37 @@ async def get_order_status(order_id: int) -> str:
         cur = await conn.execute("SELECT status FROM orders WHERE id = ?", (order_id,))
         row = await cur.fetchone()
         return row[0]
+
+
+async def make_volume_request(order_id: int, traffic_gb: float = 10, user_id: int = 1) -> int:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute(
+            "INSERT INTO extra_volume_plans (name, traffic_gb, price) VALUES ('v', ?, 100)",
+            (traffic_gb,),
+        )
+        plan_id = cur.lastrowid
+        await conn.commit()
+    return await db.create_extra_volume_request(user_id, order_id, plan_id)
+
+
+async def make_time_request(order_id: int, days: int = 15, user_id: int = 1) -> int:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute(
+            "INSERT INTO extra_time_plans (name, days, price) VALUES ('t', ?, 100)",
+            (days,),
+        )
+        plan_id = cur.lastrowid
+        await conn.commit()
+    return await db.create_extra_time_request(user_id, order_id, plan_id)
+
+
+async def get_extra_volume_status(req_id: int) -> str:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute("SELECT status FROM extra_volume_requests WHERE id = ?", (req_id,))
+        return (await cur.fetchone())[0]
+
+
+async def get_extra_time_status(req_id: int) -> str:
+    async with aiosqlite.connect(db.DB_PATH) as conn:
+        cur = await conn.execute("SELECT status FROM extra_time_requests WHERE id = ?", (req_id,))
+        return (await cur.fetchone())[0]
