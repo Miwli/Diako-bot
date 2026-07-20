@@ -19,6 +19,7 @@ urlpatterns = [
     path('diako/api/save-keyboard/', api_views.save_keyboard, name='diako_save_keyboard'),
     path('diako/api/keyboard/<str:keyboard_name>/', api_views.keyboard_data, name='diako_keyboard_data'),
     path('diako/api/bot-info/', api_views.bot_info, name='diako_bot_info'),
+    path('diako/api/receipt/<str:kind>/<int:obj_id>/', api_views.receipt_image, name='diako_receipt_image'),
     path('diako/api/update-text/', api_views.update_text, name='diako_update_text'),
     path('diako/orders/', v.orders_view, name='diako_orders'),
     path('diako/users/', v.users_view, name='diako_users'),

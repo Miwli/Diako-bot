@@ -165,13 +165,14 @@
     {% if topups %}
     <div class="mgmt-table-wrap">
       <table class="mgmt-table">
-        <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "مبلغ" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
+        <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "مبلغ" %}</th><th>{% trans "رسید" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
         <tbody>
           {% for t in topups %}
           <tr class="mgmt-row">
             <td><span class="cell-muted">#{{ t.id }}</span></td>
             <td><span class="cell-strong">{{ t.username|default:t.user_id }}</span></td>
             <td><span class="cell-accent">{{ t.amount|toman }} {% trans "تومان" %}</span></td>
+            <td>{% if t.receipt_file_id %}<img class="receipt-thumb-sm" loading="lazy" src="{% url 'diako_receipt_image' 'topup' t.id %}" alt="{% trans 'رسید' %}" onclick="openReceipt('topup', {{ t.id }})">{% else %}<span class="cell-muted">—</span>{% endif %}</td>
             <td>{% if t.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif t.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
             <td><span class="cell-muted">{{ t.created_at|jdate }}</span></td>
             <td>{% if t.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveTopup({{ t.id }})"><i class="ti ti-check"></i></button><button class="row-btn danger" title="{% trans 'رد' %}" onclick="rejectTopup({{ t.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>

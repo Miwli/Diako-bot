@@ -117,6 +117,12 @@
 <!-- Notification Stack -->
 <div id="notif-stack" class="notif-stack"></div>
 
+<!-- Receipt lightbox (shared) -->
+<div class="lightbox-bg" id="receiptLightbox" onclick="closeReceipt()">
+  <button class="lightbox-close" onclick="closeReceipt()" aria-label="{% trans 'بستن' %}"><i class="ti ti-x"></i></button>
+  <img id="receiptLightboxImg" src="" alt="{% trans 'رسید پرداخت' %}" onclick="event.stopPropagation()">
+</div>
+
 <script>
 window.DIAKO_I18N = {
   newOrder: "{% trans 'سفارش جدید' %}",

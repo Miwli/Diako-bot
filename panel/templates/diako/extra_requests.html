@@ -44,7 +44,7 @@
         {% if ev_requests %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
+            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "رسید" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
             <tbody>
               {% for r in ev_requests %}
               <tr class="mgmt-row">
@@ -52,6 +52,7 @@
                 <td><span class="cell-name">{{ r.user_id }}</span></td>
                 <td><span class="cell-muted">{{ r.order_id }}</span></td>
                 <td><span class="cell-muted">{{ r.plan_id }}</span></td>
+                <td>{% if r.receipt_file_id %}<img class="receipt-thumb-sm" loading="lazy" src="{% url 'diako_receipt_image' 'extra_volume' r.id %}" alt="{% trans 'رسید' %}" onclick="openReceipt('extra_volume', {{ r.id }})">{% else %}<span class="cell-muted">—</span>{% endif %}</td>
                 <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
                 <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
                 <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveEv({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="{% trans 'رد' %}" onclick="rejectEv({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>
@@ -71,7 +72,7 @@
         {% if et_requests %}
         <div class="mgmt-table-wrap" style="padding:0 6px;">
           <table class="mgmt-table">
-            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
+            <thead><tr><th>#</th><th>{% trans "کاربر" %}</th><th>{% trans "سرویس" %}</th><th>{% trans "پلن" %}</th><th>{% trans "رسید" %}</th><th>{% trans "وضعیت" %}</th><th>{% trans "تاریخ" %}</th><th class="col-actions"></th></tr></thead>
             <tbody>
               {% for r in et_requests %}
               <tr class="mgmt-row">
@@ -79,6 +80,7 @@
                 <td><span class="cell-name">{{ r.user_id }}</span></td>
                 <td><span class="cell-muted">{{ r.order_id }}</span></td>
                 <td><span class="cell-muted">{{ r.plan_id }}</span></td>
+                <td>{% if r.receipt_file_id %}<img class="receipt-thumb-sm" loading="lazy" src="{% url 'diako_receipt_image' 'extra_time' r.id %}" alt="{% trans 'رسید' %}" onclick="openReceipt('extra_time', {{ r.id }})">{% else %}<span class="cell-muted">—</span>{% endif %}</td>
                 <td>{% if r.status == 'pending' %}<span class="st-badge st-pending">{% trans "در انتظار" %}</span>{% elif r.status == 'approved' %}<span class="st-badge st-approved">{% trans "تایید" %}</span>{% else %}<span class="st-badge st-rejected">{% trans "رد" %}</span>{% endif %}</td>
                 <td><span class="cell-muted">{{ r.created_at|default:"—"|slice:":16" }}</span></td>
                 <td>{% if r.status == 'pending' %}<div class="row-acts"><button class="row-btn approve" title="{% trans 'تایید' %}" onclick="approveEt({{ r.id }})"><i class="ti ti-check"></i></button><button class="row-btn reject" title="{% trans 'رد' %}" onclick="rejectEt({{ r.id }})"><i class="ti ti-x"></i></button></div>{% endif %}</td>

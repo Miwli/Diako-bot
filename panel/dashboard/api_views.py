@@ -1,8 +1,11 @@
 import json
 import os
 import pathlib
+import re
+import mimetypes
 import urllib.request
-from django.http import JsonResponse
+import urllib.parse
+from django.http import JsonResponse, HttpResponse, HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.views.decorators.http import require_http_methods
@@ -357,6 +360,77 @@ def bot_info(request):
         })
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)})
+
+
+# Tables that store a Telegram receipt file_id, keyed by the URL "kind".
+_RECEIPT_SOURCES = {
+    'order':        ('orders', 'receipt_file_id'),
+    'topup':        ('top_up_requests', 'receipt_file_id'),
+    'extra_time':   ('extra_time_requests', 'receipt_file_id'),
+    'extra_volume': ('extra_volume_requests', 'receipt_file_id'),
+}
+
+
+def _receipt_cache_dir():
+    d = pathlib.Path(DB_PATH).parent / 'receipt_cache'
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+@login_required
+@require_http_methods(["GET"])
+def receipt_image(request, kind, obj_id):
+    """Proxy a receipt image from Telegram to the browser.
+
+    The bot token stays server-side: the browser only ever sees this URL.
+    Images are cached on disk by file_id (which is an immutable content ref),
+    so each receipt hits Telegram at most once.
+    """
+    source = _RECEIPT_SOURCES.get(kind)
+    if not source:
+        return HttpResponseNotFound('unknown receipt kind')
+    table, col = source
+
+    with connection.cursor() as cur:
+        cur.execute(f'SELECT {col} FROM {table} WHERE id = %s', [obj_id])
+        row = cur.fetchone()
+    if not row or not row[0]:
+        return HttpResponseNotFound('no receipt')
+    file_id = row[0]
+
+    cache_dir = _receipt_cache_dir()
+    safe = re.sub(r'[^A-Za-z0-9_-]', '_', file_id)
+    for cached in cache_dir.glob(safe + '.*'):
+        ctype = mimetypes.guess_type(str(cached))[0] or 'image/jpeg'
+        resp = HttpResponse(cached.read_bytes(), content_type=ctype)
+        resp['Cache-Control'] = 'private, max-age=86400'
+        return resp
+
+    token = _get_bot_token()
+    if not token:
+        return HttpResponseNotFound('BOT_TOKEN not configured')
+    try:
+        fid = urllib.parse.quote(file_id, safe='')
+        with urllib.request.urlopen(
+            f'https://api.telegram.org/bot{token}/getFile?file_id={fid}', timeout=8
+        ) as r:
+            fr = json.loads(r.read())
+        file_path = fr.get('result', {}).get('file_path')
+        if not file_path:
+            return HttpResponseNotFound('getFile failed')
+        with urllib.request.urlopen(
+            f'https://api.telegram.org/file/bot{token}/{file_path}', timeout=15
+        ) as r:
+            content = r.read()
+    except Exception as e:
+        return HttpResponseNotFound(str(e))
+
+    ext = pathlib.Path(file_path).suffix or '.jpg'
+    (cache_dir / (safe + ext)).write_bytes(content)
+    ctype = mimetypes.guess_type('x' + ext)[0] or 'image/jpeg'
+    resp = HttpResponse(content, content_type=ctype)
+    resp['Cache-Control'] = 'private, max-age=86400'
+    return resp
 
 
 @login_required

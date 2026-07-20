@@ -251,6 +251,32 @@ async function paletteSearch(q) {
   } catch (_) {}
 }
 
+/* ─── Receipt lightbox ─── */
+function openReceipt(kind, objId) {
+  const box = document.getElementById('receiptLightbox');
+  const img = document.getElementById('receiptLightboxImg');
+  if (!box || !img) return;
+  img.src = `/diako/api/receipt/${kind}/${objId}/`;
+  box.classList.add('open');
+}
+
+function closeReceipt() {
+  const box = document.getElementById('receiptLightbox');
+  if (!box) return;
+  box.classList.remove('open');
+  const img = document.getElementById('receiptLightboxImg');
+  if (img) img.src = '';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const box = document.getElementById('receiptLightbox');
+  if (box && box.classList.contains('open')) {
+    e.stopPropagation();
+    closeReceipt();
+  }
+}, true);
+
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();

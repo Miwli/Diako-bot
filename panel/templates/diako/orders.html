@@ -713,6 +713,7 @@
                 <th>{% trans "کاربر" %}</th>
                 <th>{% trans "پلن" %}</th>
                 <th>{% trans "نوع" %}</th>
+                <th>{% trans "رسید" %}</th>
                 <th>{% trans "وضعیت" %}</th>
                 <th>{% trans "تاریخ" %}</th>
                 <th class="col-actions"></th>
@@ -733,6 +734,7 @@
                   data-sub="{{ order.subscription_url|default:'' }}"
                   data-reason="{{ order.rejection_reason|default:'' }}"
                   data-note="{{ order.note|default:'' }}"
+                  data-receipt="{% if order.receipt_file_id %}1{% endif %}"
                   onclick="openDrawer(this)">
 
                 <td><span class="cell-id">#{{ order.id }}</span></td>
@@ -759,6 +761,17 @@
                     <span class="type-chip">{% trans "تمدید" %}</span>
                   {% else %}
                     <span class="type-chip">{% trans "خرید" %}</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if order.receipt_file_id %}
+                    <img class="receipt-thumb-sm" loading="lazy"
+                         src="{% url 'diako_receipt_image' 'order' order.id %}"
+                         alt="{% trans 'رسید' %}"
+                         onclick="event.stopPropagation(); openReceipt('order', {{ order.id }})">
+                  {% else %}
+                    <span class="cell-muted" style="font-size:11px;color:var(--text-muted)">—</span>
                   {% endif %}
                 </td>
 
@@ -920,6 +933,17 @@ function openDrawer(row) {
       <div class="drw-row"><span class="drw-lbl">{% trans "وضعیت" %}</span><span class="drw-val">${statusHtml[d.status] || d.status}</span></div>
       <div class="drw-row"><span class="drw-lbl">{% trans "تاریخ" %}</span><span class="drw-val">${d.date}</span></div>
     </div>`;
+
+  if (d.receipt) {
+    html += `
+    <div class="drw-section">
+      <div class="drw-sec-title">{% trans "رسید پرداخت" %}</div>
+      <img class="receipt-thumb" src="/diako/api/receipt/order/${d.id}/"
+           alt="{% trans 'رسید پرداخت' %}"
+           onclick="openReceipt('order', ${d.id})"
+           onerror="this.outerHTML='<div class=\\'receipt-empty\\'>{% trans "بارگذاری رسید ناموفق بود" %}</div>'">
+    </div>`;
+  }
 
   if (d.status === 'approved' && d.vpn) {
     html += `
