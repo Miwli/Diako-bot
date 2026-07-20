@@ -24,9 +24,9 @@ from shared_lib.db import (
     get_selected_payment_card,
     create_location_change_request, get_location_change_request,
     get_pending_location_change, update_location_change_request,
-    perform_location_change,
 )
 from shared_lib.services import provisioning, features, orders
+from shared_lib.services.location import change_location
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
@@ -649,7 +649,7 @@ def register_user_handlers(dp):
             await callback.answer()
             await callback.message.edit_text(get_text("changeloc_processing"))
             try:
-                result = await perform_location_change(order_id, server_id)
+                result = await change_location(order_id, server_id)
             except Exception as e:
                 from bot import logger
                 logger.error(f"خطا در تغییر لوکیشن سفارش #{order_id}: {e}")
@@ -704,7 +704,7 @@ def register_user_handlers(dp):
             return
         await callback.answer()
         try:
-            result = await perform_location_change(req["order_id"], req["to_server_id"])
+            result = await change_location(req["order_id"], req["to_server_id"])
         except Exception as e:
             logger.error(f"خطا در اعمال تغییر لوکیشن درخواست #{req_id}: {e}")
             await callback.message.edit_text(

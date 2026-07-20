@@ -1288,14 +1288,15 @@ def extra_request_action(request):
         if not req_id:
             return JsonResponse({'ok': False, 'error': 'req_id الزامی است'}, status=400)
         from shared_lib.db import (get_location_change_request, update_location_change_request,
-                                   perform_location_change, get_text)
+                                   get_text)
+        from shared_lib.services.location import change_location
         req = async_to_sync(get_location_change_request)(int(req_id))
         if not req:
             return JsonResponse({'ok': False, 'error': 'درخواست یافت نشد'}, status=404)
         if req['status'] != 'pending':
             return JsonResponse({'ok': False, 'error': 'قبلاً پردازش شده'})
         try:
-            result = async_to_sync(perform_location_change)(req['order_id'], req['to_server_id'])
+            result = async_to_sync(change_location)(req['order_id'], req['to_server_id'])
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'خطا در انتقال: {e}'})
         async_to_sync(update_location_change_request)(int(req_id), 'approved')

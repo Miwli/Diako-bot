@@ -2605,71 +2605,14 @@ async def update_location_change_request(req_id: int, status: str):
         await db.commit()
 
 
-async def perform_location_change(order_id: int, to_server_id: int) -> dict:
-    """جابجایی واقعی سرویس بین دو پنل ربکا — حجم باقی‌مانده و انقضا حفظ می‌شن.
-
-    یوزر معادل روی سرور مقصد ساخته می‌شه، یوزر قبلی حذف می‌شه و
-    اطلاعات جدید روی سفارش ذخیره می‌شه. هم بات هم پنل همین تابع رو صدا می‌زنن.
-    خروجی: {"vpn_username", "subscription_url"}
-    """
-    import time as _time
-    import json as _json
-    from shared_lib.services import provisioning
-
-    service = await get_service_by_order(order_id)
-    if not service or not service["vpn_username"]:
-        raise ValueError("سرویس یا یوزرنیم VPN پیدا نشد")
-
-    target = await get_server(to_server_id)
-    if not target or not target["is_active"]:
-        raise ValueError("سرور مقصد در دسترس نیست")
-
-    service_ids = _json.loads(target["service_ids"] or "[]")
-    if not service_ids:
-        raise ValueError("سرور مقصد سرویس پیکربندی‌شده ندارد")
-
-    # وضعیت زنده از سرور فعلی — مبنای حجم و زمان باقی‌مانده
-    live = await provisioning.get_live_user(
-        service["panel_url"], service["panel_token"], service["vpn_username"]
-    )
-    data_limit = live.get("data_limit") or 0
-    used = live.get("used_traffic") or 0
-    expire_ts = live.get("expire") or 0
-
-    remaining_gb = 0 if data_limit == 0 else max(data_limit - used, 0) / (1024 ** 3)
-    now = int(_time.time())
-    remaining_hours = 0 if expire_ts == 0 else max(expire_ts - now, 0) / 3600
-    if expire_ts and remaining_hours == 0:
-        raise ValueError("سرویس منقضی شده — قابل انتقال نیست")
-
-    # یوزر معادل روی سرور مقصد — اولین سرویس معتبر پنل
-    try:
-        result = await provisioning.provision_service(
-            target["panel_url"], target["panel_token"],
-            service_ids, remaining_gb,
-            duration_hours=remaining_hours,
-        )
-    except provisioning.NoLiveServiceError:
-        raise ValueError("سرویس‌های تنظیم‌شده روی سرور مقصد در پنل موجود نیستند")
-    new_username = result["username"]
-    new_sub_url = result["subscription_url"]
-
-    # حذف یوزر قدیمی — اگه نشد، انتقال رو خراب نمی‌کنیم
-    try:
-        await provisioning.remove_service(
-            service["panel_url"], service["panel_token"], service["vpn_username"]
-        )
-    except Exception:
-        pass
-
+async def update_order_location(order_id: int, to_server_id: int, vpn_username: str, subscription_url: str):
+    """ذخیره‌ی نتیجه‌ی جابجایی لوکیشن روی سفارش (یوزر و لینک جدید + سرور مقصد)"""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "UPDATE orders SET location_server_id=?, vpn_username=?, subscription_url=? WHERE id=?",
-            (to_server_id, new_username, new_sub_url, order_id)
+            (to_server_id, vpn_username, subscription_url, order_id)
         )
         await db.commit()
-
-    return {"vpn_username": new_username, "subscription_url": new_sub_url}
 
 
 # ─── کیبورد ادیتور ───────────────────────────
