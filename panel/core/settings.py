@@ -68,6 +68,16 @@ ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] or ['*']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h and h != '*']
 
+# Production hardening — only when DEBUG is off (panel runs behind HTTPS/nginx).
+# Kept off in local HTTP dev so the login cookie isn't dropped over plain HTTP.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True  # nginx also redirects; safe with SECURE_PROXY_SSL_HEADER above
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 
 # Application definition
 
