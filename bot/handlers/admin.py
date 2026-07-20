@@ -1,6 +1,4 @@
 import html as html_lib
-import qrcode
-from io import BytesIO
 from aiogram import types, F
 from aiogram.types import BufferedInputFile
 from aiogram.filters import CommandStart
@@ -19,16 +17,10 @@ from shared_lib.db import (
     get_text,
 )
 from shared_lib.services import orders, wallet
+from shared_lib.services.qr import make_qr_png
 
 def _make_qr(data: str) -> BufferedInputFile:
-    qr = qrcode.QRCode(box_size=10, border=4)
-    qr.add_data(data)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return BufferedInputFile(buf.read(), filename="qr.png")
+    return BufferedInputFile(make_qr_png(data), filename="qr.png")
 
 def register_admin_handlers(dp):
 
