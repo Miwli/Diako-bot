@@ -439,6 +439,8 @@ def settings_bot_view(request):
         },
         'ticket_msg': async_to_sync(get_setting)('support_ticket_msg') or '',
         'servers': list(Servers.objects.values('id', 'name').order_by('id')),
+        'maintenance_enabled': (async_to_sync(get_setting)('maintenance_enabled') or '0') == '1',
+        'maintenance_message': async_to_sync(get_setting)('maintenance_message') or '',
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

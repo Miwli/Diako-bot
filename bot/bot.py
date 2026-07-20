@@ -24,7 +24,7 @@ from handlers.stats import register_stats_handlers
 from handlers.discount import register_discount_handlers
 from handlers.services import register_services_handlers
 from handlers.force_join import register_force_join_handlers
-from middlewares import ForceJoinMiddleware, NavHistoryMiddleware
+from middlewares import ForceJoinMiddleware, NavHistoryMiddleware, MaintenanceMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +44,9 @@ def is_admin(user_id: int) -> bool:
     # bootstrap owners from .env, plus DB-managed bot admins (from cache)
     return user_id in ADMIN_IDS or is_bot_admin_cached(user_id)
 
+# maintenance runs first so it takes precedence over force-join
+dp.message.outer_middleware(MaintenanceMiddleware())
+dp.callback_query.outer_middleware(MaintenanceMiddleware())
 dp.message.outer_middleware(ForceJoinMiddleware())
 dp.callback_query.outer_middleware(ForceJoinMiddleware())
 # تاریخچه‌ی ناوبری برای دکمه‌ی «یک مرحله عقب» — بعد از جوین اجباری اجرا می‌شه

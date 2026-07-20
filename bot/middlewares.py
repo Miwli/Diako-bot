@@ -84,6 +84,45 @@ class NavHistoryMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
+_DEFAULT_MAINTENANCE_MSG = (
+    "🛠 ربات موقتاً در حال بروزرسانی است.\n\n"
+    "کمی بعد دوباره امتحان کن. ممنون از صبرت 🙏"
+)
+
+
+class MaintenanceMiddleware(BaseMiddleware):
+    """When maintenance mode is on, every non-admin gets the maintenance
+    notice and no handler runs. Admins always pass through."""
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ) -> Any:
+        user = getattr(event, "from_user", None)
+        if user is None:
+            return await handler(event, data)
+
+        from bot import is_admin
+        if is_admin(user.id):
+            return await handler(event, data)
+
+        if await get_setting("maintenance_enabled") != "1":
+            return await handler(event, data)
+
+        text = await get_setting("maintenance_message") or _DEFAULT_MAINTENANCE_MSG
+        if isinstance(event, CallbackQuery):
+            await event.answer()
+            try:
+                await event.message.edit_text(text, parse_mode="HTML")
+            except Exception:
+                await event.message.answer(text, parse_mode="HTML")
+        elif isinstance(event, Message):
+            await event.answer(text, parse_mode="HTML")
+        return None
+
+
 class ForceJoinMiddleware(BaseMiddleware):
     async def __call__(
         self,

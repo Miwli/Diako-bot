@@ -1539,6 +1539,11 @@ def bot_settings_action(request):
         async_to_sync(set_setting)('support_ticket_msg_entities', '')
         return JsonResponse({'ok': True})
 
+    if action == 'save_maintenance':
+        async_to_sync(set_setting)('maintenance_enabled', '1' if data.get('enabled') else '0')
+        async_to_sync(set_setting)('maintenance_message', (data.get('message') or '').strip())
+        return JsonResponse({'ok': True})
+
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 
