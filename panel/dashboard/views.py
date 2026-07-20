@@ -13,7 +13,7 @@ from shared_lib.db import (
     get_admin_stats, get_all_keyboard_buttons, get_keyboard_actions, get_all_texts,
     get_setting, get_all_keyboard_buttons_grouped,
     get_admins, get_admin_by_panel_user, count_admin_actions, can_manage_admins,
-    role_default_permissions, ADMIN_SECTIONS, ADMIN_ROLES,
+    role_default_permissions, ADMIN_SECTIONS, ADMIN_ROLES, get_audit_log,
 )
 from .models import (
     Orders, Servers, Users, Plans, DiscountCodes, TopUpRequests, Transactions,
@@ -48,6 +48,7 @@ def _page_ctx(request, nav, tab=None):
             ('panel',    'diako_settings_panel',  _('پنل'),               'ti-browser'),
             ('admins',   'diako_settings_admins', _('ادمین‌ها'),           'ti-user-shield'),
             ('database', 'diako_import_export',   _('دیتابیس'),           'ti-database'),
+            ('logs',     'diako_settings_logs',   _('آمار و لاگ'),         'ti-chart-line'),
         ],
         'customize': [
             ('keyboard', 'diako_keyboard_editor', _('کیبورد'),            'ti-keyboard'),
@@ -459,6 +460,44 @@ def _referral_settings():
         'discount_enabled': _s('referral_discount_enabled') == '1',
         'discount_value':   _s('referral_discount_value', '10'),
     }
+
+
+# ─── stats & logs ────────────────────────────────────────────────────────────
+
+_AUDIT_LABELS = {
+    'admin.add':    'افزودن ادمین',
+    'admin.update': 'ویرایش ادمین',
+    'admin.toggle': 'فعال/غیرفعال ادمین',
+    'admin.delete': 'حذف ادمین',
+}
+
+
+@login_required
+def settings_logs_view(request):
+    from datetime import datetime, timezone, timedelta
+    heartbeat = async_to_sync(get_setting)('bot_heartbeat')
+    bot_online = False
+    if heartbeat:
+        try:
+            last = datetime.fromisoformat(str(heartbeat).replace('Z', '+00:00'))
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            bot_online = (datetime.now(timezone.utc) - last) < timedelta(seconds=150)
+        except (ValueError, TypeError):
+            pass
+
+    logs = async_to_sync(get_audit_log)(limit=100)
+    for row in logs:
+        row['label'] = _AUDIT_LABELS.get(row['action'], row['action'])
+
+    ctx = {
+        'bot_online': bot_online,
+        'bot_username': async_to_sync(get_setting)('bot_username') or '',
+        'maintenance_on': (async_to_sync(get_setting)('maintenance_enabled') or '0') == '1',
+        'logs': logs,
+    }
+    ctx.update(_page_ctx(request, 'settings', 'logs'))
+    return render(request, 'diako/settings_logs.html', ctx)
 
 
 # ─── panel settings (appearance) ─────────────────────────────────────────────

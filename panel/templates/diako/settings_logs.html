@@ -1,0 +1,73 @@
+{% extends 'diako/base.html' %}
+{% load static i18n diako_tags %}
+
+{% block title %}{% trans "آمار و لاگ" %} — {% trans "دیاکو" %}{% endblock %}
+
+{% block content %}
+<div class="widget-grid anim-card">
+  <div class="settings-section"><i class="ti ti-activity-heartbeat"></i>{% trans "وضعیت سیستم" %}</div>
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-robot"></i>{% trans "بات" %}</div>
+    </div>
+    <div class="widget-body">
+      <div class="log-status">
+        <span class="log-dot {% if bot_online %}on{% else %}off{% endif %}"></span>
+        <span class="log-status-text">{% if bot_online %}{% trans "آنلاین" %}{% else %}{% trans "آفلاین" %}{% endif %}</span>
+        {% if bot_username %}<span class="cell-muted" style="font-size:12px">@{{ bot_username }}</span>{% endif %}
+      </div>
+      {% if maintenance_on %}
+      <div class="log-badge-warn"><i class="ti ti-tool"></i> {% trans "حالت تعمیر روشن است" %}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="settings-section"><i class="ti ti-history"></i>{% trans "لاگ اقدامات ادمین" %}</div>
+  <div class="widget-card" style="grid-column:1 / -1">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-list-check"></i>{% trans "آخرین اقدامات" %}</div>
+    </div>
+    <div class="widget-body">
+      {% if logs %}
+      <div class="item-list">
+        {% for l in logs %}
+        <div class="item-row">
+          <div class="item-ico"><i class="ti ti-point"></i></div>
+          <div class="item-text">
+            <div class="item-title">{{ l.label }}{% if l.target %} <span class="cell-muted">· {{ l.target }}</span>{% endif %}</div>
+            <div class="item-sub" style="display:flex;gap:10px;flex-wrap:wrap">
+              <span><i class="ti ti-user" style="font-size:12px"></i> {{ l.actor_name|default:"—" }}</span>
+              <span><i class="ti ti-clock" style="font-size:12px"></i> {{ l.created_at|jdate }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-ico"><i class="ti ti-history-off"></i></div>
+        <div class="empty-title">{% trans "هنوز اقدامی ثبت نشده" %}</div>
+        <div class="empty-sub">{% trans "اقدام‌های مدیریتی (افزودن/ویرایش/حذف ادمین) اینجا ثبت می‌شوند." %}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .settings-section { grid-column:1 / -1; display:flex; align-items:center; gap:8px;
+    margin:0 2px; font-size:12px; font-weight:600; color:var(--text-muted); }
+  .settings-section i { color:var(--accent); font-size:15px; }
+  .settings-section::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
+  .log-status { display:flex; align-items:center; gap:10px; }
+  .log-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+  .log-dot.on { background:#3ddc84; box-shadow:0 0 0 4px rgba(61,220,132,0.15); }
+  .log-dot.off { background:#8a8f98; box-shadow:0 0 0 4px rgba(138,143,152,0.12); }
+  .log-status-text { font-size:14px; font-weight:600; }
+  .log-badge-warn { margin-top:12px; font-size:11px; color:#FCC479;
+    background:rgba(255,193,120,0.08); border:1px solid rgba(255,193,120,0.2);
+    border-radius:10px; padding:8px 11px; display:inline-flex; gap:7px; align-items:center; }
+</style>
+{% endblock %}

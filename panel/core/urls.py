@@ -33,6 +33,7 @@ urlpatterns = [
     path('diako/settings/bot/', v.settings_bot_view, name='diako_settings_bot'),
     path('diako/settings/panel/', v.settings_panel_view, name='diako_settings_panel'),
     path('diako/settings/admins/', v.settings_admins_view, name='diako_settings_admins'),
+    path('diako/settings/logs/', v.settings_logs_view, name='diako_settings_logs'),
     # مسیرهای قدیمی — این صفحه‌ها داخل مالی/تنظیمات ادغام شدن
     path('diako/discounts/', RedirectView.as_view(url='/diako/finance/', permanent=False)),
     path('diako/tutorials/', RedirectView.as_view(url='/diako/settings/bot/', permanent=False)),
