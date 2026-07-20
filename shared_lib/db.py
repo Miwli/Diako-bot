@@ -2614,7 +2614,7 @@ async def perform_location_change(order_id: int, to_server_id: int) -> dict:
     """
     import time as _time
     import json as _json
-    from shared_lib.rebecca_api import RebeccaAPI
+    from shared_lib.services import provisioning
 
     service = await get_service_by_order(order_id)
     if not service or not service["vpn_username"]:
@@ -2628,11 +2628,10 @@ async def perform_location_change(order_id: int, to_server_id: int) -> dict:
     if not service_ids:
         raise ValueError("سرور مقصد سرویس پیکربندی‌شده ندارد")
 
-    old_api = RebeccaAPI(service["panel_url"], service["panel_token"])
-    new_api = RebeccaAPI(target["panel_url"], target["panel_token"])
-
     # وضعیت زنده از سرور فعلی — مبنای حجم و زمان باقی‌مانده
-    live = await old_api.get_user(service["vpn_username"])
+    live = await provisioning.get_live_user(
+        service["panel_url"], service["panel_token"], service["vpn_username"]
+    )
     data_limit = live.get("data_limit") or 0
     used = live.get("used_traffic") or 0
     expire_ts = live.get("expire") or 0
@@ -2643,25 +2642,23 @@ async def perform_location_change(order_id: int, to_server_id: int) -> dict:
     if expire_ts and remaining_hours == 0:
         raise ValueError("سرویس منقضی شده — قابل انتقال نیست")
 
-    # اولین سرویس معتبر پنل مقصد
-    live_services = await new_api.get_services()
-    live_ids = {s["id"] for s in live_services}
-    service_id = next((sid for sid in service_ids if sid in live_ids), None)
-    if service_id is None:
+    # یوزر معادل روی سرور مقصد — اولین سرویس معتبر پنل
+    try:
+        result = await provisioning.provision_service(
+            target["panel_url"], target["panel_token"],
+            service_ids, remaining_gb,
+            duration_hours=remaining_hours,
+        )
+    except provisioning.NoLiveServiceError:
         raise ValueError("سرویس‌های تنظیم‌شده روی سرور مقصد در پنل موجود نیستند")
-
-    user_data = await new_api.create_user(
-        service_id=service_id,
-        data_limit_gb=remaining_gb,
-        duration_hours=remaining_hours,
-    )
-    new_username = user_data.get("username", "")
-    sub_path = user_data.get("subscription_url", "")
-    new_sub_url = await new_api.get_subscription_url(sub_path)
+    new_username = result["username"]
+    new_sub_url = result["subscription_url"]
 
     # حذف یوزر قدیمی — اگه نشد، انتقال رو خراب نمی‌کنیم
     try:
-        await old_api.delete_user(service["vpn_username"])
+        await provisioning.remove_service(
+            service["panel_url"], service["panel_token"], service["vpn_username"]
+        )
     except Exception:
         pass
 

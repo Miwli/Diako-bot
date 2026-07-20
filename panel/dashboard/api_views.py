@@ -590,12 +590,15 @@ def service_action(request):
         return JsonResponse({'ok': False, 'error': 'سرویس یافت نشد'}, status=404)
 
     if action == 'changestatus':
-        from shared_lib.rebecca_api import RebeccaAPI
-        api = RebeccaAPI(order['panel_url'], order['panel_token'])
+        from shared_lib.services import provisioning
         try:
-            live = async_to_sync(api.get_user)(order['vpn_username'])
+            live = async_to_sync(provisioning.get_live_user)(
+                order['panel_url'], order['panel_token'], order['vpn_username']
+            )
             target_active = live.get('status') != 'active'
-            async_to_sync(api.toggle_status)(order['vpn_username'], target_active)
+            async_to_sync(provisioning.set_status)(
+                order['panel_url'], order['panel_token'], order['vpn_username'], target_active
+            )
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
         return JsonResponse({'ok': True, 'active': target_active})
@@ -796,10 +799,9 @@ def server_action(request):
             return JsonResponse({'ok': False, 'error': 'آدرس و توکن الزامی است'})
         if not url.startswith('https://') or url.endswith('/'):
             return JsonResponse({'ok': False, 'error': 'آدرس باید با https:// شروع و بدون / در انتها باشد'})
-        from shared_lib.rebecca_api import RebeccaAPI
-        api = RebeccaAPI(url, token)
+        from shared_lib.services import provisioning
         try:
-            services = async_to_sync(api.get_services)()
+            services = async_to_sync(provisioning.list_services)(url, token)
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'اتصال به پنل ناموفق بود: {e}'})
         return JsonResponse({'ok': True, 'services': [
@@ -1238,10 +1240,11 @@ def extra_request_action(request):
         plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
         if not plan_data:
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        from shared_lib.rebecca_api import RebeccaAPI
-        api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
+        from shared_lib.services import provisioning
         try:
-            async_to_sync(api.add_volume)(req['vpn_username'], req['traffic_gb'])
+            async_to_sync(provisioning.extend_volume)(
+                plan_data['panel_url'], plan_data['panel_token'], req['vpn_username'], req['traffic_gb']
+            )
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
         async_to_sync(update_extra_volume_request)(int(req_id), 'approved')
@@ -1271,10 +1274,11 @@ def extra_request_action(request):
         plan_data = async_to_sync(get_plan_with_server)(req['vpn_plan_id'])
         if not plan_data:
             return JsonResponse({'ok': False, 'error': 'سرور VPN مرتبط یافت نشد'})
-        from shared_lib.rebecca_api import RebeccaAPI
-        api = RebeccaAPI(plan_data['panel_url'], plan_data['panel_token'])
+        from shared_lib.services import provisioning
         try:
-            async_to_sync(api.add_time)(req['vpn_username'], req['days'])
+            async_to_sync(provisioning.extend_time)(
+                plan_data['panel_url'], plan_data['panel_token'], req['vpn_username'], req['days']
+            )
         except Exception as e:
             return JsonResponse({'ok': False, 'error': f'خطای API: {e}'})
         async_to_sync(update_extra_time_request)(int(req_id), 'approved')
