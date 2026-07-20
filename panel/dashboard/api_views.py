@@ -664,7 +664,7 @@ async def _check_all_servers(servers: list) -> list:
     import math
     import time
     from urllib.parse import urlparse
-    from shared_lib.rebecca_api import RebeccaAPI
+    from shared_lib.services import monitoring
 
     async def check(s: dict) -> dict:
         host = urlparse(s['panel_url']).hostname or ''
@@ -686,11 +686,9 @@ async def _check_all_servers(servers: list) -> list:
             info.update(lat=geo['lat'], lon=geo['lon'],
                         city=geo.get('city', ''), country=geo.get('country', ''))
 
-        api = RebeccaAPI(s['panel_url'], s['panel_token'])
-
         try:
             start = time.monotonic()
-            stats = await api.get_system_stats()
+            stats = await monitoring.get_system_stats(s['panel_url'], s['panel_token'])
             info['latency'] = int((time.monotonic() - start) * 1000)
             info['status'] = 'online'
             info['stats'] = {
@@ -706,26 +704,18 @@ async def _check_all_servers(servers: list) -> list:
             }
         except Exception:
             # شاید پنل /api/system نداشته باشه — با /api/admin چک می‌کنیم
-            import aiohttp
             try:
-                headers = {'Authorization': f"Bearer {s['panel_token']}"}
                 start = time.monotonic()
-                async with aiohttp.ClientSession(headers=headers) as session:
-                    async with session.get(
-                        s['panel_url'].rstrip('/') + '/api/admin',
-                        ssl=False,
-                        timeout=aiohttp.ClientTimeout(total=6)
-                    ) as resp:
-                        await resp.read()
-                        info['latency'] = int((time.monotonic() - start) * 1000)
-                        info['status'] = 'online' if resp.status == 200 else 'error'
+                status_code = await monitoring.ping_admin(s['panel_url'], s['panel_token'])
+                info['latency'] = int((time.monotonic() - start) * 1000)
+                info['status'] = 'online' if status_code == 200 else 'error'
             except Exception:
                 pass
             if info['status'] != 'online':
                 return info
 
         try:
-            raw_nodes = await api.get_nodes()
+            raw_nodes = await monitoring.get_nodes(s['panel_url'], s['panel_token'])
         except aiohttp.ClientResponseError as e:
             raw_nodes = []
             if e.status == 403:
