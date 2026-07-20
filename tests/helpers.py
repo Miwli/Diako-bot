@@ -45,6 +45,17 @@ async def make_vpn_order(user_id: int = 1, price: int = 10000, service_ids=None)
     return await db.create_order(user_id, "tester", plan_id, "receipt")
 
 
+async def make_plan_row(price: int = 10000, service_ids=None, traffic: int = 50, duration: int = 30):
+    """Create a server + plan and return the joined plan row (what fulfill wants)."""
+    if service_ids is None:
+        service_ids = [1]
+    await db.add_server("s1", "https://panel.test", "token", service_ids)
+    server_id = (await db.get_servers(only_active=False))[-1]["id"]
+    await db.add_plan(server_id, "p1", price, duration, traffic)
+    plan_id = (await db.get_plans(server_id, only_active=False))[-1]["id"]
+    return await db.get_plan_with_server(plan_id)
+
+
 async def get_order_status(order_id: int) -> str:
     async with aiosqlite.connect(db.DB_PATH) as conn:
         cur = await conn.execute("SELECT status FROM orders WHERE id = ?", (order_id,))

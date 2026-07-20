@@ -17,7 +17,6 @@ from shared_lib.db import (
     get_servers, get_plans, get_plan, get_plan_with_server, get_setting, set_setting, create_order,
     get_user_services, get_user_service, update_order_status, update_order_vpn_info,
     get_or_create_user, get_user, get_user_wallet_stats, get_transactions,
-    add_balance, add_balance_and_transaction, deduct_balance_if_sufficient,
     create_top_up_request, get_top_up_request, update_top_up_status,
     get_free_test_servers, create_free_test_order,
     get_free_test_uses, increment_free_test_uses,
@@ -27,7 +26,7 @@ from shared_lib.db import (
     get_pending_location_change, update_location_change_request,
     perform_location_change,
 )
-from shared_lib.services import provisioning, features
+from shared_lib.services import provisioning, features, orders
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
@@ -843,45 +842,34 @@ def register_user_handlers(dp):
         if final_price <= 0:
             # رایگان شد — مستقیم سرویس بساز
             await state.clear()
-            import json as _json
-            service_ids = _json.loads(plan["service_ids"] or "[]")
-            if not service_ids:
-                await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
-                return
             u = callback.from_user
             await get_or_create_user(u.id, u.first_name, u.username)
-            try:
-                result = await provisioning.provision_service(
-                    plan["panel_url"], plan["panel_token"],
-                    service_ids, plan["traffic"],
-                    duration_days=plan["duration"], ip_limit=plan["ip_limit"],
-                )
-                subscription_url = result["subscription_url"]
-                vpn_username = result["username"]
-            except provisioning.NoLiveServiceError:
+            res = await orders.fulfill(
+                plan, u.id, u.username or u.first_name,
+                order_type="discount_free", final_price=final_price,
+                charge_wallet=False, verify_live=True,
+                discount_amount=discount_amount, discount_code=discount_code,
+                discount_code_id=discount_code_id,
+            )
+            if res.status == "no_service_config":
+                await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
+                return
+            if res.status == "no_live_service":
                 await callback.answer(get_text("plan_service_not_found"), show_alert=True)
                 return
-            except Exception as e:
+            if res.status in ("api_error", "save_error"):
                 from bot import logger
-                logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {e}")
-                await callback.answer(get_text("wallet_error_api", error=str(e)), show_alert=True)
+                logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {res.error}")
+                await callback.answer(get_text("wallet_error_api", error=res.error), show_alert=True)
                 return
-            order_id = await create_order(u.id, u.username or u.first_name, plan_id, "discount_free")
-            await update_order_status(order_id, "approved")
-            await update_order_vpn_info(order_id, vpn_username, subscription_url)
-            if discount_code:
-                from shared_lib.db import update_order_discount, use_discount_code
-                await update_order_discount(order_id, discount_code, discount_amount)
-                if discount_code_id:
-                    await use_discount_code(discount_code_id, u.id)
             from handlers.admin import _make_qr
             from keyboards import subscription_approved_keyboard
-            qr = _make_qr(subscription_url)
+            qr = _make_qr(res.subscription_url)
             await callback.message.delete()
             await callback.message.answer_photo(
                 photo=qr,
-                caption=get_text("discount_free_success", url=subscription_url),
-                reply_markup=subscription_approved_keyboard(subscription_url),
+                caption=get_text("discount_free_success", url=res.subscription_url),
+                reply_markup=subscription_approved_keyboard(res.subscription_url),
                 parse_mode="HTML"
             )
             await callback.answer()
@@ -923,66 +911,38 @@ def register_user_handlers(dp):
         u = callback.from_user
         await get_or_create_user(u.id, u.first_name, u.username)
 
-        import json
-        service_ids = json.loads(plan["service_ids"] or "[]")
-        if not service_ids:
+        res = await orders.fulfill(
+            plan, u.id, u.username or u.first_name,
+            order_type="wallet", final_price=final_price,
+            charge_wallet=True, verify_live=False,
+            discount_amount=discount_amount, discount_code=discount_code,
+            discount_code_id=discount_code_id,
+        )
+        if res.status == "no_service_config":
             await callback.answer(get_text("free_test_no_service_config"), show_alert=True)
             return
-
-        if final_price > 0:
-            deducted = await deduct_balance_if_sufficient(u.id, final_price)
-            if not deducted:
-                await callback.answer(get_text("wallet_no_balance"), show_alert=True)
-                return
-
-        try:
-            result = await provisioning.provision_service(
-                plan["panel_url"], plan["panel_token"],
-                service_ids, plan["traffic"],
-                duration_days=plan["duration"], ip_limit=plan["ip_limit"],
-                verify_live=False,
-            )
-            subscription_url = result["subscription_url"]
-            username = result["username"]
-        except Exception as e:
-            from bot import logger
-            logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {e}")
-            if final_price > 0:
-                await add_balance(u.id, final_price)
-            await callback.answer(get_text("wallet_error_api", error=str(e)), show_alert=True)
+        if res.status == "no_balance":
+            await callback.answer(get_text("wallet_no_balance"), show_alert=True)
             return
-
-        try:
-            order_id = await create_order(u.id, u.username or u.first_name, plan_id, "wallet")
-            await update_order_status(order_id, "approved")
-            await update_order_vpn_info(order_id, username, subscription_url)
-            if final_price > 0:
-                await add_balance_and_transaction(u.id, -final_price, "purchase", f"خرید پلن {plan['name']}")
-            if discount_code:
-                from shared_lib.db import update_order_discount, use_discount_code
-                await update_order_discount(order_id, discount_code, discount_amount)
-                if discount_code_id:
-                    await use_discount_code(discount_code_id, u.id)
-        except Exception as e:
+        if res.status == "api_error":
             from bot import logger
-            logger.error(f"خطا در ثبت سفارش wallet plan #{plan_id} — حذف یوزر {username}: {e}")
-            try:
-                await api.delete_user(username)
-            except Exception:
-                pass
-            if final_price > 0:
-                await add_balance(u.id, final_price)
+            logger.error(f"خطا در ساخت یوزر (wallet) برای plan #{plan_id}: {res.error}")
+            await callback.answer(get_text("wallet_error_api", error=res.error), show_alert=True)
+            return
+        if res.status == "save_error":
+            from bot import logger
+            logger.error(f"خطا در ثبت سفارش wallet plan #{plan_id}: {res.error}")
             await callback.answer(get_text("wallet_error_order"), show_alert=True)
             return
 
         await state.clear()
         from handlers.admin import _make_qr
-        qr_file = _make_qr(subscription_url)
+        qr_file = _make_qr(res.subscription_url)
         await callback.message.delete()
         await callback.message.answer_photo(
             photo=qr_file,
-            caption=get_text("wallet_purchase_success", url=subscription_url),
-            reply_markup=subscription_approved_keyboard(subscription_url),
+            caption=get_text("wallet_purchase_success", url=res.subscription_url),
+            reply_markup=subscription_approved_keyboard(res.subscription_url),
             parse_mode="HTML"
         )
         await callback.answer()

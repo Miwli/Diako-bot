@@ -14,8 +14,14 @@ from shared_lib.services import provisioning
 from shared_lib.db import (
     get_order,
     get_plan_with_server,
+    create_order,
     update_order_status,
     update_order_vpn_info,
+    update_order_discount,
+    use_discount_code,
+    deduct_balance_if_sufficient,
+    add_balance,
+    add_transaction,
     get_referral_by_referred,
     add_balance_and_transaction,
     mark_first_purchase_rewarded,
@@ -44,6 +50,100 @@ class ApproveResult:
 class RejectResult:
     status: str  # ok | not_found | already_processed
     user_id: int = 0
+
+
+@dataclass
+class FulfillResult:
+    # status: ok | no_service_config | no_balance | no_live_service
+    #         | api_error | save_error
+    status: str
+    username: str = ""
+    subscription_url: str = ""
+    order_id: int = 0
+    error: str = ""
+
+
+async def fulfill(
+    plan: dict,
+    user_id: int,
+    username_display: str,
+    *,
+    order_type: str,
+    final_price: int,
+    charge_wallet: bool,
+    verify_live: bool,
+    discount_amount: int = 0,
+    discount_code: str = None,
+    discount_code_id: int = None,
+) -> FulfillResult:
+    """Provision and record an immediately-paid order (wallet or full discount).
+
+    Charges the wallet up front when `charge_wallet` is set, provisions the panel
+    user, then writes the order. Any failure after the charge refunds it, and a
+    failure after provisioning removes the just-created panel user so nothing
+    leaks. The caller renders the QR / success message from the result.
+    """
+    import json
+
+    service_ids = json.loads(plan["service_ids"] or "[]")
+    if not service_ids:
+        return FulfillResult(status="no_service_config")
+
+    charged = charge_wallet and final_price > 0
+    if charged:
+        if not await deduct_balance_if_sufficient(user_id, final_price):
+            return FulfillResult(status="no_balance")
+
+    try:
+        result = await provisioning.provision_service(
+            plan["panel_url"], plan["panel_token"],
+            service_ids, plan["traffic"],
+            duration_days=plan["duration"], ip_limit=plan["ip_limit"],
+            verify_live=verify_live,
+        )
+    except provisioning.NoLiveServiceError:
+        if charged:
+            await add_balance(user_id, final_price)
+        return FulfillResult(status="no_live_service")
+    except Exception as e:
+        if charged:
+            await add_balance(user_id, final_price)
+        return FulfillResult(status="api_error", error=str(e))
+
+    username = result["username"]
+    subscription_url = result["subscription_url"]
+
+    try:
+        order_id = await create_order(user_id, username_display, plan["id"], order_type)
+        await update_order_status(order_id, "approved")
+        await update_order_vpn_info(order_id, username, subscription_url)
+        if charged:
+            # balance was already atomically deducted above; just record the txn.
+            # (the old inline path also called add_balance_and_transaction here,
+            #  double-charging the wallet — record-only fixes that.)
+            await add_transaction(
+                user_id, -final_price, "purchase", f"خرید پلن {plan['name']}"
+            )
+        if discount_code:
+            await update_order_discount(order_id, discount_code, discount_amount)
+            if discount_code_id:
+                await use_discount_code(discount_code_id, user_id)
+    except Exception as e:
+        # roll back the panel user and the wallet charge so nothing is left dangling
+        try:
+            await provisioning.remove_service(plan["panel_url"], plan["panel_token"], username)
+        except Exception:
+            pass
+        if charged:
+            await add_balance(user_id, final_price)
+        return FulfillResult(status="save_error", error=str(e))
+
+    return FulfillResult(
+        status="ok",
+        username=username,
+        subscription_url=subscription_url,
+        order_id=order_id,
+    )
 
 
 async def approve(order_id: int, actor: str = "system") -> ApproveResult:
