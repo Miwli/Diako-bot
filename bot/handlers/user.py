@@ -27,7 +27,7 @@ from shared_lib.db import (
     get_pending_location_change, update_location_change_request,
     perform_location_change,
 )
-from shared_lib.services import provisioning
+from shared_lib.services import provisioning, features
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
@@ -491,7 +491,7 @@ def register_user_handlers(dp):
         if not plans:
             await callback.answer(get_text("renew_no_plans"), show_alert=True)
             return
-        show_price = (await get_setting("show_plan_price")) == "1"
+        show_price = await features.is_enabled("show_plan_price")
         await _edit_or_replace(
             callback,
             get_text("renew_prompt"),
@@ -645,7 +645,7 @@ def register_user_handlers(dp):
             await callback.answer(get_text("changeloc_already_pending"), show_alert=True)
             return
 
-        need_admin = (await get_setting("changeloc_need_admin") or "1") == "1"
+        need_admin = await features.is_enabled("changeloc_need_admin", default=True)
         if not need_admin:
             await callback.answer()
             await callback.message.edit_text(get_text("changeloc_processing"))
@@ -786,7 +786,7 @@ def register_user_handlers(dp):
         if not plans:
             await callback.message.edit_text(get_text("buy_no_plans"), reply_markup=await _get_main_menu(callback.from_user.id))
             return
-        show_price = (await get_setting("show_plan_price")) == "1"
+        show_price = await features.is_enabled("show_plan_price")
         await callback.message.edit_text(
             get_text("buy_select_plan"),
             reply_markup=user_plans_keyboard(plans, server_id, multiple_servers, show_price)

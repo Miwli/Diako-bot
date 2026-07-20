@@ -11,6 +11,7 @@ from shared_lib.db import (
     delete_plan, toggle_plan_status, get_setting, set_setting, update_plan_field,
     get_text,
 )
+from shared_lib.services import features
 
 def _fmt_dur(val) -> str:
     return "♾️ بی‌نهایت" if int(val) == 0 else f"{val} روز"
@@ -35,7 +36,7 @@ def register_plan_handlers(dp):
 
     @dp.callback_query(F.data == "admin_plans")
     async def admin_plans(callback: types.CallbackQuery):
-        show_price = (await get_setting("show_plan_price")) == "1"
+        show_price = await features.is_enabled("show_plan_price")
         await callback.message.edit_text(
             get_text("admin_plans_title"),
             reply_markup=admin_plans_menu(show_price)
