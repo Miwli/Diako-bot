@@ -28,7 +28,7 @@ from shared_lib.db import (
     get_transactions, get_free_test_uses,
     get_user_ticket_counts, get_user_order_counts, get_referral_stats,
     get_referral_by_referred, get_user_services, decrement_free_test_uses,
-    get_setting, set_setting,
+    get_setting, set_setting, get_setting_sync,
     add_server, delete_server, toggle_server_status, update_server_name,
     update_server_url, update_server_token,
     update_server_services, update_server_free_test, get_servers, apply_free_test_to_all,
@@ -48,7 +48,12 @@ from .models import Orders, Servers, Plans, DiscountCodes, TopUpRequests, Users
 
 
 def _get_bot_token():
-    token = os.environ.get('BOT_TOKEN', '')
+    # Same precedence as bot.py: settings table wins, env is the fallback.
+    # Without this the panel keeps using a stale env token after an admin
+    # changes it from the settings page.
+    token = get_setting_sync('bot_token') or ''
+    if not token:
+        token = os.environ.get('BOT_TOKEN', '')
     if not token:
         env_path = pathlib.Path(__file__).parent.parent.parent / 'bot' / '.env'
         try:
