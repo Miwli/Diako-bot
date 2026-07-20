@@ -984,8 +984,8 @@ function openDrawer(row) {
       <button class="drw-btn btn-reject" onclick="openRejectModal(${d.id})">
         <i class="ti ti-x"></i> {% trans "رد کردن" %}
       </button>
-      <button class="drw-btn btn-bot-approve" onclick="showBotApproveNote()">
-        <i class="ti ti-check"></i> {% trans "تایید از بات" %}
+      <button class="drw-btn btn-bot-approve" id="approveBtn" onclick="approveOrder(${d.id})">
+        <i class="ti ti-check"></i> {% trans "تایید و ساخت سرویس" %}
       </button>`;
   } else {
     foot.style.display = 'none';
@@ -1001,10 +1001,48 @@ function closeDrawer() {
   if (activeOrderRow) { activeOrderRow.classList.remove('selected'); activeOrderRow = null; }
 }
 
-function showBotApproveNote() {
-  showNotif('{% trans "راهنما" %}',
-    '{% trans "تایید سفارش (ساخت حساب VPN) از طریق پنل ادمین بات تلگرام انجام می‌شود." %}',
-    'info');
+async function approveOrder(orderId) {
+  if (!confirm('{% trans "سفارش #" %}' + orderId + '{% trans " تایید شود؟ سرویس در پنل ساخته و برای کاربر ارسال می‌شود." %}')) return;
+
+  const btn = document.getElementById('approveBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> {% trans "در حال ساخت سرویس..." %}';
+  }
+
+  try {
+    const res = await fetch('/diako/api/order-action/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ order_id: orderId, action: 'approve' })
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      closeDrawer();
+      if (data.notified) {
+        showNotif('{% trans "تایید شد" %}',
+          '{% trans "یوزر" %} ' + data.username + ' {% trans "ساخته شد و برای کاربر ارسال شد." %}', 'approve');
+      } else {
+        showNotif('{% trans "سرویس ساخته شد" %}',
+          '{% trans "یوزر" %} ' + data.username + ' — {% trans "ولی ارسال به کاربر ناموفق بود:" %} ' + (data.notify_error || '?'),
+          'reject');
+      }
+      setTimeout(() => location.reload(), 1400);
+    } else {
+      showNotif('{% trans "خطا" %}', data.error || '{% trans "خطایی رخ داد" %}', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-check"></i> {% trans "تایید و ساخت سرویس" %}';
+      }
+    }
+  } catch (e) {
+    showNotif('{% trans "خطا" %}', '{% trans "خطای شبکه" %}', 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> {% trans "تایید و ساخت سرویس" %}';
+    }
+  }
 }
 
 async function toggleServiceStatus(orderId) {

@@ -5,6 +5,7 @@ import re
 import mimetypes
 import urllib.request
 import urllib.parse
+from uuid import uuid4
 from django.http import JsonResponse, HttpResponse, HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
 from django.db import connection
@@ -87,6 +88,51 @@ def _send_telegram(chat_id: int, text: str, parse_mode: str = 'HTML'):
             method='POST',
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        if not data.get('ok'):
+            return False, data.get('description', 'خطای تلگرام')
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def _send_telegram_photo(chat_id: int, photo: bytes, caption: str,
+                         parse_mode: str = 'HTML', reply_markup: dict = None):
+    """Post a photo to a chat. Hand-rolled multipart so the panel keeps using
+    urllib instead of pulling in a HTTP client just for this."""
+    token = _get_bot_token()
+    if not token:
+        return False, 'BOT_TOKEN یافت نشد — پیام تلگرام ارسال نشد'
+
+    boundary = '----DiakoBoundary' + uuid4().hex
+    parts = []
+
+    def _field(name, value):
+        parts.append(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'
+            f'{value}\r\n'.encode('utf-8')
+        )
+
+    _field('chat_id', chat_id)
+    _field('caption', caption)
+    _field('parse_mode', parse_mode)
+    if reply_markup:
+        _field('reply_markup', json.dumps(reply_markup))
+    parts.append(
+        f'--{boundary}\r\nContent-Disposition: form-data; name="photo"; '
+        f'filename="qr.png"\r\nContent-Type: image/png\r\n\r\n'.encode('utf-8')
+        + photo + b'\r\n'
+    )
+    parts.append(f'--{boundary}--\r\n'.encode('utf-8'))
+
+    try:
+        req = urllib.request.Request(
+            f'https://api.telegram.org/bot{token}/sendPhoto',
+            data=b''.join(parts),
+            headers={'Content-Type': f'multipart/form-data; boundary={boundary}'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read())
         if not data.get('ok'):
             return False, data.get('description', 'خطای تلگرام')
@@ -485,7 +531,7 @@ def order_action(request):
     action   = data.get('action')
     reason   = data.get('reason', '').strip() or None
 
-    if not order_id or action not in ('reject', 'delete'):
+    if not order_id or action not in ('approve', 'reject', 'delete'):
         return JsonResponse({'ok': False, 'error': 'پارامتر نامعتبر'}, status=400)
 
     try:
@@ -500,8 +546,53 @@ def order_action(request):
     if order.status != 'pending':
         return JsonResponse({'ok': False, 'error': 'سفارش قابل تغییر نیست'})
 
-    async_to_sync(update_order_status)(order_id, 'rejected', reason)
-    return JsonResponse({'ok': True})
+    from shared_lib.db import get_text
+    from shared_lib.services import orders as orders_service
+    actor = f'panel:{request.user.username}'
+
+    if action == 'reject':
+        res = async_to_sync(orders_service.reject)(order_id, actor=actor, reason=reason)
+        if res.status == 'not_found':
+            return JsonResponse({'ok': False, 'error': 'سفارش یافت نشد'}, status=404)
+        if res.status == 'already_processed':
+            return JsonResponse({'ok': False, 'error': 'این سفارش قبلاً پردازش شده'})
+        _send_telegram(res.user_id, get_text('order_rejected'))
+        return JsonResponse({'ok': True})
+
+    # approve — same service the bot uses, so both paths behave identically
+    res = async_to_sync(orders_service.approve)(order_id, actor=actor)
+    errors = {
+        'not_found':         'سفارش یافت نشد',
+        'already_processed': 'این سفارش قبلاً پردازش شده',
+        'no_service_config': 'سرویسی برای این سرور تنظیم نشده',
+        'no_live_service':   'سرویس‌های انتخاب‌شده دیگر در پنل وجود ندارند — از بخش سرورها سرویس‌ها را به‌روز کنید',
+        'api_error':         f'خطا در ساخت یوزر: {res.error}',
+        'save_error':        f'خطا در ثبت اطلاعات: {res.error}',
+    }
+    if res.status != 'ok':
+        return JsonResponse({'ok': False, 'error': errors.get(res.status, res.status)})
+
+    if res.referrer_notify:
+        referrer_id, commission = res.referrer_notify
+        _send_telegram(referrer_id, get_text('referral_commission_notify', amount=f'{commission:,}'))
+
+    # mirror the bot: QR photo + copy-link button
+    from shared_lib.services.qr import make_qr_png
+    sent, err = _send_telegram_photo(
+        res.user_id,
+        make_qr_png(res.subscription_url),
+        get_text('order_approved', url=res.subscription_url),
+        reply_markup={'inline_keyboard': [
+            [{'text': '📋 کپی لینک اشتراک', 'copy_text': {'text': res.subscription_url}}],
+            [{'text': '🗂 سرویس‌های من', 'callback_data': 'my_services'}],
+        ]},
+    )
+    return JsonResponse({
+        'ok': True,
+        'username': res.username,
+        'notified': sent,
+        'notify_error': None if sent else err,
+    })
 
 
 @login_required
