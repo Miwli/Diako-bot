@@ -11,15 +11,14 @@ from states import AdminAction, GeneralSettings, FreeTestSettings
 from aiogram.filters import Command
 from shared_lib.db import (
     get_order,
-    get_top_up_request, update_top_up_status, approve_top_up_atomic,
-    add_balance, add_balance_and_transaction, get_or_create_user,
+    get_or_create_user,
     get_setting, set_setting,
     get_servers, get_server, update_server_free_test, apply_free_test_to_all,
     reset_free_test_uses,
     get_user,
     get_text,
 )
-from shared_lib.services import orders
+from shared_lib.services import orders, wallet
 
 def _make_qr(data: str) -> BufferedInputFile:
     qr = qrcode.QRCode(box_size=10, border=4)
@@ -526,54 +525,50 @@ def register_admin_handlers(dp):
     @dp.callback_query(F.data.startswith("topup_approve_"))
     async def topup_approve(callback: types.CallbackQuery):
         request_id = int(callback.data.replace("topup_approve_", ""))
-        req = await get_top_up_request(request_id)
-        if not req:
+        res = await wallet.approve_top_up(request_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("درخواست یافت نشد.", show_alert=True)
             return
-        approved = await approve_top_up_atomic(request_id)
-        if not approved:
+        if res.status == "already_processed":
             await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
             return
-        await get_or_create_user(req["user_id"], "", req["username"])
-        await add_balance_and_transaction(req["user_id"], req["amount"], "charge", f"شارژ حساب #{request_id}")
         await callback.message.edit_caption(
             callback.message.caption + f"\n\n✅ <b>تایید شد</b>",
             parse_mode="HTML"
         )
         try:
             await callback.bot.send_message(
-                chat_id=req["user_id"],
-                text=get_text("topup_approved", amount=f"{req['amount']:,}"),
+                chat_id=res.user_id,
+                text=get_text("topup_approved", amount=f"{res.amount:,}"),
                 parse_mode="HTML"
             )
         except TelegramForbiddenError:
             from bot import logger
-            logger.warning(f"کاربر {req['user_id']} بات را بلاک کرده — اطلاعیه شارژ ارسال نشد")
+            logger.warning(f"کاربر {res.user_id} بات را بلاک کرده — اطلاعیه شارژ ارسال نشد")
         await callback.answer("شارژ تایید شد.")
 
     @dp.callback_query(F.data.startswith("topup_reject_"))
     async def topup_reject(callback: types.CallbackQuery):
         request_id = int(callback.data.replace("topup_reject_", ""))
-        req = await get_top_up_request(request_id)
-        if not req:
+        res = await wallet.reject_top_up(request_id, actor=f"admin:{callback.from_user.id}")
+        if res.status == "not_found":
             await callback.answer("درخواست یافت نشد.", show_alert=True)
             return
-        if req["status"] != "pending":
+        if res.status == "already_processed":
             await callback.answer("این درخواست قبلاً پردازش شده.", show_alert=True)
             return
-        await update_top_up_status(request_id, "rejected")
         await callback.message.edit_caption(
             callback.message.caption + "\n\n❌ <b>رد شد</b>",
             parse_mode="HTML"
         )
         try:
             await callback.bot.send_message(
-                chat_id=req["user_id"],
+                chat_id=res.user_id,
                 text=get_text("topup_rejected"),
             )
         except TelegramForbiddenError:
             from bot import logger
-            logger.warning(f"کاربر {req['user_id']} بات را بلاک کرده — اطلاعیه رد شارژ ارسال نشد")
+            logger.warning(f"کاربر {res.user_id} بات را بلاک کرده — اطلاعیه رد شارژ ارسال نشد")
         await callback.answer("درخواست رد شد.")
 
     @dp.message(AdminAction.waiting_for_rejection_reason)
