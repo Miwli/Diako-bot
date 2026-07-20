@@ -922,6 +922,37 @@ kbd {
   transform: scale(1.06);
 }
 
+/* Duplicate-receipt warning */
+.dup-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.32);
+  color: var(--red);
+  white-space: nowrap;
+}
+
+.receipt-thumb-sm.is-dup {
+  border-color: rgba(248,113,113,0.6);
+  box-shadow: 0 0 0 1px rgba(248,113,113,0.3);
+}
+
+.dup-note {
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--red);
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.24);
+  border-radius: 9px;
+  padding: 9px 11px;
+  margin-top: 8px;
+}
+
 .receipt-empty {
   font-size: 11px;
   color: var(--text-muted);

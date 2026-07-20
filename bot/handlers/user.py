@@ -25,12 +25,31 @@ from shared_lib.db import (
     create_location_change_request, get_location_change_request,
     get_pending_location_change, update_location_change_request,
 )
-from shared_lib.services import provisioning, features, orders
+from shared_lib.services import provisioning, features, orders, receipts
 from shared_lib.services.location import change_location
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 TEHRAN = timezone(timedelta(hours=3, minutes=30))
+
+
+async def _receipt_dup_line(message, kind: str, obj_id: int, user_id: int,
+                            file_id: str) -> str:
+    """Warning line appended to the admin notification when a receipt image
+    matches an earlier one. Empty when the check is off or nothing matched."""
+    from bot import logger
+    try:
+        buf = await message.bot.download(file_id)
+        match = await receipts.check_receipt(kind, obj_id, user_id, buf.read())
+    except Exception as exc:
+        logger.warning(f"بررسی تکراری‌بودن رسید {kind}#{obj_id} انجام نشد: {exc}")
+        return ""
+    if not match:
+        return ""
+    label = receipts.KIND_LABELS.get(match.kind, match.kind)
+    same_user = " — همان کاربر" if match.user_id == user_id else ""
+    return (f"\n\n⚠️ <b>رسید مشابه {label} #{match.obj_id}</b>"
+            f" (اختلاف {match.distance}{same_user})")
 
 
 async def _get_main_menu(user_id: int):
@@ -353,6 +372,7 @@ def register_user_handlers(dp):
         await state.clear()
 
         from bot import ADMIN_IDS, logger
+        dup_line = await _receipt_dup_line(message, "topup", request_id, u.id, file_id)
         caption = get_text(
             "admin_topup_notify",
             full_name=u.full_name,
@@ -360,7 +380,7 @@ def register_user_handlers(dp):
             user_id=u.id,
             amount=f"{amount:,}",
             request_id=request_id,
-        )
+        ) + dup_line
         for admin_id in ADMIN_IDS:
             try:
                 await message.bot.send_photo(
@@ -985,6 +1005,10 @@ def register_user_handlers(dp):
 
         await message.answer(get_text("payment_submitted"))
 
+        dup_line = await _receipt_dup_line(
+            message, "order", order_id, message.from_user.id, receipt_file_id
+        )
+
         final_price   = plan["price"] - discount_amount
         discount_line = f"🎟 کد تخفیف: <code>{discount_code}</code> ({discount_amount:,} تومان)\n" if discount_code else ""
         admin_text = get_text(
@@ -1003,7 +1027,7 @@ def register_user_handlers(dp):
                 await message.bot.send_photo(
                     chat_id=admin_id,
                     photo=receipt_file_id,
-                    caption=admin_text,
+                    caption=admin_text + dup_line,
                     reply_markup=admin_order_keyboard(order_id),
                     parse_mode="HTML"
                 )

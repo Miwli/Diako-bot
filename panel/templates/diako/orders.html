@@ -735,6 +735,10 @@
                   data-reason="{{ order.rejection_reason|default:'' }}"
                   data-note="{{ order.note|default:'' }}"
                   data-receipt="{% if order.receipt_file_id %}1{% endif %}"
+                  {% if order.dup_flag %}
+                  data-dup="{{ order.dup_flag.label }} #{{ order.dup_flag.dup_obj_id }}"
+                  data-dupdist="{{ order.dup_flag.dup_distance }}"
+                  {% endif %}
                   onclick="openDrawer(this)">
 
                 <td><span class="cell-id">#{{ order.id }}</span></td>
@@ -766,9 +770,10 @@
 
                 <td>
                   {% if order.receipt_file_id %}
-                    <img class="receipt-thumb-sm" loading="lazy"
+                    <img class="receipt-thumb-sm {% if order.dup_flag %}is-dup{% endif %}" loading="lazy"
                          src="{% url 'diako_receipt_image' 'order' order.id %}"
                          alt="{% trans 'رسید' %}"
+                         {% if order.dup_flag %}title="{% trans 'رسید مشابه' %} #{{ order.dup_flag.dup_obj_id }}"{% endif %}
                          onclick="event.stopPropagation(); openReceipt('order', {{ order.id }})">
                   {% else %}
                     <span class="cell-muted" style="font-size:11px;color:var(--text-muted)">—</span>
@@ -942,6 +947,12 @@ function openDrawer(row) {
            alt="{% trans 'رسید پرداخت' %}"
            onclick="openReceipt('order', ${d.id})"
            onerror="this.outerHTML='<div class=\\'receipt-empty\\'>{% trans "بارگذاری رسید ناموفق بود" %}</div>'">
+      ${d.dup ? `<div class="dup-note">
+        <i class="ti ti-alert-triangle"></i>
+        {% trans "این تصویر با رسید" %} <b>${d.dup}</b> {% trans "مشابه است" %}
+        (${d.dupdist === '0' ? '{% trans "کاملاً یکسان" %}' : '{% trans "اختلاف" %} ' + d.dupdist})
+        — {% trans "قبل از تایید بررسی کنید." %}
+      </div>` : ''}
     </div>`;
   }
 

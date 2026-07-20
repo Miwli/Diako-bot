@@ -1660,6 +1660,12 @@ def bot_settings_action(request):
         async_to_sync(set_setting)('referral_discount_value', _num(data.get('discount_value'), '0'))
         return JsonResponse({'ok': True})
 
+    if action == 'toggle_receipt_dup_check':
+        from shared_lib.services.receipts import FLAG_KEY
+        enabled = '1' if data.get('enabled') else '0'
+        async_to_sync(set_setting)(FLAG_KEY, enabled)
+        return JsonResponse({'ok': True, 'enabled': enabled == '1'})
+
     if action == 'save_free_test':
         def _int(v, default):
             s = str(v or '').strip()

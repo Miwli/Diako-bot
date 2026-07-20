@@ -325,6 +325,23 @@ async def init_db():
             )
         """)
         await db.execute("""
+            CREATE TABLE IF NOT EXISTS receipt_hashes (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind         TEXT NOT NULL,
+                obj_id       INTEGER NOT NULL,
+                user_id      INTEGER,
+                phash        TEXT NOT NULL,
+                dup_kind     TEXT,
+                dup_obj_id   INTEGER,
+                dup_distance INTEGER,
+                created_at   TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_receipt_hashes_obj "
+            "ON receipt_hashes (kind, obj_id)"
+        )
+        await db.execute("""
             CREATE TABLE IF NOT EXISTS payment_cards (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 number      TEXT NOT NULL,
@@ -1703,6 +1720,57 @@ async def init_keyboards_cache() -> None:
 async def reload_keyboards_cache() -> None:
     """بارگذاری مجدد کش کیبوردها — برای loop تازه‌سازی بات"""
     await init_keyboards_cache()
+
+
+# ─── receipt hashes (duplicate detection) ─────
+
+async def add_receipt_hash(kind: str, obj_id: int, user_id: int, phash: str,
+                           dup_kind: str = None, dup_obj_id: int = None,
+                           dup_distance: int = None) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO receipt_hashes "
+            "(kind, obj_id, user_id, phash, dup_kind, dup_obj_id, dup_distance) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (kind, obj_id, user_id, phash, dup_kind, dup_obj_id, dup_distance)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def get_receipt_hashes() -> list:
+    """Every stored hash, oldest first — the candidate set to compare against."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT kind, obj_id, user_id, phash FROM receipt_hashes ORDER BY id"
+        )
+        return [dict(r) for r in await cursor.fetchall()]
+
+
+async def get_receipt_flag(kind: str, obj_id: int) -> dict:
+    """The duplicate flag for one receipt, or None when it looked unique."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT dup_kind, dup_obj_id, dup_distance FROM receipt_hashes "
+            "WHERE kind = ? AND obj_id = ? AND dup_obj_id IS NOT NULL LIMIT 1",
+            (kind, obj_id)
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def get_flagged_receipts(kind: str) -> dict:
+    """{obj_id: flag} for one kind — one query for a whole listing page."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT obj_id, dup_kind, dup_obj_id, dup_distance FROM receipt_hashes "
+            "WHERE kind = ? AND dup_obj_id IS NOT NULL",
+            (kind,)
+        )
+        return {r["obj_id"]: dict(r) for r in await cursor.fetchall()}
 
 
 # ─── توابع سفارش‌ها ────────────────────────────

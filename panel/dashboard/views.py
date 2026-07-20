@@ -209,6 +209,14 @@ def orders_view(request):
     page_num = min(page_num, total_pages)
     orders = list(qs[(page_num - 1) * per_page: page_num * per_page])
 
+    from shared_lib.db import get_flagged_receipts
+    from shared_lib.services.receipts import KIND_LABELS
+    dup_flags = async_to_sync(get_flagged_receipts)('order')
+    for o in orders:
+        o.dup_flag = dup_flags.get(o.id)
+        if o.dup_flag:
+            o.dup_flag['label'] = KIND_LABELS.get(o.dup_flag['dup_kind'], o.dup_flag['dup_kind'])
+
     pr_start = max(1, page_num - 3)
     pr_end   = min(total_pages + 1, page_num + 4)
 
@@ -371,6 +379,13 @@ def finance_view(request):
     card_mode = async_to_sync(get_setting)('card_select_mode') or 'round_robin'
     card_fixed_id = async_to_sync(get_setting)('card_fixed_id')
     topups = list(TopUpRequests.objects.all().order_by('-id')[:20])
+    from shared_lib.db import get_flagged_receipts
+    from shared_lib.services.receipts import KIND_LABELS
+    topup_flags = async_to_sync(get_flagged_receipts)('topup')
+    for t in topups:
+        t.dup_flag = topup_flags.get(t.id)
+        if t.dup_flag:
+            t.dup_flag['label'] = KIND_LABELS.get(t.dup_flag['dup_kind'], t.dup_flag['dup_kind'])
     transactions = list(Transactions.objects.select_related('user').order_by('-id')[:20])
     discounts = list(DiscountCodes.objects.all().order_by('-id'))
     stats = async_to_sync(get_admin_stats)()
@@ -443,6 +458,8 @@ def settings_bot_view(request):
         'maintenance_enabled': (async_to_sync(get_setting)('maintenance_enabled') or '0') == '1',
         'maintenance_message': async_to_sync(get_setting)('maintenance_message') or '',
         'bot_token': async_to_sync(get_setting)('bot_token') or '',
+        # defaults to on — the flag only exists once an admin has touched it
+        'receipt_dup_check': (async_to_sync(get_setting)('receipt_duplicate_check_enabled') or '1') == '1',
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)
