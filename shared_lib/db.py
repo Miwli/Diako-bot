@@ -1,6 +1,8 @@
 import aiosqlite
 import json
 import os
+import sqlite3
+import time
 
 # در محیط Docker، DB_PATH از متغیر محیطی خوانده می‌شود تا بات و پنل
 # به یک دیتابیس مشترک روی volume دسترسی داشته باشند.
@@ -872,6 +874,36 @@ async def set_setting(key: str, value: str):
             (key, value)
         )
         await db.commit()
+
+
+def get_setting_sync(key: str):
+    """Read a setting without an event loop (used at process startup, e.g. for
+    the bot token before the async runtime is up)."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = cur.fetchone()
+        conn.close()
+        return row[0] if row else None
+    except sqlite3.Error:
+        return None
+
+
+# ─── restart control (self-exit + restart policy) ───
+
+async def request_restart(target: str) -> None:
+    """Ask a service to restart itself. The service's control loop compares this
+    timestamp with its own start time and exits when a newer request appears;
+    the container/systemd restart policy brings it back up."""
+    await set_setting(f"restart_{target}_requested", str(time.time()))
+
+
+async def get_restart_request(target: str) -> float:
+    val = await get_setting(f"restart_{target}_requested")
+    try:
+        return float(val) if val else 0.0
+    except (TypeError, ValueError):
+        return 0.0
 
 # ─── admin accounts & permissions ───────────────
 

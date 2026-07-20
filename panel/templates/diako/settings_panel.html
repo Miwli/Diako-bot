@@ -37,6 +37,19 @@
       </div>
     </div>
   </div>
+
+  <div class="settings-section"><i class="ti ti-settings-2"></i>{% trans "سیستم" %}</div>
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-refresh"></i>{% trans "ری‌استارت پنل" %}</div>
+    </div>
+    <div class="widget-body">
+      <p class="cell-muted" style="font-size:11px;margin-bottom:12px">{% trans "پروسه‌ی پنل را دوباره راه‌اندازی می‌کند. برای چند ثانیه پنل در دسترس نخواهد بود و بعد خودکار بالا می‌آید." %}</p>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn-ghost" id="restartPanelBtn" onclick="restartPanel()"><i class="ti ti-refresh"></i> {% trans "ری‌استارت پنل" %}</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -69,6 +82,14 @@ async function savePanelAppearance() {
   });
   if (data.ok) { showToast('{% trans "انجام شد" %}', '', 'success'); setTimeout(() => location.reload(), 400); }
   else { showToast('{% trans "خطا" %}', data.error, 'error'); btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> {% trans "ذخیره" %}'; }
+}
+async function restartPanel() {
+  if (!confirm('{% trans "پنل ری‌استارت شود؟" %}')) return;
+  const btn = document.getElementById('restartPanelBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const data = await apiPost('/diako/api/panel-settings-action/', { action: 'restart_panel' });
+  if (data.ok) { showToast('{% trans "انجام شد" %}', '{% trans "پنل در حال ری‌استارت است…" %}', 'success'); }
+  else { showToast('{% trans "خطا" %}', data.error, 'error'); btn.disabled = false; btn.innerHTML = '<i class="ti ti-refresh"></i> {% trans "ری‌استارت پنل" %}'; }
 }
 </script>
 {% endblock %}

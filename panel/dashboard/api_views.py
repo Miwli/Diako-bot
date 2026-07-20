@@ -21,7 +21,7 @@ from shared_lib.db import (
     get_admins, get_admin, add_admin, update_admin, set_admin_status, delete_admin,
     get_admin_by_panel_user, get_admin_by_telegram, build_permissions,
     can_manage_admins, log_admin_action, role_default_permissions,
-    ADMIN_SECTIONS, ADMIN_ROLES,
+    ADMIN_SECTIONS, ADMIN_ROLES, request_restart,
 )
 from shared_lib.db import (
     get_user, ban_user, unban_user, admin_adjust_balance,
@@ -1544,6 +1544,19 @@ def bot_settings_action(request):
         async_to_sync(set_setting)('maintenance_message', (data.get('message') or '').strip())
         return JsonResponse({'ok': True})
 
+    if action == 'save_token':
+        token = (data.get('token') or '').strip()
+        if ':' not in token or len(token) < 20:
+            return JsonResponse({'ok': False, 'error': 'توکن معتبر نیست'})
+        async_to_sync(set_setting)('bot_token', token)
+        # a new token only takes effect after the bot process restarts
+        async_to_sync(request_restart)('bot')
+        return JsonResponse({'ok': True})
+
+    if action == 'restart_bot':
+        async_to_sync(request_restart)('bot')
+        return JsonResponse({'ok': True})
+
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)
 
 
@@ -1565,6 +1578,10 @@ def panel_settings_action(request):
             async_to_sync(set_setting)('panel_default_calendar', calendar)
         if language in ('fa', 'en'):
             async_to_sync(set_setting)('panel_default_lang', language)
+        return JsonResponse({'ok': True})
+
+    if data.get('action') == 'restart_panel':
+        async_to_sync(request_restart)('panel')
         return JsonResponse({'ok': True})
 
     return JsonResponse({'ok': False, 'error': 'action نامعتبر'}, status=400)

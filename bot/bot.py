@@ -2,13 +2,14 @@ import asyncio
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from shared_lib.db import (
-    init_db, reload_texts_cache, reload_keyboards_cache, set_setting,
-    reload_admins_cache, is_bot_admin_cached,
+    init_db, reload_texts_cache, reload_keyboards_cache, set_setting, get_setting,
+    reload_admins_cache, is_bot_admin_cached, get_setting_sync, get_restart_request,
 )
 from handlers.admin import register_admin_handlers
 from handlers.servers import register_server_handlers
@@ -33,8 +34,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# token comes from the DB (editable in the panel); .env is the bootstrap fallback
+BOT_TOKEN = get_setting_sync("bot_token") or os.getenv("BOT_TOKEN")
 ADMIN_IDS = [int(i) for i in os.getenv("ADMIN_IDS", "").split(",") if i.strip()]
+
+_START_TIME = time.time()
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -90,12 +94,30 @@ async def _heartbeat_loop():
         await asyncio.sleep(60)
 
 
+async def _control_loop():
+    # exit when a restart newer than our start time is requested; the container
+    # restart policy brings us back with the fresh token/config
+    while True:
+        await asyncio.sleep(5)
+        try:
+            if await get_restart_request("bot") > _START_TIME:
+                logger.info("restart requested, exiting")
+                if os.environ.get("ENABLE_SELF_RESTART") == "1":
+                    os._exit(0)
+        except Exception:
+            pass
+
+
 async def main():
     logger.info("ربات در حال راه‌اندازی است...")
     await init_db()
     logger.info("دیتابیس آماده شد")
+    # seed the token into the DB on first run so the panel can show/edit it
+    if not await get_setting("bot_token") and os.getenv("BOT_TOKEN"):
+        await set_setting("bot_token", os.getenv("BOT_TOKEN"))
     asyncio.create_task(_texts_refresh_loop())
     asyncio.create_task(_heartbeat_loop())
+    asyncio.create_task(_control_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

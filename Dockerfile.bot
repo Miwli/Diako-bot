@@ -15,4 +15,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY bot/ .
 COPY shared_lib/ shared_lib/
 
+ENV ENABLE_SELF_RESTART=1
 CMD ["sh", "-c", "mkdir -p /shared-data && python bot.py"]

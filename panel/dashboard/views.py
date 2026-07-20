@@ -441,6 +441,7 @@ def settings_bot_view(request):
         'servers': list(Servers.objects.values('id', 'name').order_by('id')),
         'maintenance_enabled': (async_to_sync(get_setting)('maintenance_enabled') or '0') == '1',
         'maintenance_message': async_to_sync(get_setting)('maintenance_message') or '',
+        'bot_token': async_to_sync(get_setting)('bot_token') or '',
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

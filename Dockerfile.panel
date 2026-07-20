@@ -16,6 +16,7 @@ COPY panel/ .
 COPY shared_lib/ shared_lib/
 
 # Collect static files and run migrations on startup
+ENV ENABLE_SELF_RESTART=1
 CMD ["sh", "-c", "mkdir -p /shared-data && \
                   python manage.py migrate --noinput && \
                   python manage.py collectstatic --noinput && \
