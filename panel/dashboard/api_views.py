@@ -481,6 +481,37 @@ def receipt_image(request, kind, obj_id):
 
 @login_required
 @require_http_methods(["POST"])
+def qr_background_upload(request):
+    """Store an admin-uploaded image as the QR background (normalised to PNG)."""
+    up = request.FILES.get('file')
+    if not up:
+        return JsonResponse({'ok': False, 'error': 'فایلی آپلود نشده'}, status=400)
+    if up.size > 5 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'حجم عکس نباید بیش از ۵ مگابایت باشد'}, status=400)
+    from shared_lib.services import qr
+    try:
+        qr.save_background(up.read())
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'عکس نامعتبر است: {e}'}, status=400)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_http_methods(["GET"])
+def qr_background_image(request):
+    """Serve the current QR background image for the settings preview."""
+    from shared_lib.services import qr
+    path = qr.qr_background_path()
+    if not os.path.exists(path):
+        return HttpResponseNotFound('no background')
+    with open(path, 'rb') as f:
+        resp = HttpResponse(f.read(), content_type='image/png')
+    resp['Cache-Control'] = 'no-store'
+    return resp
+
+
+@login_required
+@require_http_methods(["POST"])
 def update_text(request):
     try:
         data = json.loads(request.body)
@@ -1665,6 +1696,17 @@ def bot_settings_action(request):
         enabled = '1' if data.get('enabled') else '0'
         async_to_sync(set_setting)(FLAG_KEY, enabled)
         return JsonResponse({'ok': True, 'enabled': enabled == '1'})
+
+    if action == 'toggle_qr_background':
+        from shared_lib.services.qr import FLAG_KEY
+        enabled = '1' if data.get('enabled') else '0'
+        async_to_sync(set_setting)(FLAG_KEY, enabled)
+        return JsonResponse({'ok': True, 'enabled': enabled == '1'})
+
+    if action == 'remove_qr_background':
+        from shared_lib.services import qr
+        qr.remove_background()
+        return JsonResponse({'ok': True})
 
     if action == 'save_free_test':
         def _int(v, default):

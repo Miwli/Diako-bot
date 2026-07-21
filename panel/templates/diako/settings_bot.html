@@ -278,6 +278,38 @@
     </div>
   </div>
 
+  <!-- پس‌زمینه‌ی QR -->
+  <div class="widget-card">
+    <div class="widget-head">
+      <div class="widget-title"><i class="ti ti-qrcode"></i>{% trans "پس‌زمینه‌ی QR کد" %}</div>
+    </div>
+    <div class="widget-body">
+      <div class="pick-row{% if qr_background_enabled %} sel{% endif %}" id="qrBgRow" onclick="toggleQrBackground()">
+        <span class="pick-check"><i class="ti ti-check"></i></span>
+        <span class="ref-text"><span class="ref-title">{% trans "پس‌زمینه‌ی دلخواه روی QR کد" %}</span>
+          <span class="ref-sub">{% trans "یک عکس آپلود کن تا کم‌رنگ پشت QR کدی که برای کاربر ارسال می‌شود بیفتد. کد همچنان کاملاً اسکن‌پذیر می‌ماند. اگر عکسی آپلود نشده باشد، QR ساده ارسال می‌شود." %}</span></span>
+      </div>
+      <div class="ref-divider" style="margin:8px 0 12px"></div>
+      <div class="qr-bg-manage">
+        <div class="qr-bg-preview" id="qrBgPreview">
+          {% if qr_background_exists %}
+            <img src="{% url 'diako_qr_background_image' %}?t={{ now_ts }}" alt="">
+          {% else %}
+            <span class="qr-bg-empty"><i class="ti ti-photo-off"></i>{% trans "عکسی آپلود نشده" %}</span>
+          {% endif %}
+        </div>
+        <div class="qr-bg-actions">
+          <input type="file" id="qrBgFile" accept="image/*" hidden onchange="uploadQrBackground(this)">
+          <button class="btn-ghost" type="button" onclick="document.getElementById('qrBgFile').click()">
+            <i class="ti ti-upload"></i>{% trans "آپلود عکس" %}</button>
+          <button class="btn-ghost danger" type="button" id="qrBgRemoveBtn" onclick="removeQrBackground()"
+            {% if not qr_background_exists %}style="display:none"{% endif %}>
+            <i class="ti ti-trash"></i>{% trans "حذف عکس" %}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- حالت تعمیر -->
   <div class="widget-card">
     <div class="widget-head">
@@ -582,6 +614,57 @@ async function toggleDupCheck() {
       'success');
   } else {
     row.classList.toggle('sel');
+    showToast('{% trans "خطا" %}', data.error, 'error');
+  }
+}
+
+/* ─── پس‌زمینه‌ی QR ─── */
+async function toggleQrBackground() {
+  var row = document.getElementById('qrBgRow');
+  row.classList.toggle('sel');
+  var data = await apiPost('/diako/api/bot-settings-action/', {
+    action: 'toggle_qr_background',
+    enabled: row.classList.contains('sel'),
+  });
+  if (data.ok) {
+    showToast('{% trans "ذخیره شد" %}',
+      data.enabled ? '{% trans "پس‌زمینه‌ی QR روشن شد" %}' : '{% trans "پس‌زمینه‌ی QR خاموش شد" %}',
+      'success');
+  } else {
+    row.classList.toggle('sel');
+    showToast('{% trans "خطا" %}', data.error, 'error');
+  }
+}
+
+async function uploadQrBackground(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('file', file);
+  var resp = await fetch('/diako/api/qr-background/upload/', {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+  });
+  var data = await resp.json().catch(function () { return { ok: false, error: 'خطای شبکه' }; });
+  input.value = '';
+  if (data.ok) {
+    document.getElementById('qrBgPreview').innerHTML =
+      '<img src="{% url 'diako_qr_background_image' %}?t=' + Date.now() + '" alt="">';
+    document.getElementById('qrBgRemoveBtn').style.display = '';
+    showToast('{% trans "ذخیره شد" %}', '{% trans "عکس پس‌زمینه آپلود شد" %}', 'success');
+  } else {
+    showToast('{% trans "خطا" %}', data.error, 'error');
+  }
+}
+
+async function removeQrBackground() {
+  if (!confirm('{% trans "عکس پس‌زمینه حذف شود؟" %}')) return;
+  var data = await apiPost('/diako/api/bot-settings-action/', { action: 'remove_qr_background' });
+  if (data.ok) {
+    document.getElementById('qrBgPreview').innerHTML =
+      '<span class="qr-bg-empty"><i class="ti ti-photo-off"></i>{% trans "عکسی آپلود نشده" %}</span>';
+    document.getElementById('qrBgRemoveBtn').style.display = 'none';
+    showToast('{% trans "حذف شد" %}', '{% trans "عکس پس‌زمینه حذف شد" %}', 'success');
+  } else {
     showToast('{% trans "خطا" %}', data.error, 'error');
   }
 }

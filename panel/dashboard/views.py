@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from django.conf import settings as dj_settings
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
@@ -436,6 +437,7 @@ def extra_requests_view(request):
 
 @login_required
 def settings_bot_view(request):
+    from shared_lib.services import qr
     channels = list(RequiredChannels.objects.all())
     force_join_enabled = async_to_sync(get_setting)('force_join_enabled') == '1'
     tutorials = list(Tutorials.objects.all().order_by('order_index', 'id'))
@@ -460,6 +462,9 @@ def settings_bot_view(request):
         'bot_token': async_to_sync(get_setting)('bot_token') or '',
         # defaults to on — the flag only exists once an admin has touched it
         'receipt_dup_check': (async_to_sync(get_setting)('receipt_duplicate_check_enabled') or '1') == '1',
+        'qr_background_enabled': (async_to_sync(get_setting)('qr_background_enabled') or '0') == '1',
+        'qr_background_exists': qr.has_background(),
+        'now_ts': int(time.time()),
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)
