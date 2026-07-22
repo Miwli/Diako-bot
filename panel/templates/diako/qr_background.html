@@ -5,58 +5,31 @@
 
 {% block extra_head %}
 <style>
-.qr-page { max-width: 1040px; }
+.qr-page { max-width: 1180px; margin-inline: auto; }
 
-/* hero: big preview on one side, two badge-cards on the other */
-.qr-hero { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; max-width: 1000px; margin: 0 auto; }
-.qr-hero-preview {
-  flex: 1 1 380px; min-width: 300px; max-width: 560px; aspect-ratio: 1/1;
-  border-radius: 20px; overflow: hidden; border: 1px solid var(--border);
-  background: repeating-conic-gradient(rgba(128,128,128,.10) 0% 25%, transparent 0% 50%) 50%/22px 22px;
-  display: flex; align-items: center; justify-content: center;
+/* master bar: the on/off switch + reset, full width above the workspace */
+.qr-topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin-bottom: 18px; padding: 13px 16px; border-radius: 16px;
+  background: var(--surface-raised); border: 1px solid var(--card-border);
+  box-shadow: var(--edge-soft), 0 2px 8px rgba(0,0,0,.15);
 }
-.qr-hero-preview img { width: 100%; height: 100%; object-fit: contain; }
-.qr-hero-side { flex: 1 1 340px; min-width: 300px; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+.qr-switch { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+.qr-sw-text strong { font-size: 14px; font-weight: 700; display: block; line-height: 1.3; }
+.qr-sw-text small { font-size: 11px; color: var(--text-muted); }
+.qr-reset {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 8px 13px; border-radius: 11px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--surface); color: var(--text-muted);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.qr-reset:hover { color: var(--red); border-color: rgba(248,113,113,.4); }
+.qr-reset i { font-size: 15px; }
 
-/* badge-card */
-.qr-card {
-  background: var(--surface-raised); border: 1px solid var(--border);
-  border-radius: 18px; padding: 16px;
-}
-.qr-card-title {
-  font-size: 12px; font-weight: 700; color: var(--text-muted);
-  margin-bottom: 13px; display: flex; align-items: center; gap: 7px; letter-spacing: .01em;
-}
-.qr-card-title i { color: var(--accent); font-size: 15px; }
-
-/* action rows */
-.qr-actions { display: flex; flex-direction: column; gap: 10px; }
-.qr-act {
-  display: flex; align-items: center; gap: 11px;
-  padding: 13px 15px; border-radius: 13px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); font-size: 13px; font-weight: 600;
-  transition: border-color .16s, transform .12s, background .16s, box-shadow .16s;
-}
-.qr-act:hover { border-color: rgba(var(--accent-rgb),.5); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.18); }
-.qr-act:active { transform: translateY(0); }
-.qr-act i { font-size: 18px; color: var(--accent); }
-.qr-act.danger i { color: var(--red); }
-
-/* enable switch — prominent row at the top of the actions card */
-.qr-switch {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 13px 15px; border-radius: 13px; cursor: pointer; user-select: none;
-  border: 1px solid var(--border); background: var(--surface);
-  font-size: 13px; font-weight: 700; transition: border-color .18s, background .18s;
-}
-.qr-switch.on { border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.08); }
-
-/* clean toggle: even 3px margins, knob fills one side */
+/* clean toggle: even 3px margins, knob fills one side; logical inset keeps RTL+LTR correct */
 .qr-toggle {
   position: relative; flex: 0 0 auto; width: 44px; height: 26px;
-  border-radius: 40px; background: rgba(128,128,128,.30);
-  transition: background .2s;
+  border-radius: 40px; background: rgba(128,128,128,.30); transition: background .2s;
 }
 .qr-toggle::after {
   content: ""; position: absolute; top: 3px; inset-inline-start: 3px;
@@ -64,45 +37,33 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: inset-inline-start .2s;
 }
 .qr-toggle.on { background: var(--accent); }
-/* knob slides to the end edge; a logical inset keeps this correct in RTL and LTR */
 .qr-toggle.on::after { inset-inline-start: calc(100% - 23px); }
 
-/* source picker grid inside the badge-card */
-.qr-sources { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.qr-src-card {
-  position: relative; border-radius: 13px; overflow: hidden; cursor: pointer;
-  border: 2px solid var(--border); aspect-ratio: 1/1; background: var(--surface);
-  transition: border-color .16s, transform .12s, box-shadow .16s;
-}
-.qr-src-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.22); }
-.qr-src-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.20); }
-.qr-src-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.qr-src-card .qr-src-label {
-  position: absolute; inset-inline: 0; bottom: 0; padding: 5px 6px 4px;
-  font-size: 10px; font-weight: 600; color: #fff; text-align: center;
-  background: linear-gradient(transparent, rgba(0,0,0,.65));
-}
-.qr-src-card.qr-src-empty {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; color: var(--text-muted); font-size: 10px; text-align: center;
-}
-.qr-src-card.qr-src-empty i { font-size: 22px; }
-.qr-src-check {
-  position: absolute; top: 5px; inset-inline-end: 5px; width: 20px; height: 20px;
-  border-radius: 50%; background: var(--accent); color: #fff; opacity: 0; transform: scale(.5);
-  display: flex; align-items: center; justify-content: center; font-size: 12px;
-  transition: opacity .16s, transform .16s;
-}
-.qr-src-card.sel .qr-src-check { opacity: 1; transform: scale(1); }
+/* two-column workspace: preview + mode on one side, source + tuning on the other */
+.qr-grid { display: grid; grid-template-columns: minmax(330px, 430px) 1fr; gap: 18px; align-items: start; }
+.qr-grid.off { opacity: .5; }
+.qr-preview-col, .qr-controls-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
-/* ── settings modal editor ── */
-.qr-modal-box { width: min(760px, 100%); transform-origin: center; }
-/* a slightly springy pop when the settings modal opens */
-#qrSettingsModal .modal-box { transition: transform .3s cubic-bezier(.2,.9,.3,1.25), opacity .22s; }
-.qr-editor { display: flex; gap: 18px; flex-wrap: wrap; position: relative; }
+/* badge-card */
+.qr-card {
+  background: var(--surface-raised); border: 1px solid var(--card-border);
+  border-radius: 18px; padding: 16px; box-shadow: var(--edge-soft);
+}
+.qr-card-title {
+  font-size: 12px; font-weight: 700; color: var(--text-muted);
+  margin-bottom: 13px; display: flex; align-items: center; gap: 7px; letter-spacing: .01em;
+}
+.qr-card-title i { color: var(--accent); font-size: 15px; }
+.qr-card-title .qr-step {
+  margin-inline-start: auto; font-size: 10px; font-weight: 700; color: var(--accent);
+  background: rgba(var(--accent-rgb),.14); border-radius: 6px; padding: 2px 7px;
+}
+
+/* live preview — stays in view while the controls scroll */
+.qr-preview-card { display: flex; flex-direction: column; gap: 13px; position: sticky; top: 16px; }
 .qr-canvas-wrap {
-  position: relative; flex: 0 0 320px; width: 320px; max-width: 100%; align-self: flex-start;
-  border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+  position: relative; width: 100%; max-width: 380px; margin: 0 auto; align-self: center;
+  border-radius: 16px; overflow: hidden; border: 1px solid var(--card-border);
   background: repeating-conic-gradient(rgba(128,128,128,.10) 0% 25%, transparent 0% 50%) 50%/20px 20px;
   touch-action: none;
 }
@@ -115,66 +76,135 @@
   position: absolute; width: 16px; height: 16px; inset-inline-end: -8px; bottom: -8px;
   background: var(--accent); border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize;
 }
-.qr-controls { flex: 1 1 260px; min-width: 240px; display: flex; flex-direction: column; gap: 17px; }
-.qr-ctrl-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 7px; display: flex; justify-content: space-between; }
-.qr-seg { display: flex; gap: 6px; }
-.qr-seg button {
-  flex: 1; padding: 9px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  transition: border-color .14s, background .14s, color .14s;
+.qr-preview-hint {
+  font-size: 10.5px; color: var(--text-muted); text-align: center; line-height: 1.6;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.qr-seg button.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.12); color: var(--accent); }
-.qr-mrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 700; cursor: pointer; user-select: none; }
-.qr-slider { width: 100%; margin-top: 9px; accent-color: var(--accent); }
-.qr-sub { opacity: .5; pointer-events: none; }
-.qr-val { font-size: 12px; color: var(--text-muted); font-weight: 600; }
-
-/* color triggers */
-.qr-colors { display: flex; gap: 8px; }
-.qr-color-trig {
-  flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer;
-  padding: 8px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  transition: border-color .14s;
+.qr-preview-hint i { font-size: 13px; color: var(--accent); }
+.qr-download {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px; border-radius: 12px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--surface); color: var(--text);
+  transition: border-color .15s, transform .12s, box-shadow .15s;
 }
-.qr-color-trig:hover { border-color: rgba(var(--accent-rgb),.5); }
-.qr-color-sw {
-  width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto;
-  border: 1px solid rgba(255,255,255,.25);
-}
+.qr-download:hover { border-color: rgba(var(--accent-rgb),.5); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+.qr-download:active { transform: translateY(0); }
+.qr-download i { font-size: 17px; color: var(--accent); }
 
 /* scannability warning */
 .qr-warn {
   display: flex; align-items: center; gap: 8px; font-size: 11px; line-height: 1.7;
   color: var(--red); background: rgba(248,113,113,.10);
-  border: 1px solid rgba(248,113,113,.28); border-radius: 10px; padding: 8px 11px;
+  border: 1px solid rgba(248,113,113,.28); border-radius: 11px; padding: 9px 11px;
 }
 .qr-warn i { font-size: 15px; flex: 0 0 auto; }
 .qr-warn[hidden] { display: none; }  /* display:flex above would otherwise beat the hidden attr */
 
+/* source picker grid */
+.qr-sources { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.qr-src-card {
+  position: relative; border-radius: 13px; overflow: hidden; cursor: pointer;
+  border: 2px solid var(--card-border); aspect-ratio: 1/1; background: var(--surface);
+  transition: border-color .16s, transform .12s, box-shadow .16s;
+}
+.qr-src-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.22); }
+.qr-src-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.20); }
+.qr-src-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.qr-src-card .qr-src-label {
+  position: absolute; inset-inline: 0; bottom: 0; padding: 5px 6px 4px;
+  font-size: 10px; font-weight: 600; color: #fff; text-align: center;
+  background: linear-gradient(transparent, rgba(0,0,0,.65));
+}
+.qr-src-card.qr-src-empty,
+.qr-src-card.qr-src-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; color: var(--text-muted); font-size: 10px; text-align: center;
+}
+.qr-src-card.qr-src-empty i, .qr-src-card.qr-src-add i { font-size: 22px; }
+.qr-src-card.qr-src-add { border-style: dashed; }
+.qr-src-card.qr-src-add:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),.5); }
+.qr-src-check {
+  position: absolute; top: 5px; inset-inline-end: 5px; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--accent); color: #fff; opacity: 0; transform: scale(.5);
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+  transition: opacity .16s, transform .16s; z-index: 2;
+}
+.qr-src-card.sel .qr-src-check { opacity: 1; transform: scale(1); }
 /* animated (GIF) badge on the custom source card */
 .qr-gif-badge {
-  position: absolute; top: 5px; inset-inline-start: 5px; z-index: 2;
+  position: absolute; top: 5px; inset-inline-start: 5px; z-index: 3;
   font-size: 9px; font-weight: 700; letter-spacing: .04em;
   padding: 2px 6px; border-radius: 6px; background: var(--accent); color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
 .qr-gif-badge[hidden] { display: none; }
 
-/* small hint line (e.g. turn on the plate to animate) */
-.qr-hint {
-  display: flex; align-items: center; gap: 7px; margin-top: 8px;
-  font-size: 11px; line-height: 1.7; color: var(--text-muted);
+/* display-mode selector — two equal, prominent cards */
+.qr-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.qr-mode {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  padding: 14px; border-radius: 14px; cursor: pointer; text-align: start;
+  border: 1.5px solid var(--card-border); background: var(--surface); color: var(--text);
+  font-family: inherit; transition: border-color .16s, background .16s, transform .12s, box-shadow .16s;
 }
-.qr-hint i { color: var(--accent); font-size: 14px; }
+.qr-mode:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+.qr-mode i { font-size: 23px; color: var(--accent); }
+.qr-mode strong { font-size: 13px; font-weight: 700; }
+.qr-mode small { font-size: 10.5px; color: var(--text-muted); font-weight: 500; line-height: 1.5; }
+.qr-mode.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.10); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.15); }
+
+/* small hint line (e.g. turn on the card to animate a GIF) */
+.qr-hint {
+  display: flex; align-items: center; gap: 7px; margin-top: 12px;
+  font-size: 11px; line-height: 1.7; color: var(--text-muted);
+  background: rgba(var(--accent-rgb),.07); border: 1px solid rgba(var(--accent-rgb),.2);
+  border-radius: 10px; padding: 8px 11px;
+}
+.qr-hint i { color: var(--accent); font-size: 15px; flex: 0 0 auto; }
 .qr-hint[hidden] { display: none; }
 
-/* color picker popover — always LTR for predictable sliders */
-.qr-colorpop {
-  position: absolute; top: 0; inset-inline-start: 0; z-index: 5; width: 216px;
-  direction: ltr; padding: 12px; border-radius: 14px;
-  background: var(--surface-raised); border: 1px solid var(--border);
-  box-shadow: 0 16px 40px rgba(0,0,0,.4);
+/* fine-tune controls */
+.qr-tune { display: flex; flex-direction: column; gap: 16px; }
+.qr-tune-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 18px; }
+.qr-ctrl-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 7px; display: flex; justify-content: space-between; }
+.qr-val { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.qr-slider { width: 100%; accent-color: var(--accent); }
+.qr-sub { opacity: .4; pointer-events: none; }
+.qr-seg { display: flex; gap: 6px; }
+.qr-seg button {
+  flex: 1; padding: 9px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--surface); color: var(--text);
+  font-family: inherit; transition: border-color .14s, background .14s, color .14s;
 }
+.qr-seg button.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.12); color: var(--accent); }
+
+/* colour triggers + popover live in one relative box so the popup anchors here (away from the QR) */
+.qr-colorwrap { position: relative; }
+.qr-colors { display: flex; gap: 8px; }
+.qr-color-trig {
+  flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 9px 11px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--card-border); background: var(--surface); color: var(--text);
+  font-family: inherit; transition: border-color .14s;
+}
+.qr-color-trig:hover { border-color: rgba(var(--accent-rgb),.5); }
+.qr-color-trig.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb),.18); }
+.qr-color-sw { width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.25); }
+
+/* colour picker popover — anchored under the triggers, always LTR for predictable sliders */
+.qr-colorpop {
+  position: absolute; top: calc(100% + 9px); inset-inline-start: 0; z-index: 20; width: 232px;
+  direction: ltr; padding: 13px; border-radius: 14px;
+  background: var(--bg-base); border: 1px solid rgba(255,255,255,.12);
+  box-shadow: var(--elev-3);
+}
+.qr-colorpop::before {
+  content: ""; position: absolute; top: -7px; inset-inline-start: 22px;
+  width: 12px; height: 12px; background: var(--bg-base);
+  border-inline-start: 1px solid rgba(255,255,255,.12); border-top: 1px solid rgba(255,255,255,.12);
+  transform: rotate(45deg);
+}
+.qr-colorpop[hidden] { display: none; }
 .qr-sv {
   position: relative; width: 100%; height: 130px; border-radius: 8px; cursor: crosshair;
   background:
@@ -204,38 +234,84 @@
 .qr-hexrow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .qr-hex {
   flex: 1; min-width: 0; font-family: monospace; font-size: 12px; text-align: center;
-  padding: 7px 6px; border-radius: 8px; border: 1px solid var(--border);
+  padding: 7px 6px; border-radius: 8px; border: 1px solid var(--card-border);
   background: var(--surface); color: var(--text);
 }
 .qr-pop-close {
   flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
-  border: none; background: var(--accent); color: #fff; font-size: 14px;
+  border: none; background: var(--accent); color: #000; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
+}
+
+@media (max-width: 860px) {
+  .qr-grid { grid-template-columns: 1fr; }
+  .qr-preview-card { position: static; }
+  .qr-canvas-wrap { max-width: 320px; }
+}
+@media (max-width: 520px) {
+  .qr-tune-grid { grid-template-columns: 1fr; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="qr-page anim-card">
-  <div class="qr-hero">
 
-    <div class="qr-hero-preview"><img id="qrHeroImg" src="{% url 'diako_qr_render' %}" alt=""></div>
+  <div class="qr-topbar">
+    <div class="qr-switch" id="qrEnable" onclick="toggleEnable()">
+      <span class="qr-toggle" id="qrEnableTgl"></span>
+      <span class="qr-sw-text">
+        <strong>{% trans "پس‌زمینه‌ی کد QR" %}</strong>
+        <small>{% trans "کدهای ارسالی به کاربر، روی پس‌زمینه‌ی انتخابی ساخته می‌شوند" %}</small>
+      </span>
+    </div>
+    <div class="qr-reset" onclick="resetAll()"><i class="ti ti-rotate"></i>{% trans "بازنشانی" %}</div>
+    <input type="file" id="qrUpload" accept="image/*" hidden onchange="uploadCustom(this)">
+  </div>
 
-    <div class="qr-hero-side">
-      <div class="qr-card">
-        <div class="qr-card-title"><i class="ti ti-adjustments-horizontal"></i>{% trans "پس‌زمینه QR" %}</div>
-        <div class="qr-actions">
-          <div class="qr-switch" id="qrEnable" onclick="toggleEnable()">
-            <span>{% trans "پس‌زمینه فعال" %}</span>
-            <span class="qr-toggle" id="qrEnableTgl"></span>
-          </div>
-          <div class="qr-act" onclick="openSettings()"><i class="ti ti-adjustments"></i>{% trans "تنظیمات ظاهر" %}</div>
-          <div class="qr-act" onclick="document.getElementById('qrUpload').click()"><i class="ti ti-upload"></i>{% trans "آپلود عکس دلخواه" %}</div>
-          <div class="qr-act danger" onclick="resetAll()"><i class="ti ti-rotate"></i>{% trans "بازنشانی" %}</div>
-          <input type="file" id="qrUpload" accept="image/*" hidden onchange="uploadCustom(this)">
+  <div class="qr-grid" id="qrGrid">
+
+    <!-- LEFT: live preview, sticky -->
+    <div class="qr-preview-col">
+      <div class="qr-card qr-preview-card">
+        <div class="qr-canvas-wrap" id="qrCanvasWrap">
+          <canvas id="qrCanvas" width="320" height="320"></canvas>
+          <div class="qr-posbox" id="qrPosBox"><span class="qr-poshandle" id="qrPosHandle"></span></div>
         </div>
+        <div class="qr-preview-hint"><i class="ti ti-drag-drop"></i>{% trans "برای جابه‌جایی و تغییر اندازه، کادر را بکشید" %}</div>
+        <div class="qr-warn" id="qrWarn" hidden>
+          <i class="ti ti-alert-triangle"></i>
+          <span>{% trans "کنتراست کم است؛ ممکن است کد اسکن نشود." %}</span>
+        </div>
+        <div class="qr-download" onclick="downloadTest()"><i class="ti ti-download"></i>{% trans "دانلود برای تست اسکن" %}</div>
       </div>
 
+      <!-- display mode: right under the preview it changes -->
+      <div class="qr-card">
+        <div class="qr-card-title"><i class="ti ti-layout-2"></i>{% trans "حالت نمایش" %}</div>
+        <div class="qr-modes" id="qrModes">
+          <button class="qr-mode" type="button" data-mode="blur" onclick="setMode('blur')">
+            <i class="ti ti-droplet-half-2-filled"></i>
+            <strong>{% trans "بلور تمام‌صفحه" %}</strong>
+            <small>{% trans "کد مستقیم روی پس‌زمینه‌ی تار" %}</small>
+          </button>
+          <button class="qr-mode" type="button" data-mode="card" onclick="setMode('card')">
+            <i class="ti ti-square-rounded"></i>
+            <strong>{% trans "کارت سفید" %}</strong>
+            <small>{% trans "کد روی یک کارت وسطِ تصویر" %}</small>
+          </button>
+        </div>
+        <div class="qr-hint" id="qrAnimHint" hidden>
+          <i class="ti ti-movie"></i>
+          <span>{% trans "پس‌زمینه‌ی متحرک است؛ برای متحرک‌شدن خروجی، حالت «کارت سفید» را انتخاب کن." %}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: source + fine tuning -->
+    <div class="qr-controls-col">
+
+      <!-- source -->
       <div class="qr-card">
         <div class="qr-card-title"><i class="ti ti-photo"></i>{% trans "انتخاب پس‌زمینه" %}</div>
         <div class="qr-sources" id="qrSources">
@@ -257,100 +333,76 @@
                  style="{% if not qr_has_custom %}display:none{% endif %}">
             <span class="qr-src-label">{% trans "آپلودی" %}</span>
           </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-{% endblock %}
-
-{% block modals %}
-<div class="modal-bg" id="qrSettingsModal">
-  <div class="modal-box qr-modal-box">
-    <div class="modal-title"><i class="ti ti-adjustments"></i>{% trans "تنظیمات ظاهر" %}</div>
-    <div class="qr-editor">
-      <div class="qr-canvas-wrap" id="qrCanvasWrap">
-        <canvas id="qrCanvas" width="320" height="320"></canvas>
-        <div class="qr-posbox" id="qrPosBox"><span class="qr-poshandle" id="qrPosHandle"></span></div>
-      </div>
-      <div class="qr-controls">
-        <div>
-          <div class="qr-ctrl-label">{% trans "شکل خروجی" %}</div>
-          <div class="qr-seg" id="qrShapeSeg">
-            <button data-shape="square" onclick="setShape('square')">{% trans "مربع" %}</button>
-            <button data-shape="original" onclick="setShape('original')">{% trans "نسبت اصلی" %}</button>
+          <div class="qr-src-card qr-src-add" onclick="document.getElementById('qrUpload').click()">
+            <i class="ti ti-upload"></i><span>{% trans "آپلود" %}</span>
           </div>
-        </div>
-
-        <div>
-          <div class="qr-mrow" onclick="toggleField('blur_enabled')">
-            <span>{% trans "بلور پس‌زمینه" %}</span>
-            <span class="qr-toggle" id="qrBlurTgl"></span>
-          </div>
-          <div id="qrBlurWrap">
-            <input type="range" class="qr-slider" id="qrBlurAmount" min="0" max="100"
-                   oninput="onSlider('blur_amount', this.value, true)">
-          </div>
-        </div>
-
-        <div>
-          <div class="qr-mrow" onclick="toggleField('plate_enabled')">
-            <span>{% trans "کارت سفید پشت کد" %}</span>
-            <span class="qr-toggle" id="qrPlateTgl"></span>
-          </div>
-          <div class="qr-hint" id="qrAnimHint" hidden>
-            <i class="ti ti-movie"></i>
-            <span>{% trans "پس‌زمینه‌ی متحرک است؛ برای متحرک‌شدن خروجی، کارت را روشن کن." %}</span>
-          </div>
-          <div id="qrPlateWrap">
-            <div class="qr-ctrl-label" style="margin-top:9px">{% trans "گردی گوشه" %} <span class="qr-val" id="qrRadiusVal"></span></div>
-            <input type="range" class="qr-slider" id="qrPlateRadius" min="0" max="100"
-                   oninput="onSlider('plate_radius', this.value)">
-            <div class="qr-ctrl-label" style="margin-top:9px">{% trans "فاصله تا لبه" %} <span class="qr-val" id="qrPadVal"></span></div>
-            <input type="range" class="qr-slider" id="qrPlatePadding" min="0" max="40"
-                   oninput="onSlider('plate_padding', this.value)">
-          </div>
-        </div>
-
-        <div>
-          <div class="qr-ctrl-label">{% trans "اندازه کد" %} <span class="qr-val" id="qrSizeVal"></span></div>
-          <input type="range" class="qr-slider" id="qrSize" min="20" max="100"
-                 oninput="onSlider('size', this.value)">
-        </div>
-
-        <div>
-          <div class="qr-ctrl-label">{% trans "رنگ‌ها" %}</div>
-          <div class="qr-colors">
-            <button class="qr-color-trig" type="button" onclick="openPicker('fg')">
-              <span class="qr-color-sw" id="qrFgSw"></span><span>{% trans "رنگ کد" %}</span></button>
-            <button class="qr-color-trig" type="button" onclick="openPicker('plate')">
-              <span class="qr-color-sw" id="qrPlateSw"></span><span>{% trans "رنگ کارت" %}</span></button>
-          </div>
-        </div>
-
-        <div class="qr-warn" id="qrWarn" hidden>
-          <i class="ti ti-alert-triangle"></i>
-          <span>{% trans "کنتراست کم است؛ ممکن است کد اسکن نشود." %}</span>
         </div>
       </div>
 
-      <div class="qr-colorpop" id="qrColorPop" hidden>
-        <div class="qr-sv" id="qrSv"><div class="qr-sv-knob" id="qrSvKnob"></div></div>
-        <input type="range" class="qr-hue" id="qrHue" min="0" max="360"
-               oninput="pickState.h=+this.value; onPickChange()">
-        <input type="range" class="qr-alpha" id="qrAlpha" min="0" max="255"
-               oninput="pickState.a=+this.value; onPickChange()">
-        <div class="qr-hexrow">
-          <span class="qr-color-sw" id="qrPickSw"></span>
-          <input class="qr-hex" id="qrHex" spellcheck="false" maxlength="9" onchange="onHexInput(this.value)">
-          <button class="qr-pop-close" type="button" onclick="closePicker()"><i class="ti ti-check"></i></button>
+      <!-- fine tune -->
+      <div class="qr-card">
+        <div class="qr-card-title"><i class="ti ti-adjustments"></i>{% trans "تنظیم دقیق" %}</div>
+        <div class="qr-tune">
+
+          <div class="qr-tune-grid">
+            <div>
+              <div class="qr-ctrl-label">{% trans "اندازه کد" %} <span class="qr-val" id="qrSizeVal"></span></div>
+              <input type="range" class="qr-slider" id="qrSize" min="20" max="100"
+                     oninput="onSlider('size', this.value)">
+            </div>
+            <div>
+              <div class="qr-ctrl-label">{% trans "میزان تاری پس‌زمینه" %} <span class="qr-val" id="qrBlurVal"></span></div>
+              <input type="range" class="qr-slider" id="qrBlurAmount" min="0" max="100"
+                     oninput="onSlider('blur_amount', this.value, true)">
+            </div>
+            <div id="qrCardOpts" class="qr-tune-grid" style="grid-column:1/-1">
+              <div>
+                <div class="qr-ctrl-label">{% trans "گردی گوشه‌ی کارت" %} <span class="qr-val" id="qrRadiusVal"></span></div>
+                <input type="range" class="qr-slider" id="qrPlateRadius" min="0" max="100"
+                       oninput="onSlider('plate_radius', this.value)">
+              </div>
+              <div>
+                <div class="qr-ctrl-label">{% trans "فاصله‌ی کد تا لبه‌ی کارت" %} <span class="qr-val" id="qrPadVal"></span></div>
+                <input type="range" class="qr-slider" id="qrPlatePadding" min="0" max="40"
+                       oninput="onSlider('plate_padding', this.value)">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="qr-ctrl-label">{% trans "شکل خروجی" %}</div>
+            <div class="qr-seg" id="qrShapeSeg">
+              <button type="button" data-shape="square" onclick="setShape('square')">{% trans "مربع" %}</button>
+              <button type="button" data-shape="original" onclick="setShape('original')">{% trans "نسبت اصلی" %}</button>
+            </div>
+          </div>
+
+          <div class="qr-colorwrap">
+            <div class="qr-ctrl-label">{% trans "رنگ‌ها" %}</div>
+            <div class="qr-colors">
+              <button class="qr-color-trig" id="qrFgTrig" type="button" onclick="openPicker('fg')">
+                <span class="qr-color-sw" id="qrFgSw"></span><span>{% trans "رنگ کد" %}</span></button>
+              <button class="qr-color-trig" id="qrPlateColorTrig" type="button" onclick="openPicker('plate')">
+                <span class="qr-color-sw" id="qrPlateSw"></span><span>{% trans "رنگ کارت" %}</span></button>
+            </div>
+
+            <div class="qr-colorpop" id="qrColorPop" hidden>
+              <div class="qr-sv" id="qrSv"><div class="qr-sv-knob" id="qrSvKnob"></div></div>
+              <input type="range" class="qr-hue" id="qrHue" min="0" max="360"
+                     oninput="pickState.h=+this.value; onPickChange()">
+              <input type="range" class="qr-alpha" id="qrAlpha" min="0" max="255"
+                     oninput="pickState.a=+this.value; onPickChange()">
+              <div class="qr-hexrow">
+                <span class="qr-color-sw" id="qrPickSw"></span>
+                <input class="qr-hex" id="qrHex" spellcheck="false" maxlength="9" onchange="onHexInput(this.value)">
+                <button class="qr-pop-close" type="button" onclick="closePicker()"><i class="ti ti-check"></i></button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
-    </div>
-    <div class="modal-acts" style="margin-top:16px">
-      <button class="modal-btn" type="button" onclick="downloadTest()"><i class="ti ti-download"></i>{% trans "دانلود برای تست" %}</button>
-      <button class="modal-btn btn-confirm" onclick="closeSettings()">{% trans "تمام" %}</button>
+
     </div>
   </div>
 </div>
@@ -374,32 +426,36 @@ let customAnimated = {% if qr_custom_animated %}true{% else %}false{% endif %};
 let bgImg = null, bgKey = "", qrImg = null;
 let saveTimer = null, bgTimer = null;
 
-function scheduleSave(refreshHero) {
+function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const data = await apiPost(QR_URLS.config, cfg);
-    if (!data.ok) { showToast('{% trans "خطا" %}', data.error || '', 'error'); return; }
-    if (refreshHero !== false) refreshHeroImg();
+    if (!data.ok) showToast('{% trans "خطا" %}', data.error || '', 'error');
   }, 350);
-}
-function refreshHeroImg() {
-  document.getElementById('qrHeroImg').src = QR_URLS.render + '?t=' + Date.now();
 }
 
 /* enable + source */
 function paintEnable() {
   const on = !!cfg.enabled;
-  document.getElementById('qrEnable').classList.toggle('on', on);
   document.getElementById('qrEnableTgl').classList.toggle('on', on);
+  document.getElementById('qrGrid').classList.toggle('off', !on);
 }
 function paintSources() {
   document.querySelectorAll('.qr-src-card').forEach(el => {
     const s = el.dataset.source;
+    if (!s) return;
     el.classList.toggle('sel', cfg.enabled ? (s === cfg.source) : (s === 'none'));
   });
   document.getElementById('qrGifBadge').hidden = !customAnimated;
 }
-/* hint shown when an animated background needs the plate turned on */
+/* two equal mode cards drive the white-card (plate) toggle */
+function paintMode() {
+  const card = !!cfg.plate_enabled;
+  document.querySelectorAll('.qr-mode').forEach(b => b.classList.toggle('sel', b.dataset.mode === (card ? 'card' : 'blur')));
+  document.getElementById('qrCardOpts').classList.toggle('qr-sub', !card);
+  document.getElementById('qrPlateColorTrig').classList.toggle('qr-sub', !card);
+}
+/* hint shown when an animated background needs the card turned on */
 function updateAnimHint() {
   const el = document.getElementById('qrAnimHint');
   if (el) el.hidden = !(cfg.enabled && cfg.source === 'custom' && customAnimated && !cfg.plate_enabled);
@@ -407,12 +463,16 @@ function updateAnimHint() {
 function toggleEnable() {
   cfg.enabled = !cfg.enabled;
   if (cfg.enabled && (cfg.source === 'none' || !cfg.source)) cfg.source = 'aurora';
-  paintEnable(); paintSources(); scheduleSave();
+  paintEnable(); paintSources(); loadBg(); updateAnimHint(); scheduleSave();
 }
 function selectSource(key) {
   if (key === 'none') { cfg.enabled = false; }
   else { cfg.enabled = true; cfg.source = key; }
-  paintEnable(); paintSources(); scheduleSave();
+  paintEnable(); paintSources(); loadBg(); updateAnimHint(); scheduleSave();
+}
+function setMode(m) {
+  cfg.plate_enabled = (m === 'card');
+  paintMode(); drawCanvas(); updateAnimHint(); scheduleSave();
 }
 function onCustomCard() {
   if (hasCustom) selectSource('custom');
@@ -433,8 +493,8 @@ async function uploadCustom(input) {
   thumb.src = QR_URLS.custom + '?t=' + Date.now();
   thumb.style.display = '';
   cfg.source = 'custom'; cfg.enabled = true;
-  paintEnable(); paintSources(); updateAnimHint();
   bgKey = '';
+  paintEnable(); paintSources(); loadBg(); updateAnimHint();
   scheduleSave();
   showToast('{% trans "انجام شد" %}',
     data.animated ? '{% trans "GIF متحرک آپلود شد" %}' : '{% trans "عکس آپلود شد" %}', 'success');
@@ -446,41 +506,28 @@ async function resetAll() {
   location.reload();
 }
 
-/* settings modal */
-function openSettings() {
-  if (!qrImg) { qrImg = new Image(); qrImg.onload = drawCanvas; qrImg.src = QR_URLS.layer + '?size=512'; }
-  syncControls();
-  loadBg();
-  document.getElementById('qrSettingsModal').classList.add('open');
-}
-function closeSettings() { document.getElementById('qrSettingsModal').classList.remove('open'); }
+/* sync all sliders / segments / swatches / mode to cfg */
 function syncControls() {
   document.querySelectorAll('#qrShapeSeg button').forEach(b => b.classList.toggle('sel', b.dataset.shape === cfg.shape));
-  document.getElementById('qrBlurTgl').classList.toggle('on', !!cfg.blur_enabled);
-  document.getElementById('qrPlateTgl').classList.toggle('on', !!cfg.plate_enabled);
-  document.getElementById('qrBlurAmount').value = cfg.blur_amount;
+  document.getElementById('qrBlurAmount').value = cfg.blur_enabled ? cfg.blur_amount : 0;
   document.getElementById('qrPlateRadius').value = cfg.plate_radius;
   document.getElementById('qrPlatePadding').value = cfg.plate_padding;
   document.getElementById('qrSize').value = Math.round(cfg.size * 100);
-  document.getElementById('qrBlurWrap').classList.toggle('qr-sub', !cfg.blur_enabled);
-  document.getElementById('qrPlateWrap').classList.toggle('qr-sub', !cfg.plate_enabled);
+  document.getElementById('qrBlurVal').textContent = (cfg.blur_enabled ? cfg.blur_amount : 0) + '٪';
   document.getElementById('qrRadiusVal').textContent = cfg.plate_radius;
   document.getElementById('qrPadVal').textContent = cfg.plate_padding;
   document.getElementById('qrSizeVal').textContent = Math.round(cfg.size * 100) + '٪';
+  paintMode();
   paintSwatches();
   updateAnimHint();
 }
 function setShape(s) { cfg.shape = s; syncControls(); loadBg(); scheduleSave(); }
-function toggleField(f) {
-  cfg[f] = !cfg[f];
-  document.getElementById(f === 'blur_enabled' ? 'qrBlurTgl' : 'qrPlateTgl').classList.toggle('on', cfg[f]);
-  document.getElementById(f === 'blur_enabled' ? 'qrBlurWrap' : 'qrPlateWrap').classList.toggle('qr-sub', !cfg[f]);
-  if (f === 'blur_enabled') loadBg(); else drawCanvas();
-  updateAnimHint();
-  scheduleSave();
-}
 function onSlider(field, value, isBg) {
   cfg[field] = (field === 'size') ? (+value / 100) : +value;
+  if (field === 'blur_amount') {
+    cfg.blur_enabled = +value > 0;
+    document.getElementById('qrBlurVal').textContent = value + '٪';
+  }
   if (field === 'plate_radius') document.getElementById('qrRadiusVal').textContent = value;
   if (field === 'plate_padding') document.getElementById('qrPadVal').textContent = value;
   if (field === 'size') document.getElementById('qrSizeVal').textContent = value + '٪';
@@ -500,6 +547,7 @@ function bgUrl() {
 function loadBg() {
   clearTimeout(bgTimer);
   bgTimer = setTimeout(() => {
+    if (!cfg.enabled) { bgImg = null; bgKey = ''; drawCanvas(); return; }
     const url = bgUrl();
     if (url === bgKey && bgImg) { drawCanvas(); return; }
     const img = new Image();
@@ -516,6 +564,20 @@ function qrGeom(W, H) {
 function drawCanvas() {
   const cv = document.getElementById('qrCanvas');
   const ctx = cv.getContext('2d');
+  const posBox = document.getElementById('qrPosBox');
+
+  /* disabled → the bot sends a plain full QR; mirror that and hide the tuning overlay */
+  if (!cfg.enabled) {
+    cv.width = 320; cv.height = 320;
+    ctx.clearRect(0, 0, 320, 320);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 320, 320);
+    if (qrImg) ctx.drawImage(qrImg, 0, 0, 320, 320);
+    posBox.style.display = 'none';
+    document.getElementById('qrWarn').hidden = true;
+    return;
+  }
+  posBox.style.display = '';
+
   let W = 320, H = 320;
   if (cfg.shape === 'original' && bgImg) {
     if (bgImg.width >= bgImg.height) { W = 320; H = Math.round(320 * bgImg.height / bgImg.width); }
@@ -569,21 +631,27 @@ function placePosBox(W, H, g) {
   box.style.height = (g.qw / H * 100) + '%';
 }
 
-/* drag to move / resize */
+/* drag to move / resize — keep the grabbed point under the cursor (no jump) */
 (function () {
   const box = document.getElementById('qrPosBox');
   const handle = document.getElementById('qrPosHandle');
-  let mode = null;
+  let mode = null, start = null;
   function rect() { return document.getElementById('qrCanvas').getBoundingClientRect(); }
-  function down(e, m) { mode = m; e.preventDefault(); e.stopPropagation(); }
+  function down(e, m) {
+    mode = m;
+    start = { px: cfg.pos_x, py: cfg.pos_y, mx: e.clientX, my: e.clientY };
+    e.preventDefault(); e.stopPropagation();
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+  }
   handle.addEventListener('pointerdown', e => down(e, 'resize'));
   box.addEventListener('pointerdown', e => { if (e.target !== handle) down(e, 'move'); });
   window.addEventListener('pointermove', e => {
     if (!mode) return;
     const r = rect();
     if (mode === 'move') {
-      cfg.pos_x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-      cfg.pos_y = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+      /* shift the QR centre by exactly how far the pointer moved since grabbing */
+      cfg.pos_x = Math.max(0, Math.min(1, start.px + (e.clientX - start.mx) / r.width));
+      cfg.pos_y = Math.max(0, Math.min(1, start.py + (e.clientY - start.my) / r.height));
     } else {
       const short = Math.min(r.width, r.height);
       const dx = (e.clientX - r.left) - cfg.pos_x * r.width;
@@ -595,7 +663,7 @@ function placePosBox(W, H, g) {
     }
     drawCanvas();
   });
-  window.addEventListener('pointerup', () => { if (mode) { mode = null; scheduleSave(); } });
+  window.addEventListener('pointerup', () => { if (mode) { mode = null; start = null; scheduleSave(); } });
 })();
 
 /* ── colours ── */
@@ -647,10 +715,17 @@ function openPicker(target) {
   const c = parseArgb(cfg[colorKey()]);
   const hsv = rgbToHsv(c.r, c.g, c.b);
   pickState = { h: hsv.h, s: hsv.s, v: hsv.v, a: c.a };
+  document.getElementById('qrFgTrig').classList.toggle('active', target === 'fg');
+  document.getElementById('qrPlateColorTrig').classList.toggle('active', target === 'plate');
   syncPickerUI();
   document.getElementById('qrColorPop').hidden = false;
 }
-function closePicker() { document.getElementById('qrColorPop').hidden = true; pickTarget = null; }
+function closePicker() {
+  document.getElementById('qrColorPop').hidden = true;
+  document.getElementById('qrFgTrig').classList.remove('active');
+  document.getElementById('qrPlateColorTrig').classList.remove('active');
+  pickTarget = null;
+}
 
 function syncPickerUI() {
   const { h, s, v, a } = pickState;
@@ -725,7 +800,6 @@ function updateWarn() {
 async function downloadTest() {
   clearTimeout(saveTimer);
   await apiPost(QR_URLS.config, cfg);
-  refreshHeroImg();
   const resp = await fetch(QR_URLS.render + '?t=' + Date.now());
   const blob = await resp.blob();
   const a = document.createElement('a');
@@ -735,7 +809,13 @@ async function downloadTest() {
   URL.revokeObjectURL(a.href);
 }
 
+/* init the live editor on load — no modal, the canvas is always on screen */
+qrImg = new Image();
+qrImg.onload = drawCanvas;
+qrImg.src = QR_URLS.layer + '?size=512';
 paintEnable();
 paintSources();
+syncControls();
+loadBg();
 </script>
 {% endblock %}
