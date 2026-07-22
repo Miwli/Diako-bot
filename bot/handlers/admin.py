@@ -17,10 +17,24 @@ from shared_lib.db import (
     get_text,
 )
 from shared_lib.services import orders, wallet
-from shared_lib.services.qr import make_qr_png
+from shared_lib.services.qr import render_qr
 
-def _make_qr(data: str) -> BufferedInputFile:
-    return BufferedInputFile(make_qr_png(data), filename="qr.png")
+
+async def send_qr(bot, chat_id, data: str, *, caption=None, reply_markup=None,
+                  parse_mode="HTML"):
+    """Render `data` and send it, picking photo vs animation by MIME.
+
+    Keeping the send behind the MIME lets an animated QR (later) drop in without
+    touching any call site.
+    """
+    r = render_qr(data)
+    if r.mime == "image/gif":
+        file = BufferedInputFile(r.data, filename="qr.gif")
+        return await bot.send_animation(chat_id=chat_id, animation=file,
+            caption=caption, reply_markup=reply_markup, parse_mode=parse_mode)
+    file = BufferedInputFile(r.data, filename="qr.png")
+    return await bot.send_photo(chat_id=chat_id, photo=file,
+        caption=caption, reply_markup=reply_markup, parse_mode=parse_mode)
 
 def register_admin_handlers(dp):
 
@@ -458,14 +472,11 @@ def register_admin_handlers(dp):
             parse_mode="HTML",
             reply_markup=after_order_keyboard()
         )
-        qr_file = _make_qr(res.subscription_url)
         try:
-            await callback.bot.send_photo(
-                chat_id=res.user_id,
-                photo=qr_file,
+            await send_qr(
+                callback.bot, res.user_id, res.subscription_url,
                 caption=get_text("order_approved", url=res.subscription_url),
                 reply_markup=subscription_approved_keyboard(res.subscription_url),
-                parse_mode="HTML"
             )
         except TelegramForbiddenError:
             from bot import logger

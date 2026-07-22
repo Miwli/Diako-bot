@@ -893,6 +893,18 @@ async def set_setting(key: str, value: str):
         await db.commit()
 
 
+async def set_settings(mapping: dict):
+    """Write several settings in one transaction."""
+    if not mapping:
+        return
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.executemany(
+            "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [(k, str(v)) for k, v in mapping.items()],
+        )
+        await db.commit()
+
+
 def get_setting_sync(key: str):
     """Read a setting without an event loop (used at process startup, e.g. for
     the bot token before the async runtime is up)."""
@@ -904,6 +916,25 @@ def get_setting_sync(key: str):
         return row[0] if row else None
     except sqlite3.Error:
         return None
+
+
+def get_settings_sync(keys) -> dict:
+    """Read several settings at once without an event loop. Missing keys are
+    simply absent from the returned dict."""
+    keys = list(keys)
+    if not keys:
+        return {}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        placeholders = ",".join("?" * len(keys))
+        cur = conn.execute(
+            f"SELECT key, value FROM settings WHERE key IN ({placeholders})", keys
+        )
+        rows = cur.fetchall()
+        conn.close()
+        return {k: v for k, v in rows}
+    except sqlite3.Error:
+        return {}
 
 
 # ─── restart control (self-exit + restart policy) ───

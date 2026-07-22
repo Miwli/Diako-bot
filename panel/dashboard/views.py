@@ -1,6 +1,5 @@
 import json
 import os
-import time
 from django.conf import settings as dj_settings
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
@@ -54,6 +53,7 @@ def _page_ctx(request, nav, tab=None):
         'customize': [
             ('keyboard', 'diako_keyboard_editor', _('کیبورد'),            'ti-keyboard'),
             ('texts',    'diako_texts_editor',    _('متن‌ها'),             'ti-text-size'),
+            ('qr',       'diako_qr_background',    _('پس‌زمینه QR'),        'ti-qrcode'),
         ],
     }
     tabs = [
@@ -323,6 +323,20 @@ def keyboard_editor_view(request):
 
 
 @login_required
+def qr_background_view(request):
+    from shared_lib.services import qr
+    from shared_lib.services.qr import config as qrcfg
+    cfg = qrcfg.load_config()
+    ctx = {
+        'qr_config_json': json.dumps(cfg.__dict__, ensure_ascii=False),
+        'qr_presets': qr.preset_keys(),
+        'qr_has_custom': qr.has_background(),
+    }
+    ctx.update(_page_ctx(request, 'customize', 'qr'))
+    return render(request, 'diako/qr_background.html', ctx)
+
+
+@login_required
 def monitoring_view(request):
     ctx = _page_ctx(request, 'sales', 'monitoring')
     return render(request, 'diako/monitoring.html', ctx)
@@ -437,7 +451,6 @@ def extra_requests_view(request):
 
 @login_required
 def settings_bot_view(request):
-    from shared_lib.services import qr
     channels = list(RequiredChannels.objects.all())
     force_join_enabled = async_to_sync(get_setting)('force_join_enabled') == '1'
     tutorials = list(Tutorials.objects.all().order_by('order_index', 'id'))
@@ -462,9 +475,6 @@ def settings_bot_view(request):
         'bot_token': async_to_sync(get_setting)('bot_token') or '',
         # defaults to on — the flag only exists once an admin has touched it
         'receipt_dup_check': (async_to_sync(get_setting)('receipt_duplicate_check_enabled') or '1') == '1',
-        'qr_background_enabled': (async_to_sync(get_setting)('qr_background_enabled') or '0') == '1',
-        'qr_background_exists': qr.has_background(),
-        'now_ts': int(time.time()),
     }
     ctx.update(_page_ctx(request, 'settings', 'bot'))
     return render(request, 'diako/settings_bot.html', ctx)

@@ -1,0 +1,458 @@
+{% extends 'diako/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "پس‌زمینه QR" %} — {% trans "دیاکو" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+.qr-page { max-width: 920px; }
+
+/* hero: big authoritative preview + action rail */
+.qr-hero {
+  display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap;
+}
+.qr-hero-preview {
+  flex: 1 1 300px; min-width: 260px; aspect-ratio: 1/1;
+  border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: repeating-conic-gradient(rgba(128,128,128,.10) 0% 25%, transparent 0% 50%) 50%/22px 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.qr-hero-preview img { width: 100%; height: 100%; object-fit: contain; }
+.qr-hero-side {
+  flex: 0 0 190px; display: flex; flex-direction: column; gap: 12px;
+  justify-content: center;
+}
+.qr-act {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; border-radius: 13px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-raised);
+  color: var(--text); font-size: 13px; font-weight: 600;
+  transition: border-color .16s, transform .12s, background .16s;
+}
+.qr-act:hover { border-color: rgba(var(--accent-rgb),.5); transform: translateY(-1px); }
+.qr-act:active { transform: translateY(0); }
+.qr-act i { font-size: 18px; color: var(--accent); }
+.qr-act.danger i { color: var(--red); }
+
+/* enable switch */
+.qr-switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 16px; border-radius: 13px;
+  border: 1px solid var(--border); background: var(--surface-raised);
+  font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;
+}
+.qr-toggle { position: relative; width: 42px; height: 24px; flex: 0 0 auto; }
+.qr-toggle i {
+  position: absolute; inset: 0; border-radius: 20px;
+  background: rgba(128,128,128,.28); transition: background .18s;
+}
+.qr-toggle i::after {
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: transform .18s;
+}
+.qr-switch.on .qr-toggle i,
+.qr-toggle.on i { background: var(--accent); }
+.qr-switch.on .qr-toggle i::after,
+.qr-toggle.on i::after { transform: translateX(-18px); }
+
+/* source picker row */
+.qr-section-title {
+  font-size: 13px; font-weight: 700; color: var(--text-muted);
+  margin: 26px 4px 12px;
+}
+.qr-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.qr-src-card {
+  position: relative; border-radius: 14px; overflow: hidden; cursor: pointer;
+  border: 2px solid var(--border); aspect-ratio: 1/1;
+  transition: border-color .16s, transform .12s;
+  background: var(--surface-raised);
+}
+.qr-src-card:hover { transform: translateY(-2px); }
+.qr-src-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.18); }
+.qr-src-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.qr-src-card .qr-src-label {
+  position: absolute; inset-inline: 0; bottom: 0; padding: 6px 8px;
+  font-size: 11px; font-weight: 600; color: #fff; text-align: center;
+  background: linear-gradient(transparent, rgba(0,0,0,.6));
+}
+.qr-src-card.qr-src-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; color: var(--text-muted); font-size: 12px;
+}
+.qr-src-card.qr-src-empty i { font-size: 26px; }
+.qr-src-card.sel .qr-src-check {
+  position: absolute; top: 6px; inset-inline-end: 6px; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+}
+
+/* settings modal editor */
+.qr-modal-box { width: min(760px, 100%); }
+.qr-editor { display: flex; gap: 18px; flex-wrap: wrap; }
+.qr-canvas-wrap {
+  position: relative; flex: 0 0 320px; width: 320px; max-width: 100%;
+  align-self: flex-start; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: repeating-conic-gradient(rgba(128,128,128,.10) 0% 25%, transparent 0% 50%) 50%/20px 20px;
+  touch-action: none;
+}
+#qrCanvas { display: block; width: 100%; height: auto; }
+.qr-posbox {
+  position: absolute; border: 1.5px dashed rgba(255,255,255,.9);
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,.35); cursor: move;
+  border-radius: 3px;
+}
+.qr-poshandle {
+  position: absolute; width: 16px; height: 16px; inset-inline-end: -8px; bottom: -8px;
+  background: var(--accent); border: 2px solid #fff; border-radius: 50%;
+  cursor: nwse-resize;
+}
+.qr-controls { flex: 1 1 260px; min-width: 240px; display: flex; flex-direction: column; gap: 16px; }
+.qr-ctrl-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 7px; }
+.qr-seg { display: flex; gap: 6px; }
+.qr-seg button {
+  flex: 1; padding: 9px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface-raised); color: var(--text);
+  transition: border-color .14s, background .14s;
+}
+.qr-seg button.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.12); color: var(--accent); }
+.qr-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;
+}
+.qr-slider { width: 100%; margin-top: 8px; accent-color: var(--accent); }
+.qr-sub { opacity: .55; pointer-events: none; }
+.qr-val { font-size: 12px; color: var(--text-muted); font-weight: 600; min-width: 34px; text-align: end; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qr-page anim-card">
+
+  <div class="qr-hero">
+    <div class="qr-hero-preview"><img id="qrHeroImg" src="{% url 'diako_qr_render' %}" alt=""></div>
+    <div class="qr-hero-side">
+      <div class="qr-switch" id="qrEnable" onclick="toggleEnable()">
+        <span>{% trans "پس‌زمینه فعال" %}</span>
+        <span class="qr-toggle"><i></i></span>
+      </div>
+      <div class="qr-act" onclick="openSettings()"><i class="ti ti-adjustments"></i>{% trans "تنظیمات" %}</div>
+      <div class="qr-act" onclick="document.getElementById('qrUpload').click()"><i class="ti ti-upload"></i>{% trans "آپلود عکس" %}</div>
+      <div class="qr-act danger" onclick="resetAll()"><i class="ti ti-rotate"></i>{% trans "بازنشانی" %}</div>
+      <input type="file" id="qrUpload" accept="image/*" hidden onchange="uploadCustom(this)">
+    </div>
+  </div>
+
+  <div class="qr-section-title">{% trans "انتخاب پس‌زمینه" %}</div>
+  <div class="qr-sources" id="qrSources">
+    <div class="qr-src-card qr-src-empty" data-source="none" onclick="selectSource('none')">
+      <span class="qr-src-check"><i class="ti ti-check"></i></span>
+      <i class="ti ti-ban"></i><span>{% trans "بدون پس‌زمینه" %}</span>
+    </div>
+    {% for key in qr_presets %}
+    <div class="qr-src-card" data-source="{{ key }}" onclick="selectSource('{{ key }}')">
+      <span class="qr-src-check"><i class="ti ti-check"></i></span>
+      <img src="{% url 'diako_qr_preset_image' key %}" alt="">
+      <span class="qr-src-label">{{ key }}</span>
+    </div>
+    {% endfor %}
+    <div class="qr-src-card" id="qrCustomCard" data-source="custom" onclick="onCustomCard()">
+      <span class="qr-src-check"><i class="ti ti-check"></i></span>
+      <img id="qrCustomThumb" src="{% url 'diako_qr_background_image' %}" alt=""
+           style="{% if not qr_has_custom %}display:none{% endif %}">
+      <span class="qr-src-label">{% trans "آپلودی" %}</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal-bg" id="qrSettingsModal">
+  <div class="modal-box qr-modal-box">
+    <div class="modal-title"><i class="ti ti-adjustments"></i>{% trans "تنظیمات پس‌زمینه" %}</div>
+    <div class="qr-editor">
+      <div class="qr-canvas-wrap" id="qrCanvasWrap">
+        <canvas id="qrCanvas" width="320" height="320"></canvas>
+        <div class="qr-posbox" id="qrPosBox"><span class="qr-poshandle" id="qrPosHandle"></span></div>
+      </div>
+      <div class="qr-controls">
+        <div>
+          <div class="qr-ctrl-label">{% trans "شکل خروجی" %}</div>
+          <div class="qr-seg" id="qrShapeSeg">
+            <button data-shape="square" onclick="setShape('square')">{% trans "مربع" %}</button>
+            <button data-shape="original" onclick="setShape('original')">{% trans "نسبت اصلی" %}</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="qr-row" onclick="toggleField('blur_enabled')">
+            <span>{% trans "بلور پس‌زمینه" %}</span>
+            <span class="qr-toggle" id="qrBlurTgl"><i></i></span>
+          </div>
+          <div id="qrBlurWrap">
+            <input type="range" class="qr-slider" id="qrBlurAmount" min="0" max="100"
+                   oninput="onSlider('blur_amount', this.value, true)">
+          </div>
+        </div>
+
+        <div>
+          <div class="qr-row" onclick="toggleField('plate_enabled')">
+            <span>{% trans "کارت سفید پشت کد" %}</span>
+            <span class="qr-toggle" id="qrPlateTgl"><i></i></span>
+          </div>
+          <div id="qrPlateWrap">
+            <div class="qr-ctrl-label" style="margin-top:8px">{% trans "گردی گوشه" %} <span class="qr-val" id="qrRadiusVal"></span></div>
+            <input type="range" class="qr-slider" id="qrPlateRadius" min="0" max="100"
+                   oninput="onSlider('plate_radius', this.value)">
+            <div class="qr-ctrl-label" style="margin-top:8px">{% trans "فاصله تا لبه" %} <span class="qr-val" id="qrPadVal"></span></div>
+            <input type="range" class="qr-slider" id="qrPlatePadding" min="0" max="40"
+                   oninput="onSlider('plate_padding', this.value)">
+          </div>
+        </div>
+
+        <div>
+          <div class="qr-ctrl-label">{% trans "اندازه کد" %} <span class="qr-val" id="qrSizeVal"></span></div>
+          <input type="range" class="qr-slider" id="qrSize" min="20" max="100"
+                 oninput="onSlider('size', this.value)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-acts" style="margin-top:16px">
+      <button class="modal-btn btn-confirm" onclick="closeSettings()">{% trans "تمام" %}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const QR_URLS = {
+  render:   "{% url 'diako_qr_render' %}",
+  previewBg:"{% url 'diako_qr_preview_bg' %}",
+  layer:    "{% url 'diako_qr_layer' %}",
+  config:   "{% url 'diako_qr_config' %}",
+  reset:    "{% url 'diako_qr_reset' %}",
+  upload:   "{% url 'diako_qr_background_upload' %}",
+  custom:   "{% url 'diako_qr_background_image' %}",
+};
+let cfg = {{ qr_config_json|safe }};
+let hasCustom = {% if qr_has_custom %}true{% else %}false{% endif %};
+
+let bgImg = null, bgKey = "", qrImg = null;
+let saveTimer = null, bgTimer = null;
+
+/* ─── persistence ─── */
+function scheduleSave(refreshHero) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const data = await apiPost(QR_URLS.config, cfg);
+    if (!data.ok) { showToast('{% trans "خطا" %}', data.error || '', 'error'); return; }
+    if (refreshHero !== false) refreshHeroImg();
+  }, 350);
+}
+function refreshHeroImg() {
+  document.getElementById('qrHeroImg').src = QR_URLS.render + '?t=' + Date.now();
+}
+
+/* ─── enable + source ─── */
+function paintEnable() {
+  document.getElementById('qrEnable').classList.toggle('on', !!cfg.enabled);
+}
+function paintSources() {
+  document.querySelectorAll('.qr-src-card').forEach(el => {
+    const s = el.dataset.source;
+    const active = cfg.enabled ? (s === cfg.source) : (s === 'none');
+    el.classList.toggle('sel', active);
+  });
+}
+function toggleEnable() {
+  cfg.enabled = !cfg.enabled;
+  if (cfg.enabled && (cfg.source === 'none' || !cfg.source)) cfg.source = 'aurora';
+  paintEnable(); paintSources(); scheduleSave();
+}
+function selectSource(key) {
+  if (key === 'none') { cfg.enabled = false; }
+  else { cfg.enabled = true; cfg.source = key; }
+  paintEnable(); paintSources(); scheduleSave();
+}
+function onCustomCard() {
+  if (hasCustom) selectSource('custom');
+  else document.getElementById('qrUpload').click();
+}
+async function uploadCustom(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  const resp = await fetch(QR_URLS.upload, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd });
+  const data = await resp.json().catch(() => ({ ok: false, error: 'خطای شبکه' }));
+  input.value = '';
+  if (!data.ok) { showToast('{% trans "خطا" %}', data.error, 'error'); return; }
+  hasCustom = true;
+  const thumb = document.getElementById('qrCustomThumb');
+  thumb.src = QR_URLS.custom + '?t=' + Date.now();
+  thumb.style.display = '';
+  cfg.source = 'custom'; cfg.enabled = true;
+  paintEnable(); paintSources();
+  bgKey = ''; // force reload if editor open
+  scheduleSave();
+  showToast('{% trans "انجام شد" %}', '{% trans "عکس آپلود شد" %}', 'success');
+}
+async function resetAll() {
+  if (!confirm('{% trans "همه‌ی تنظیمات پس‌زمینه به حالت اولیه برگردد؟" %}')) return;
+  const data = await apiPost(QR_URLS.reset, {});
+  if (!data.ok) { showToast('{% trans "خطا" %}', data.error || '', 'error'); return; }
+  location.reload();
+}
+
+/* ─── settings modal ─── */
+function openSettings() {
+  if (!qrImg) { qrImg = new Image(); qrImg.onload = drawCanvas; qrImg.src = QR_URLS.layer + '?size=512'; }
+  syncControls();
+  loadBg();
+  document.getElementById('qrSettingsModal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('qrSettingsModal').classList.remove('open');
+}
+function syncControls() {
+  document.querySelectorAll('#qrShapeSeg button').forEach(b =>
+    b.classList.toggle('sel', b.dataset.shape === cfg.shape));
+  document.getElementById('qrBlurTgl').classList.toggle('on', !!cfg.blur_enabled);
+  document.getElementById('qrPlateTgl').classList.toggle('on', !!cfg.plate_enabled);
+  document.getElementById('qrBlurAmount').value = cfg.blur_amount;
+  document.getElementById('qrPlateRadius').value = cfg.plate_radius;
+  document.getElementById('qrPlatePadding').value = cfg.plate_padding;
+  document.getElementById('qrSize').value = Math.round(cfg.size * 100);
+  document.getElementById('qrBlurWrap').classList.toggle('qr-sub', !cfg.blur_enabled);
+  document.getElementById('qrPlateWrap').classList.toggle('qr-sub', !cfg.plate_enabled);
+  document.getElementById('qrRadiusVal').textContent = cfg.plate_radius;
+  document.getElementById('qrPadVal').textContent = cfg.plate_padding;
+  document.getElementById('qrSizeVal').textContent = Math.round(cfg.size * 100) + '٪';
+}
+function setShape(s) { cfg.shape = s; syncControls(); loadBg(); scheduleSave(); }
+function toggleField(f) {
+  cfg[f] = !cfg[f];
+  document.getElementById(f === 'blur_enabled' ? 'qrBlurTgl' : 'qrPlateTgl').classList.toggle('on', cfg[f]);
+  document.getElementById(f === 'blur_enabled' ? 'qrBlurWrap' : 'qrPlateWrap').classList.toggle('qr-sub', !cfg[f]);
+  if (f === 'blur_enabled') loadBg(); else drawCanvas();
+  scheduleSave();
+}
+function onSlider(field, value, isBg) {
+  cfg[field] = (field === 'size') ? (+value / 100) : +value;
+  if (field === 'plate_radius') document.getElementById('qrRadiusVal').textContent = value;
+  if (field === 'plate_padding') document.getElementById('qrPadVal').textContent = value;
+  if (field === 'size') document.getElementById('qrSizeVal').textContent = value + '٪';
+  if (isBg) loadBg(); else drawCanvas();
+  scheduleSave();
+}
+
+/* ─── live canvas ─── */
+function bgUrl() {
+  const p = new URLSearchParams({
+    source: cfg.source, shape: cfg.shape,
+    blur_enabled: cfg.blur_enabled ? '1' : '0', blur_amount: cfg.blur_amount,
+  });
+  if (cfg.source === 'custom') p.set('v', hasCustom ? '1' : '0');
+  return QR_URLS.previewBg + '?' + p.toString();
+}
+function loadBg() {
+  clearTimeout(bgTimer);
+  bgTimer = setTimeout(() => {
+    const url = bgUrl();
+    if (url === bgKey && bgImg) { drawCanvas(); return; }
+    const img = new Image();
+    img.onload = () => { bgImg = img; bgKey = url; drawCanvas(); };
+    img.onerror = () => { bgImg = null; bgKey = ''; drawCanvas(); };
+    img.src = url;
+  }, 120);
+}
+function qrGeom(W, H) {
+  const short = Math.min(W, H);
+  const qw = short * Math.max(0.1, Math.min(1, cfg.size));
+  return { qw, x0: cfg.pos_x * W - qw / 2, y0: cfg.pos_y * H - qw / 2 };
+}
+function drawCanvas() {
+  const cv = document.getElementById('qrCanvas');
+  const ctx = cv.getContext('2d');
+  // canvas pixel size follows shape
+  let W = 320, H = 320;
+  if (cfg.shape === 'original' && bgImg) {
+    if (bgImg.width >= bgImg.height) { W = 320; H = Math.round(320 * bgImg.height / bgImg.width); }
+    else { H = 320; W = Math.round(320 * bgImg.width / bgImg.height); }
+  }
+  cv.width = W; cv.height = H;
+  ctx.clearRect(0, 0, W, H);
+  if (bgImg) ctx.drawImage(bgImg, 0, 0, W, H);
+  else { ctx.fillStyle = 'rgba(128,128,128,.15)'; ctx.fillRect(0, 0, W, H); }
+
+  const g = qrGeom(W, H);
+  if (cfg.plate_enabled) {
+    const pad = g.qw * cfg.plate_padding / 100;
+    const px = g.x0 - pad, py = g.y0 - pad, pw = g.qw + 2 * pad;
+    const r = pw * Math.min(100, cfg.plate_radius) / 200;
+    ctx.fillStyle = '#ffffff';
+    roundRect(ctx, px, py, pw, pw, r); ctx.fill();
+  }
+  if (qrImg) ctx.drawImage(qrImg, g.x0, g.y0, g.qw, g.qw);
+  placePosBox(W, H, g);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function placePosBox(W, H, g) {
+  const box = document.getElementById('qrPosBox');
+  box.style.left = (g.x0 / W * 100) + '%';
+  box.style.top = (g.y0 / H * 100) + '%';
+  box.style.width = (g.qw / W * 100) + '%';
+  box.style.height = (g.qw / H * 100) + '%';
+}
+
+/* ─── drag to move / resize the QR ─── */
+(function () {
+  const wrap = document.getElementById('qrCanvasWrap');
+  const box = document.getElementById('qrPosBox');
+  const handle = document.getElementById('qrPosHandle');
+  let mode = null;
+
+  function rect() { return document.getElementById('qrCanvas').getBoundingClientRect(); }
+  function down(e, m) { mode = m; e.preventDefault(); e.stopPropagation(); }
+  handle.addEventListener('pointerdown', e => down(e, 'resize'));
+  box.addEventListener('pointerdown', e => { if (e.target !== handle) down(e, 'move'); });
+
+  window.addEventListener('pointermove', e => {
+    if (!mode) return;
+    const r = rect();
+    const fx = (e.clientX - r.left) / r.width;
+    const fy = (e.clientY - r.top) / r.height;
+    if (mode === 'move') {
+      cfg.pos_x = Math.max(0, Math.min(1, fx));
+      cfg.pos_y = Math.max(0, Math.min(1, fy));
+    } else {
+      const short = Math.min(r.width, r.height);
+      const dx = (e.clientX - r.left) - cfg.pos_x * r.width;
+      const dy = (e.clientY - r.top) - cfg.pos_y * r.height;
+      const half = Math.max(Math.abs(dx), Math.abs(dy));
+      cfg.size = Math.max(0.1, Math.min(1, (half * 2) / short));
+      document.getElementById('qrSize').value = Math.round(cfg.size * 100);
+      document.getElementById('qrSizeVal').textContent = Math.round(cfg.size * 100) + '٪';
+    }
+    drawCanvas();
+  });
+  window.addEventListener('pointerup', () => { if (mode) { mode = null; scheduleSave(); } });
+})();
+
+/* ─── init ─── */
+paintEnable();
+paintSources();
+</script>
+{% endblock %}

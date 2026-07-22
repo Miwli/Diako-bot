@@ -479,34 +479,150 @@ def receipt_image(request, kind, obj_id):
     return resp
 
 
+# Fixed sample link used for every panel preview/render.
+_QR_SAMPLE = "https://sub.example.com/preview-QR-abcdef123456"
+
+
+def _png_response(img, cache='no-store'):
+    from io import BytesIO
+    buf = BytesIO()
+    img.convert("RGB").save(buf, format="PNG")
+    resp = HttpResponse(buf.getvalue(), content_type='image/png')
+    resp['Cache-Control'] = cache
+    return resp
+
+
 @login_required
 @require_http_methods(["POST"])
 def qr_background_upload(request):
-    """Store an admin-uploaded image as the QR background (normalised to PNG)."""
+    """Store an admin-uploaded image as the custom background and select it."""
     up = request.FILES.get('file')
     if not up:
         return JsonResponse({'ok': False, 'error': 'فایلی آپلود نشده'}, status=400)
     if up.size > 5 * 1024 * 1024:
         return JsonResponse({'ok': False, 'error': 'حجم عکس نباید بیش از ۵ مگابایت باشد'}, status=400)
     from shared_lib.services import qr
+    from shared_lib.services.qr import config as qrcfg
     try:
         qr.save_background(up.read())
     except Exception as e:
         return JsonResponse({'ok': False, 'error': f'عکس نامعتبر است: {e}'}, status=400)
+    async_to_sync(set_setting)(qrcfg.KEY_SOURCE, 'custom')
     return JsonResponse({'ok': True})
 
 
 @login_required
 @require_http_methods(["GET"])
 def qr_background_image(request):
-    """Serve the current QR background image for the settings preview."""
+    """Serve the uploaded custom background (for its thumbnail)."""
     from shared_lib.services import qr
-    path = qr.qr_background_path()
+    path = qr.custom_background_path()
     if not os.path.exists(path):
         return HttpResponseNotFound('no background')
     with open(path, 'rb') as f:
         resp = HttpResponse(f.read(), content_type='image/png')
     resp['Cache-Control'] = 'no-store'
+    return resp
+
+
+@login_required
+@require_http_methods(["GET"])
+def qr_preset_image(request, key):
+    """Serve a built-in preset image (for its thumbnail)."""
+    from shared_lib.services.qr import preset_path
+    path = preset_path(key)
+    if not path or not os.path.exists(path):
+        return HttpResponseNotFound('unknown preset')
+    with open(path, 'rb') as f:
+        resp = HttpResponse(f.read(), content_type='image/png')
+    resp['Cache-Control'] = 'private, max-age=86400'
+    return resp
+
+
+@login_required
+@require_http_methods(["POST"])
+def qr_config(request):
+    """Save the whole QR render config in one shot."""
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'JSON نامعتبر'}, status=400)
+    from shared_lib.services.qr import config as qrcfg
+    from shared_lib.db import set_settings
+    cfg = qrcfg.from_payload(data)
+    async_to_sync(set_settings)(cfg.to_settings())
+    return JsonResponse({'ok': True, 'config': cfg.to_settings()})
+
+
+@login_required
+@require_http_methods(["POST"])
+def qr_reset(request):
+    """Reset the QR background to defaults and drop the uploaded image."""
+    from shared_lib.services import qr
+    from shared_lib.services.qr import config as qrcfg
+    from shared_lib.db import set_settings
+    qr.remove_background()
+    defaults = qrcfg.QrRenderConfig().to_settings()
+    async_to_sync(set_settings)(defaults)
+    return JsonResponse({'ok': True, 'config': defaults})
+
+
+@login_required
+@require_http_methods(["GET"])
+def qr_render(request):
+    """Authoritative render of the saved config — the big preview card."""
+    from shared_lib.services import qr
+    return _png_response(_qr_open(qr.render_qr(_QR_SAMPLE).data))
+
+
+def _qr_open(data):
+    from io import BytesIO
+    from PIL import Image
+    return Image.open(BytesIO(data))
+
+
+@login_required
+@require_http_methods(["GET"])
+def qr_preview_bg(request):
+    """Prepared (shaped + blurred) background for the live canvas preview.
+
+    Reflects the *unsaved* source/shape/blur being edited, so it takes them as
+    query params. Cached like the render path, keyed by those params.
+    """
+    from shared_lib.services.qr import config as qrcfg, sources, cache
+    g = request.GET
+    cfg = qrcfg.from_payload({
+        'enabled': True,
+        'source': g.get('source', 'none'),
+        'shape': g.get('shape', 'square'),
+        'blur_enabled': g.get('blur_enabled') == '1',
+        'blur_amount': g.get('blur_amount', '40'),
+    })
+    src = sources.resolve_background(cfg)
+    if src is None:
+        return HttpResponseNotFound('no background')
+    try:
+        prep = cache.prepared_background(src, cfg, long=720)
+    except Exception as e:
+        return HttpResponseNotFound(str(e))
+    return _png_response(prep, cache='private, max-age=3600')
+
+
+@login_required
+@require_http_methods(["GET"])
+def qr_layer(request):
+    """Transparent QR (black modules) for the canvas to place and, later, tint."""
+    from shared_lib.services.qr import compose
+    try:
+        size = max(64, min(720, int(request.GET.get('size', '512'))))
+    except ValueError:
+        size = 512
+    layer = compose.qr_layer(_QR_SAMPLE, size, (0, 0, 0, 255))
+    from io import BytesIO
+    buf = BytesIO()
+    layer.save(buf, format="PNG")
+    resp = HttpResponse(buf.getvalue(), content_type='image/png')
+    resp['Cache-Control'] = 'private, max-age=3600'
     return resp
 
 
@@ -1696,17 +1812,6 @@ def bot_settings_action(request):
         enabled = '1' if data.get('enabled') else '0'
         async_to_sync(set_setting)(FLAG_KEY, enabled)
         return JsonResponse({'ok': True, 'enabled': enabled == '1'})
-
-    if action == 'toggle_qr_background':
-        from shared_lib.services.qr import FLAG_KEY
-        enabled = '1' if data.get('enabled') else '0'
-        async_to_sync(set_setting)(FLAG_KEY, enabled)
-        return JsonResponse({'ok': True, 'enabled': enabled == '1'})
-
-    if action == 'remove_qr_background':
-        from shared_lib.services import qr
-        qr.remove_background()
-        return JsonResponse({'ok': True})
 
     if action == 'save_free_test':
         def _int(v, default):

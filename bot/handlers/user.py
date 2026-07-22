@@ -241,7 +241,7 @@ def register_user_handlers(dp):
 
     @dp.callback_query(F.data.startswith("free_test_confirm_"))
     async def free_test_confirm(callback: types.CallbackQuery):
-        from handlers.admin import _make_qr
+        from handlers.admin import send_qr
         from keyboards import subscription_approved_keyboard
         import json
 
@@ -298,13 +298,11 @@ def register_user_handlers(dp):
         await update_order_vpn_info(order_id, username, subscription_url)
         await increment_free_test_uses(u.id)
 
-        qr_file = _make_qr(subscription_url)
         await callback.message.delete()
-        await callback.message.answer_photo(
-            photo=qr_file,
+        await send_qr(
+            callback.bot, callback.message.chat.id, subscription_url,
             caption=get_text("free_test_success", server=server['name'], url=subscription_url),
             reply_markup=subscription_approved_keyboard(subscription_url),
-            parse_mode="HTML"
         )
 
     # ─── پروفایل ──────────────────────────────────
@@ -882,15 +880,13 @@ def register_user_handlers(dp):
                 logger.error(f"خطا در ساخت رایگان plan #{plan_id}: {res.error}")
                 await callback.answer(get_text("wallet_error_api", error=res.error), show_alert=True)
                 return
-            from handlers.admin import _make_qr
+            from handlers.admin import send_qr
             from keyboards import subscription_approved_keyboard
-            qr = _make_qr(res.subscription_url)
             await callback.message.delete()
-            await callback.message.answer_photo(
-                photo=qr,
+            await send_qr(
+                callback.bot, callback.message.chat.id, res.subscription_url,
                 caption=get_text("discount_free_success", url=res.subscription_url),
                 reply_markup=subscription_approved_keyboard(res.subscription_url),
-                parse_mode="HTML"
             )
             await callback.answer()
             return
@@ -956,14 +952,12 @@ def register_user_handlers(dp):
             return
 
         await state.clear()
-        from handlers.admin import _make_qr
-        qr_file = _make_qr(res.subscription_url)
+        from handlers.admin import send_qr
         await callback.message.delete()
-        await callback.message.answer_photo(
-            photo=qr_file,
+        await send_qr(
+            callback.bot, callback.message.chat.id, res.subscription_url,
             caption=get_text("wallet_purchase_success", url=res.subscription_url),
             reply_markup=subscription_approved_keyboard(res.subscription_url),
-            parse_mode="HTML"
         )
         await callback.answer()
 
