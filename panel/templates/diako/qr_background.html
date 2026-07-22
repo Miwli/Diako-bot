@@ -96,8 +96,10 @@
 .qr-src-card.sel .qr-src-check { opacity: 1; transform: scale(1); }
 
 /* ── settings modal editor ── */
-.qr-modal-box { width: min(760px, 100%); }
-.qr-editor { display: flex; gap: 18px; flex-wrap: wrap; }
+.qr-modal-box { width: min(760px, 100%); transform-origin: center; }
+/* a slightly springy pop when the settings modal opens */
+#qrSettingsModal .modal-box { transition: transform .3s cubic-bezier(.2,.9,.3,1.25), opacity .22s; }
+.qr-editor { display: flex; gap: 18px; flex-wrap: wrap; position: relative; }
 .qr-canvas-wrap {
   position: relative; flex: 0 0 320px; width: 320px; max-width: 100%; align-self: flex-start;
   border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
@@ -126,6 +128,74 @@
 .qr-slider { width: 100%; margin-top: 9px; accent-color: var(--accent); }
 .qr-sub { opacity: .5; pointer-events: none; }
 .qr-val { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+/* color triggers */
+.qr-colors { display: flex; gap: 8px; }
+.qr-color-trig {
+  flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  transition: border-color .14s;
+}
+.qr-color-trig:hover { border-color: rgba(var(--accent-rgb),.5); }
+.qr-color-sw {
+  width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,.25);
+}
+
+/* scannability warning */
+.qr-warn {
+  display: flex; align-items: center; gap: 8px; font-size: 11px; line-height: 1.7;
+  color: var(--red); background: rgba(248,113,113,.10);
+  border: 1px solid rgba(248,113,113,.28); border-radius: 10px; padding: 8px 11px;
+}
+.qr-warn i { font-size: 15px; flex: 0 0 auto; }
+.qr-warn[hidden] { display: none; }  /* display:flex above would otherwise beat the hidden attr */
+
+/* color picker popover — always LTR for predictable sliders */
+.qr-colorpop {
+  position: absolute; top: 0; inset-inline-start: 0; z-index: 5; width: 216px;
+  direction: ltr; padding: 12px; border-radius: 14px;
+  background: var(--surface-raised); border: 1px solid var(--border);
+  box-shadow: 0 16px 40px rgba(0,0,0,.4);
+}
+.qr-sv {
+  position: relative; width: 100%; height: 130px; border-radius: 8px; cursor: crosshair;
+  background:
+    linear-gradient(to top, #000, rgba(0,0,0,0)),
+    linear-gradient(to right, #fff, rgba(255,255,255,0)),
+    hsl(var(--h, 200), 100%, 50%);
+}
+.qr-sv-knob {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5);
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+.qr-hue, .qr-alpha {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 12px;
+  border-radius: 6px; margin-top: 12px; cursor: pointer;
+}
+.qr-hue { background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.qr-alpha {
+  background:
+    linear-gradient(to right, rgba(var(--ac,0 0 0)/0), rgb(var(--ac,0 0 0))),
+    repeating-conic-gradient(#888 0 25%, #ccc 0 50%) 0 / 10px 10px;
+}
+.qr-hue::-webkit-slider-thumb, .qr-alpha::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 2px solid rgba(0,0,0,.35); cursor: pointer;
+}
+.qr-hexrow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.qr-hex {
+  flex: 1; min-width: 0; font-family: monospace; font-size: 12px; text-align: center;
+  padding: 7px 6px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+}
+.qr-pop-close {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+  border: none; background: var(--accent); color: #fff; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
 </style>
 {% endblock %}
 
@@ -227,9 +297,38 @@
           <input type="range" class="qr-slider" id="qrSize" min="20" max="100"
                  oninput="onSlider('size', this.value)">
         </div>
+
+        <div>
+          <div class="qr-ctrl-label">{% trans "رنگ‌ها" %}</div>
+          <div class="qr-colors">
+            <button class="qr-color-trig" type="button" onclick="openPicker('fg')">
+              <span class="qr-color-sw" id="qrFgSw"></span><span>{% trans "رنگ کد" %}</span></button>
+            <button class="qr-color-trig" type="button" onclick="openPicker('plate')">
+              <span class="qr-color-sw" id="qrPlateSw"></span><span>{% trans "رنگ کارت" %}</span></button>
+          </div>
+        </div>
+
+        <div class="qr-warn" id="qrWarn" hidden>
+          <i class="ti ti-alert-triangle"></i>
+          <span>{% trans "کنتراست کم است؛ ممکن است کد اسکن نشود." %}</span>
+        </div>
+      </div>
+
+      <div class="qr-colorpop" id="qrColorPop" hidden>
+        <div class="qr-sv" id="qrSv"><div class="qr-sv-knob" id="qrSvKnob"></div></div>
+        <input type="range" class="qr-hue" id="qrHue" min="0" max="360"
+               oninput="pickState.h=+this.value; onPickChange()">
+        <input type="range" class="qr-alpha" id="qrAlpha" min="0" max="255"
+               oninput="pickState.a=+this.value; onPickChange()">
+        <div class="qr-hexrow">
+          <span class="qr-color-sw" id="qrPickSw"></span>
+          <input class="qr-hex" id="qrHex" spellcheck="false" maxlength="9" onchange="onHexInput(this.value)">
+          <button class="qr-pop-close" type="button" onclick="closePicker()"><i class="ti ti-check"></i></button>
+        </div>
       </div>
     </div>
     <div class="modal-acts" style="margin-top:16px">
+      <button class="modal-btn" type="button" onclick="downloadTest()"><i class="ti ti-download"></i>{% trans "دانلود برای تست" %}</button>
       <button class="modal-btn btn-confirm" onclick="closeSettings()">{% trans "تمام" %}</button>
     </div>
   </div>
@@ -338,6 +437,7 @@ function syncControls() {
   document.getElementById('qrRadiusVal').textContent = cfg.plate_radius;
   document.getElementById('qrPadVal').textContent = cfg.plate_padding;
   document.getElementById('qrSizeVal').textContent = Math.round(cfg.size * 100) + '٪';
+  paintSwatches();
 }
 function setShape(s) { cfg.shape = s; syncControls(); loadBg(); scheduleSave(); }
 function toggleField(f) {
@@ -398,11 +498,26 @@ function drawCanvas() {
     const pad = g.qw * cfg.plate_padding / 100;
     const px = g.x0 - pad, py = g.y0 - pad, pw = g.qw + 2 * pad;
     const r = pw * Math.min(100, cfg.plate_radius) / 200;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = rgbaOf(cfg.plate_color);
     roundRect(ctx, px, py, pw, pw, r); ctx.fill();
   }
-  if (qrImg) ctx.drawImage(qrImg, g.x0, g.y0, g.qw, g.qw);
+  const tq = tintedQr();
+  if (tq) ctx.drawImage(tq, g.x0, g.y0, g.qw, g.qw);
   placePosBox(W, H, g);
+  updateWarn();
+}
+
+/* recolour the black QR layer to the chosen foreground colour */
+function tintedQr() {
+  if (!qrImg) return null;
+  const off = document.createElement('canvas');
+  off.width = qrImg.width; off.height = qrImg.height;
+  const o = off.getContext('2d');
+  o.drawImage(qrImg, 0, 0);
+  o.globalCompositeOperation = 'source-in';
+  o.fillStyle = rgbaOf(cfg.fg_color);
+  o.fillRect(0, 0, off.width, off.height);
+  return off;
 }
 function roundRect(ctx, x, y, w, h, r) {
   r = Math.max(0, Math.min(r, w / 2, h / 2));
@@ -450,6 +565,143 @@ function placePosBox(W, H, g) {
   });
   window.addEventListener('pointerup', () => { if (mode) { mode = null; scheduleSave(); } });
 })();
+
+/* ── colours ── */
+let pickState = { h: 200, s: 1, v: 1, a: 255 };
+let pickTarget = null;
+
+function parseArgb(hex) {
+  hex = String(hex || '').replace('#', '');
+  if (hex.length === 6) hex = 'FF' + hex;
+  const n = k => parseInt(hex.substr(k, 2), 16);
+  return { a: n(0), r: n(2), g: n(4), b: n(6) };
+}
+function byte(x) { return Math.max(0, Math.min(255, Math.round(x))); }
+function argbHex(a, r, g, b) {
+  return '#' + [a, r, g, b].map(x => byte(x).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function rgbaOf(hex) { const c = parseArgb(hex); return `rgba(${c.r},${c.g},${c.b},${(c.a / 255).toFixed(3)})`; }
+function swatchBg(hex) {
+  const c = parseArgb(hex), col = `rgba(${c.r},${c.g},${c.b},${(c.a / 255).toFixed(3)})`;
+  return `linear-gradient(${col},${col}), repeating-conic-gradient(#888 0 25%,#ccc 0 50%) 0/8px 8px`;
+}
+function hsvToRgb(h, s, v) {
+  h /= 60; const c = v * s, x = c * (1 - Math.abs(h % 2 - 1)), m = v - c;
+  let r = 0, g = 0, b = 0;
+  if (h < 1) [r, g, b] = [c, x, 0]; else if (h < 2) [r, g, b] = [x, c, 0];
+  else if (h < 3) [r, g, b] = [0, c, x]; else if (h < 4) [r, g, b] = [0, x, c];
+  else if (h < 5) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  return { r: byte((r + m) * 255), g: byte((g + m) * 255), b: byte((b + m) * 255) };
+}
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  return { h, s: mx ? d / mx : 0, v: mx };
+}
+
+function paintSwatches() {
+  document.getElementById('qrFgSw').style.background = swatchBg(cfg.fg_color);
+  document.getElementById('qrPlateSw').style.background = swatchBg(cfg.plate_color);
+}
+function colorKey() { return pickTarget === 'fg' ? 'fg_color' : 'plate_color'; }
+
+function openPicker(target) {
+  pickTarget = target;
+  const c = parseArgb(cfg[colorKey()]);
+  const hsv = rgbToHsv(c.r, c.g, c.b);
+  pickState = { h: hsv.h, s: hsv.s, v: hsv.v, a: c.a };
+  syncPickerUI();
+  document.getElementById('qrColorPop').hidden = false;
+}
+function closePicker() { document.getElementById('qrColorPop').hidden = true; pickTarget = null; }
+
+function syncPickerUI() {
+  const { h, s, v, a } = pickState;
+  const rgb = hsvToRgb(h, s, v);
+  const hex = argbHex(a, rgb.r, rgb.g, rgb.b);
+  document.getElementById('qrSv').style.setProperty('--h', h);
+  document.getElementById('qrSvKnob').style.left = (s * 100) + '%';
+  document.getElementById('qrSvKnob').style.top = ((1 - v) * 100) + '%';
+  document.getElementById('qrHue').value = Math.round(h);
+  document.getElementById('qrAlpha').value = a;
+  document.getElementById('qrAlpha').style.background =
+    `linear-gradient(to right, rgba(${rgb.r},${rgb.g},${rgb.b},0), rgb(${rgb.r},${rgb.g},${rgb.b}))`
+    + `, repeating-conic-gradient(#888 0 25%,#ccc 0 50%) 0 / 10px 10px`;
+  document.getElementById('qrHex').value = hex;
+  document.getElementById('qrPickSw').style.background = swatchBg(hex);
+  return hex;
+}
+function onPickChange() {
+  const hex = syncPickerUI();
+  cfg[colorKey()] = hex;
+  paintSwatches();
+  drawCanvas();
+  scheduleSave();
+}
+function onHexInput(val) {
+  const c = parseArgb(val.trim());
+  const hsv = rgbToHsv(c.r, c.g, c.b);
+  pickState = { h: hsv.h, s: hsv.s, v: hsv.v, a: c.a };
+  onPickChange();
+}
+
+/* SV square drag */
+(function () {
+  const sv = document.getElementById('qrSv');
+  let dragging = false;
+  function set(e) {
+    const r = sv.getBoundingClientRect();
+    pickState.s = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    pickState.v = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
+    onPickChange();
+  }
+  sv.addEventListener('pointerdown', e => { dragging = true; sv.setPointerCapture(e.pointerId); set(e); });
+  sv.addEventListener('pointermove', e => { if (dragging) set(e); });
+  sv.addEventListener('pointerup', () => { dragging = false; });
+})();
+
+/* ── scannability warning ── */
+function _lin(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function luminance(rgb) { return 0.2126 * _lin(rgb[0]) + 0.7152 * _lin(rgb[1]) + 0.0722 * _lin(rgb[2]); }
+function contrastRatio(a, b) {
+  const l1 = luminance(a), l2 = luminance(b), hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function flatten(hex, bg) {
+  const c = parseArgb(hex), a = c.a / 255;
+  return [c.r * a + bg[0] * (1 - a), c.g * a + bg[1] * (1 - a), c.b * a + bg[2] * (1 - a)];
+}
+function avgBg() {
+  if (!bgImg) return [128, 128, 128];
+  const o = document.createElement('canvas'); o.width = o.height = 1;
+  const c = o.getContext('2d'); c.drawImage(bgImg, 0, 0, 1, 1);
+  const d = c.getImageData(0, 0, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}
+function updateWarn() {
+  const behind = cfg.plate_enabled ? flatten(cfg.plate_color, avgBg()) : avgBg();
+  const fg = flatten(cfg.fg_color, behind);
+  document.getElementById('qrWarn').hidden = contrastRatio(fg, behind) >= 3;
+}
+
+/* ── download for a test scan ── */
+async function downloadTest() {
+  clearTimeout(saveTimer);
+  await apiPost(QR_URLS.config, cfg);
+  refreshHeroImg();
+  const resp = await fetch(QR_URLS.render + '?t=' + Date.now());
+  const blob = await resp.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qr-test.png';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 paintEnable();
 paintSources();
