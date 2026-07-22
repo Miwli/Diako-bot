@@ -177,3 +177,16 @@ def test_still_preset_never_animates(db_module):
     cfg = config.QrRenderConfig(enabled=True, source="onyx",
                                 plate_enabled=True, blur_enabled=False)
     assert qr.render_qr("x", cfg).mime == "image/png"
+
+
+def test_animated_preset_is_detected():
+    assert presets.preset_is_animated("samurai")
+    assert not presets.preset_is_animated("aurora")
+
+
+def test_animated_preset_card_mode_produces_a_gif(db_module):
+    cfg = config.QrRenderConfig(enabled=True, source="samurai",
+                                plate_enabled=True, blur_enabled=False)
+    r = qr.render_qr("scan-me", cfg)
+    assert r.mime == "image/gif"
+    assert _open(r.data).n_frames > 1

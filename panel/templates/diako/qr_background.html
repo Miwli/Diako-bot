@@ -326,11 +326,12 @@
             <span class="qr-src-check"><i class="ti ti-check"></i></span>
             <i class="ti ti-ban"></i><span>{% trans "بدون" %}</span>
           </div>
-          {% for key in qr_presets %}
-          <div class="qr-src-card" data-source="{{ key }}" onclick="selectSource('{{ key }}')">
+          {% for p in qr_presets %}
+          <div class="qr-src-card" data-source="{{ p.key }}" onclick="selectSource('{{ p.key }}')">
             <span class="qr-src-check"><i class="ti ti-check"></i></span>
-            <img src="{% url 'diako_qr_preset_image' key %}" alt="">
-            <span class="qr-src-label">{{ key }}</span>
+            {% if p.animated %}<span class="qr-gif-badge">GIF</span>{% endif %}
+            <img src="{% url 'diako_qr_preset_image' p.key %}" alt="">
+            <span class="qr-src-label">{{ p.key }}</span>
           </div>
           {% endfor %}
           <div class="qr-src-card" id="qrCustomCard" data-source="custom" onclick="onCustomCard()">
@@ -429,6 +430,7 @@ const QR_URLS = {
 let cfg = {{ qr_config_json|safe }};
 let hasCustom = {% if qr_has_custom %}true{% else %}false{% endif %};
 let customAnimated = {% if qr_custom_animated %}true{% else %}false{% endif %};
+const ANIMATED_PRESETS = [{% for p in qr_presets %}{% if p.animated %}"{{ p.key }}", {% endif %}{% endfor %}];
 
 let bgImg = null, bgKey = "", qrImg = null;
 let saveTimer = null, bgTimer = null;
@@ -462,10 +464,14 @@ function paintMode() {
   document.getElementById('qrCardOpts').classList.toggle('qr-sub', !card);
   document.getElementById('qrPlateColorTrig').classList.toggle('qr-sub', !card);
 }
+/* whether the selected background (custom upload or preset) is animated */
+function sourceIsAnimated() {
+  return cfg.source === 'custom' ? customAnimated : ANIMATED_PRESETS.includes(cfg.source);
+}
 /* hint shown when an animated background needs the card turned on */
 function updateAnimHint() {
   const el = document.getElementById('qrAnimHint');
-  if (el) el.hidden = !(cfg.enabled && cfg.source === 'custom' && customAnimated && !cfg.plate_enabled);
+  if (el) el.hidden = !(cfg.enabled && sourceIsAnimated() && !cfg.plate_enabled);
 }
 function toggleEnable() {
   cfg.enabled = !cfg.enabled;

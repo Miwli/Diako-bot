@@ -22,6 +22,7 @@ FLAG_KEY = "qr_bg_enabled"
 # Re-exports so callers can reach presets without importing the submodule.
 preset_keys = presets.preset_keys
 preset_path = presets.preset_path
+preset_is_animated = presets.preset_is_animated
 
 
 def render_qr(data: str, cfg: QrRenderConfig | None = None) -> RenderedQr:

@@ -533,8 +533,9 @@ def qr_preset_image(request, key):
     path = preset_path(key)
     if not path or not os.path.exists(path):
         return HttpResponseNotFound('unknown preset')
+    ctype = 'image/gif' if path.lower().endswith('.gif') else 'image/png'
     with open(path, 'rb') as f:
-        resp = HttpResponse(f.read(), content_type='image/png')
+        resp = HttpResponse(f.read(), content_type=ctype)
     resp['Cache-Control'] = 'private, max-age=86400'
     return resp
 

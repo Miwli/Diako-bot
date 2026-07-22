@@ -103,4 +103,6 @@ def resolve_background(cfg):
         png = _custom_path("png")
         return StaticSource(png) if os.path.exists(png) else None
     p = presets.preset_path(cfg.source)
-    return StaticSource(p) if p and os.path.exists(p) else None
+    if not (p and os.path.exists(p)):
+        return None
+    return AnimatedSource(p) if p.lower().endswith(".gif") else StaticSource(p)

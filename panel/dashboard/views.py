@@ -329,7 +329,7 @@ def qr_background_view(request):
     cfg = qrcfg.load_config()
     ctx = {
         'qr_config_json': json.dumps(cfg.__dict__, ensure_ascii=False),
-        'qr_presets': qr.preset_keys(),
+        'qr_presets': [{'key': k, 'animated': qr.preset_is_animated(k)} for k in qr.preset_keys()],
         'qr_has_custom': qr.has_background(),
         'qr_custom_animated': qr.custom_is_animated(),
     }
