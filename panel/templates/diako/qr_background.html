@@ -194,15 +194,22 @@
 /* colour picker popover — anchored under the triggers, always LTR for predictable sliders */
 .qr-colorpop {
   position: absolute; top: calc(100% + 9px); inset-inline-start: 0; z-index: 20; width: 232px;
-  direction: ltr; padding: 13px; border-radius: 14px;
+  direction: ltr; padding: 13px; border-radius: 14px; user-select: none;
   background: var(--bg-base); border: 1px solid rgba(255,255,255,.12);
   box-shadow: var(--elev-3);
 }
+/* flip above the trigger when there isn't room below (JS toggles .up) */
+.qr-colorpop.up { top: auto; bottom: calc(100% + 9px); }
 .qr-colorpop::before {
   content: ""; position: absolute; top: -7px; inset-inline-start: 22px;
   width: 12px; height: 12px; background: var(--bg-base);
   border-inline-start: 1px solid rgba(255,255,255,.12); border-top: 1px solid rgba(255,255,255,.12);
   transform: rotate(45deg);
+}
+.qr-colorpop.up::before {
+  top: auto; bottom: -7px;
+  border-inline-start: none; border-top: none;
+  border-inline-end: 1px solid rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.12);
 }
 .qr-colorpop[hidden] { display: none; }
 .qr-sv {
@@ -715,10 +722,16 @@ function openPicker(target) {
   const c = parseArgb(cfg[colorKey()]);
   const hsv = rgbToHsv(c.r, c.g, c.b);
   pickState = { h: hsv.h, s: hsv.s, v: hsv.v, a: c.a };
+  const trig = document.getElementById(target === 'fg' ? 'qrFgTrig' : 'qrPlateColorTrig');
   document.getElementById('qrFgTrig').classList.toggle('active', target === 'fg');
   document.getElementById('qrPlateColorTrig').classList.toggle('active', target === 'plate');
   syncPickerUI();
-  document.getElementById('qrColorPop').hidden = false;
+  const pop = document.getElementById('qrColorPop');
+  pop.classList.remove('up');
+  pop.hidden = false;
+  /* open upward if the popover would run past the bottom of the viewport */
+  const tr = trig.getBoundingClientRect();
+  if (tr.bottom + 9 + pop.offsetHeight > window.innerHeight - 8) pop.classList.add('up');
 }
 function closePicker() {
   document.getElementById('qrColorPop').hidden = true;
