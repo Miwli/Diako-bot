@@ -128,3 +128,52 @@ def test_prepared_background_is_cached(db_module):
     cache.prepared_background(src, cfg)
     cache_dir = pathlib.Path(db_module.DB_PATH).parent / "qr_cache"
     assert list(cache_dir.glob("*.png")), "expected a cached background file"
+
+
+# ─── animated (GIF) backgrounds ───
+
+def _gif(colors, size=(120, 120)) -> bytes:
+    frames = [Image.new("RGB", size, c) for c in colors]
+    buf = BytesIO()
+    frames[0].save(buf, format="GIF", save_all=True, append_images=frames[1:],
+                   duration=100, loop=0)
+    return buf.getvalue()
+
+
+def test_animated_upload_is_detected(db_module):
+    assert qr.save_background(_gif([(200, 0, 0), (0, 200, 0)])) is True
+    assert qr.has_background() and qr.custom_is_animated()
+
+
+def test_static_upload_is_not_animated(db_module):
+    assert qr.save_background(_png((10, 10, 10))) is False
+    assert qr.has_background() and not qr.custom_is_animated()
+
+
+def test_upload_switches_type_cleanly(db_module):
+    qr.save_background(_gif([(1, 2, 3), (4, 5, 6)]))
+    assert qr.custom_is_animated()
+    qr.save_background(_png((9, 9, 9)))          # replace GIF with a still image
+    assert qr.has_background() and not qr.custom_is_animated()
+
+
+def test_card_mode_produces_a_gif(db_module):
+    qr.save_background(_gif([(200, 0, 0), (0, 200, 0), (0, 0, 200)]))
+    cfg = config.QrRenderConfig(enabled=True, source="custom",
+                                plate_enabled=True, blur_enabled=False)
+    r = qr.render_qr("scan-me", cfg)
+    assert r.mime == "image/gif"
+    assert _open(r.data).n_frames == 3
+
+
+def test_animated_without_plate_stays_static(db_module):
+    qr.save_background(_gif([(200, 0, 0), (0, 200, 0)]))
+    cfg = config.QrRenderConfig(enabled=True, source="custom",
+                                plate_enabled=False, blur_enabled=False)
+    assert qr.render_qr("x", cfg).mime == "image/png"
+
+
+def test_still_preset_never_animates(db_module):
+    cfg = config.QrRenderConfig(enabled=True, source="onyx",
+                                plate_enabled=True, blur_enabled=False)
+    assert qr.render_qr("x", cfg).mime == "image/png"

@@ -499,16 +499,16 @@ def qr_background_upload(request):
     up = request.FILES.get('file')
     if not up:
         return JsonResponse({'ok': False, 'error': 'فایلی آپلود نشده'}, status=400)
-    if up.size > 5 * 1024 * 1024:
-        return JsonResponse({'ok': False, 'error': 'حجم عکس نباید بیش از ۵ مگابایت باشد'}, status=400)
+    if up.size > 10 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'حجم فایل نباید بیش از ۱۰ مگابایت باشد'}, status=400)
     from shared_lib.services import qr
     from shared_lib.services.qr import config as qrcfg
     try:
-        qr.save_background(up.read())
+        animated = qr.save_background(up.read())
     except Exception as e:
-        return JsonResponse({'ok': False, 'error': f'عکس نامعتبر است: {e}'}, status=400)
+        return JsonResponse({'ok': False, 'error': f'فایل نامعتبر است (فقط عکس یا GIF): {e}'}, status=400)
     async_to_sync(set_setting)(qrcfg.KEY_SOURCE, 'custom')
-    return JsonResponse({'ok': True})
+    return JsonResponse({'ok': True, 'animated': animated})
 
 
 @login_required
@@ -570,15 +570,16 @@ def qr_reset(request):
 @login_required
 @require_http_methods(["GET"])
 def qr_render(request):
-    """Authoritative render of the saved config — the big preview card."""
+    """Authoritative render of the saved config — the big preview card.
+
+    Serves the real bytes and MIME so an animated (GIF) render plays in the
+    preview <img> just as the bot would send it.
+    """
     from shared_lib.services import qr
-    return _png_response(_qr_open(qr.render_qr(_QR_SAMPLE).data))
-
-
-def _qr_open(data):
-    from io import BytesIO
-    from PIL import Image
-    return Image.open(BytesIO(data))
+    r = qr.render_qr(_QR_SAMPLE)
+    resp = HttpResponse(r.data, content_type=r.mime)
+    resp['Cache-Control'] = 'no-store'
+    return resp
 
 
 @login_required

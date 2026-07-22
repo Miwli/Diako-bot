@@ -152,6 +152,22 @@
 .qr-warn i { font-size: 15px; flex: 0 0 auto; }
 .qr-warn[hidden] { display: none; }  /* display:flex above would otherwise beat the hidden attr */
 
+/* animated (GIF) badge on the custom source card */
+.qr-gif-badge {
+  position: absolute; top: 5px; inset-inline-start: 5px; z-index: 2;
+  font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  padding: 2px 6px; border-radius: 6px; background: var(--accent); color: #fff;
+}
+.qr-gif-badge[hidden] { display: none; }
+
+/* small hint line (e.g. turn on the plate to animate) */
+.qr-hint {
+  display: flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: 11px; line-height: 1.7; color: var(--text-muted);
+}
+.qr-hint i { color: var(--accent); font-size: 14px; }
+.qr-hint[hidden] { display: none; }
+
 /* color picker popover — always LTR for predictable sliders */
 .qr-colorpop {
   position: absolute; top: 0; inset-inline-start: 0; z-index: 5; width: 216px;
@@ -236,6 +252,7 @@
           {% endfor %}
           <div class="qr-src-card" id="qrCustomCard" data-source="custom" onclick="onCustomCard()">
             <span class="qr-src-check"><i class="ti ti-check"></i></span>
+            <span class="qr-gif-badge" id="qrGifBadge" {% if not qr_custom_animated %}hidden{% endif %}>GIF</span>
             <img id="qrCustomThumb" src="{% url 'diako_qr_background_image' %}" alt=""
                  style="{% if not qr_has_custom %}display:none{% endif %}">
             <span class="qr-src-label">{% trans "آپلودی" %}</span>
@@ -281,6 +298,10 @@
           <div class="qr-mrow" onclick="toggleField('plate_enabled')">
             <span>{% trans "کارت سفید پشت کد" %}</span>
             <span class="qr-toggle" id="qrPlateTgl"></span>
+          </div>
+          <div class="qr-hint" id="qrAnimHint" hidden>
+            <i class="ti ti-movie"></i>
+            <span>{% trans "پس‌زمینه‌ی متحرک است؛ برای متحرک‌شدن خروجی، کارت را روشن کن." %}</span>
           </div>
           <div id="qrPlateWrap">
             <div class="qr-ctrl-label" style="margin-top:9px">{% trans "گردی گوشه" %} <span class="qr-val" id="qrRadiusVal"></span></div>
@@ -348,6 +369,7 @@ const QR_URLS = {
 };
 let cfg = {{ qr_config_json|safe }};
 let hasCustom = {% if qr_has_custom %}true{% else %}false{% endif %};
+let customAnimated = {% if qr_custom_animated %}true{% else %}false{% endif %};
 
 let bgImg = null, bgKey = "", qrImg = null;
 let saveTimer = null, bgTimer = null;
@@ -375,6 +397,12 @@ function paintSources() {
     const s = el.dataset.source;
     el.classList.toggle('sel', cfg.enabled ? (s === cfg.source) : (s === 'none'));
   });
+  document.getElementById('qrGifBadge').hidden = !customAnimated;
+}
+/* hint shown when an animated background needs the plate turned on */
+function updateAnimHint() {
+  const el = document.getElementById('qrAnimHint');
+  if (el) el.hidden = !(cfg.enabled && cfg.source === 'custom' && customAnimated && !cfg.plate_enabled);
 }
 function toggleEnable() {
   cfg.enabled = !cfg.enabled;
@@ -400,14 +428,16 @@ async function uploadCustom(input) {
   input.value = '';
   if (!data.ok) { showToast('{% trans "خطا" %}', data.error, 'error'); return; }
   hasCustom = true;
+  customAnimated = !!data.animated;
   const thumb = document.getElementById('qrCustomThumb');
   thumb.src = QR_URLS.custom + '?t=' + Date.now();
   thumb.style.display = '';
   cfg.source = 'custom'; cfg.enabled = true;
-  paintEnable(); paintSources();
+  paintEnable(); paintSources(); updateAnimHint();
   bgKey = '';
   scheduleSave();
-  showToast('{% trans "انجام شد" %}', '{% trans "عکس آپلود شد" %}', 'success');
+  showToast('{% trans "انجام شد" %}',
+    data.animated ? '{% trans "GIF متحرک آپلود شد" %}' : '{% trans "عکس آپلود شد" %}', 'success');
 }
 async function resetAll() {
   if (!confirm('{% trans "همه‌ی تنظیمات پس‌زمینه به حالت اولیه برگردد؟" %}')) return;
@@ -438,6 +468,7 @@ function syncControls() {
   document.getElementById('qrPadVal').textContent = cfg.plate_padding;
   document.getElementById('qrSizeVal').textContent = Math.round(cfg.size * 100) + '٪';
   paintSwatches();
+  updateAnimHint();
 }
 function setShape(s) { cfg.shape = s; syncControls(); loadBg(); scheduleSave(); }
 function toggleField(f) {
@@ -445,6 +476,7 @@ function toggleField(f) {
   document.getElementById(f === 'blur_enabled' ? 'qrBlurTgl' : 'qrPlateTgl').classList.toggle('on', cfg[f]);
   document.getElementById(f === 'blur_enabled' ? 'qrBlurWrap' : 'qrPlateWrap').classList.toggle('qr-sub', !cfg[f]);
   if (f === 'blur_enabled') loadBg(); else drawCanvas();
+  updateAnimHint();
   scheduleSave();
 }
 function onSlider(field, value, isBg) {

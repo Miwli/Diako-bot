@@ -331,6 +331,7 @@ def qr_background_view(request):
         'qr_config_json': json.dumps(cfg.__dict__, ensure_ascii=False),
         'qr_presets': qr.preset_keys(),
         'qr_has_custom': qr.has_background(),
+        'qr_custom_animated': qr.custom_is_animated(),
     }
     ctx.update(_page_ctx(request, 'customize', 'qr'))
     return render(request, 'diako/qr_background.html', ctx)

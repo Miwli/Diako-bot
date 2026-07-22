@@ -16,6 +16,9 @@ from .config import parse_color
 # Long side of the rendered output, in pixels.
 OUTPUT_LONG = 1024
 
+# Smaller canvas for animated output, to keep GIF frame count × size sane.
+ANIM_LONG = 512
+
 # Max blur radius as a fraction of the canvas short side (at blur_amount = 100).
 _BLUR_MAX = 0.08
 

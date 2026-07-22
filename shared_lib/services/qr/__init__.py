@@ -37,10 +37,17 @@ def render_qr(data: str, cfg: QrRenderConfig | None = None) -> RenderedQr:
     if src is None:
         return encode([compose.plain_qr(data)], cfg)
 
+    # Animate only in card mode: the code stays on a static opaque plate every
+    # frame, so it keeps its contrast while the background moves around it.
+    animate = cfg.plate_enabled and getattr(src, "animated", False)
+
     try:
+        if animate:
+            prepared = cache.prepared_frames(src, cfg)
+            frames = [compose.render_frame(p, data, cfg) for p in prepared]
+            return encode(frames, cfg, src.durations())
         prepared = cache.prepared_background(src, cfg)
-        frame = compose.render_frame(prepared, data, cfg)
-        return encode([frame], cfg)
+        return encode([compose.render_frame(prepared, data, cfg)], cfg)
     except Exception as e:
         log.warning("QR render failed, sending plain QR: %s", e)
         return encode([compose.plain_qr(data)], cfg)
@@ -53,26 +60,42 @@ def make_qr_png(data: str) -> bytes:
 
 # ─── admin-uploaded custom background ───
 
-def save_background(image_bytes: bytes) -> None:
-    """Normalise an uploaded image to PNG and store it as the custom background."""
+def save_background(image_bytes: bytes) -> bool:
+    """Store an uploaded image as the custom background.
+
+    An animated GIF is kept as a GIF (frames preserved); anything else is
+    flattened to PNG. Returns True when the stored background is animated.
+    """
     from io import BytesIO
     from PIL import Image
 
-    img = Image.open(BytesIO(image_bytes)).convert("RGB")
-    img.save(custom_background_path(), format="PNG")
+    img = Image.open(BytesIO(image_bytes))
+    animated = getattr(img, "is_animated", False) and getattr(img, "n_frames", 1) > 1
+    remove_background()
+    if animated:
+        img.save(sources._custom_path("gif"), format="GIF", save_all=True)
+    else:
+        img.convert("RGB").save(sources._custom_path("png"), format="PNG")
+    return animated
 
 
 def remove_background() -> None:
     import os
-    try:
-        os.remove(custom_background_path())
-    except FileNotFoundError:
-        pass
+    for ext in ("gif", "png"):
+        try:
+            os.remove(sources._custom_path(ext))
+        except FileNotFoundError:
+            pass
 
 
 def has_background() -> bool:
     import os
-    return os.path.exists(custom_background_path())
+    return any(os.path.exists(sources._custom_path(e)) for e in ("gif", "png"))
+
+
+def custom_is_animated() -> bool:
+    import os
+    return os.path.exists(sources._custom_path("gif"))
 
 
 # Back-compat alias for callers that used the old single-file path name.
